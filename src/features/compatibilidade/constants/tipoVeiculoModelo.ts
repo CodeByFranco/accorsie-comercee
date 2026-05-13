@@ -1,10 +1,11 @@
-export const TIPOS_VEICULO_MODELO = ["carro", "caminhao"] as const;
+export const TIPOS_VEICULO_MODELO = ["carro", "caminhao", "camionete"] as const;
 
 export type TipoVeiculoModelo = (typeof TIPOS_VEICULO_MODELO)[number];
 
 export const TIPO_VEICULO_MODELO_LABELS: Record<TipoVeiculoModelo, string> = {
   carro: "Carro",
   caminhao: "Caminhão",
+  camionete: "Camionete",
 };
 
 export function parseTipoVeiculoModelo(raw: string): TipoVeiculoModelo | null {

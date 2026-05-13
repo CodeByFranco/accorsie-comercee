@@ -13,26 +13,30 @@ import type {
 import { storeShellContent, storeShellInset } from "@/config/storeShell";
 import { PlateVehicleFinder } from "@/features/compatibilidade/components/PlateVehicleFinder";
 
-type VehicleCategory = "carros" | "caminhoes";
+type VehicleCategory = "carros" | "caminhoes" | "camionetes";
 
 const TABS: { id: VehicleCategory; label: string }[] = [
   { id: "carros", label: "Carros" },
   { id: "caminhoes", label: "Caminhões" },
+  { id: "camionetes", label: "Camionetes" },
 ];
 
 const TAB_TO_TIPO: Record<VehicleCategory, TipoVeiculoModelo> = {
   carros: "carro",
   caminhoes: "caminhao",
+  camionetes: "camionete",
 };
 
 function tipoToTab(t: TipoVeiculoModelo): VehicleCategory {
   if (t === "caminhao") return "caminhoes";
+  if (t === "camionete") return "camionetes";
   return "carros";
 }
 
 const TAB_ICON_SRC: Record<VehicleCategory, string> = {
   carros: "/home/filtro/carro.png",
   caminhoes: "/home/filtro/caminhao.png",
+  camionetes: "/home/filtro/suv.png",
 };
 
 const TAB_ICON_PX = 40;
@@ -41,6 +45,7 @@ const TAB_ICON_PX = 40;
 const FILTER_KIND_LABEL: Record<VehicleCategory, string> = {
   carros: "carro",
   caminhoes: "caminhão",
+  camionetes: "camionete",
 };
 
 function IconSearch({ className }: { className?: string }) {
@@ -259,7 +264,7 @@ export function VehicleFilter({
   const [marcaId, setMarcaId] = useState("");
   const [modeloId, setModeloId] = useState("");
   const [ano, setAno] = useState("");
-  /** Mobile: painel de marca/modelo/ano só após toque em carro/caminhão. */
+  /** Mobile: painel de marca/modelo/ano só após toque no tipo de veículo. */
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   const replaceVehicleQuery = (mutate: (p: URLSearchParams) => void) => {
@@ -271,6 +276,8 @@ export function VehicleFilter({
 
   const prevModeloInUrl = useRef<string | null>(null);
 
+  /* Sincroniza selects/aba com `modelo`/`ano` da URL (fonte de verdade ao navegar ou voltar). */
+  /* eslint-disable react-hooks/set-state-in-effect -- setState aqui é o padrão “URL → UI” deste filtro */
   useEffect(() => {
     if (appliedModel) {
       setCategory(tipoToTab(appliedModel.tipo_veiculo));
@@ -296,6 +303,7 @@ export function VehicleFilter({
     }
     prevModeloInUrl.current = null;
   }, [appliedModeloId, appliedAno, appliedModel]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const tipoAtual = TAB_TO_TIPO[category];
 
@@ -456,7 +464,7 @@ export function VehicleFilter({
       <div className="relative flex">
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-y-0 left-0 z-0 w-1/2 rounded-full bg-store-navy shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+          className="pointer-events-none absolute inset-y-0 left-0 z-0 w-1/3 rounded-full bg-store-navy shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
           style={{ transform: `translateX(calc(${activeTabIndex} * 100%))` }}
         />
         {TABS.map(({ id, label }) => {

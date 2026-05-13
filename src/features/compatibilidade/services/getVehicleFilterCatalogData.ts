@@ -30,6 +30,12 @@ export async function getVehicleFilterCatalogData(): Promise<VehicleFilterCatalo
       supabase.from("modelo_anos").select("modelo_id, ano"),
     ]);
 
+    if (process.env.NODE_ENV === "development") {
+      if (marcasRes.error) console.error("[getVehicleFilterCatalogData] marcas", marcasRes.error);
+      if (modelosRes.error) console.error("[getVehicleFilterCatalogData] modelos", modelosRes.error);
+      if (anosRes.error) console.error("[getVehicleFilterCatalogData] modelo_anos", anosRes.error);
+    }
+
     const marcas = (marcasRes.data ?? []) as VehicleFilterMarca[];
     const modelosRaw = modelosRes.data ?? [];
     const modelos: VehicleFilterModelo[] = modelosRaw.map((row) => ({
