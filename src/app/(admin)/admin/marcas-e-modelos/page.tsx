@@ -3,8 +3,7 @@ import { createClient } from "@/services/supabase/server";
 import { MarcaForm } from "@/features/marcas/components/MarcaForm";
 import { MarcaRow } from "@/features/marcas/components/MarcaRow";
 import { ModeloForm, type MarcaOption } from "@/features/compatibilidade/components/ModeloForm";
-import { ModelosListagemFiltros } from "@/features/compatibilidade/components/ModelosListagemFiltros";
-import { ModelosListagemTabela } from "@/features/compatibilidade/components/ModelosListagemTabela";
+import { ModelosListagemComBusca } from "@/features/compatibilidade/components/ModelosListagemComBusca";
 
 export const metadata = {
   title: "Marcas e modelos | Admin",
@@ -41,13 +40,11 @@ type ModeloAnoRow = {
 export default async function MarcasEModelosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ cadastrado?: string; buscaModelo?: string; marcaModelo?: string }>;
+  searchParams: Promise<{ cadastrado?: string }>;
 }) {
-  const { cadastrado, buscaModelo, marcaModelo } = await searchParams;
+  const { cadastrado } = await searchParams;
   const showMarcaOk = cadastrado === "marca";
   const showModeloOk = cadastrado === "modelo";
-  const modeloSearchTerm = (buscaModelo ?? "").trim();
-  const marcaModeloFiltro = (marcaModelo ?? "").trim();
 
   let marcas: MarcaListRow[] = [];
   let marcasForSelect: MarcaOption[] = [];
@@ -84,41 +81,36 @@ export default async function MarcasEModelosPage({
       modelos = modelosData as ModeloRow[];
     }
 
-    const { data: anosData, error: anosErr } = await supabase
-      .from("modelo_anos")
-      .select("id, modelo_id, ano")
-      .order("ano", { ascending: true });
+    // Pagina manualmente porque o PostgREST do Supabase limita a 1000 linhas por padrão e o catálogo
+    // de modelo_anos já passa de 1800 linhas (ver migration 20260429120000_backfill_modelo_anos_catalogo_seed.sql).
+    // Sem isso, alguns anos não aparecem na UI e o cadastro falha com "ano já cadastrado" por causa do UNIQUE.
+    const ANOS_PAGE_SIZE = 1000;
+    let anosOffset = 0;
+    while (true) {
+      const { data: anosData, error: anosErr } = await supabase
+        .from("modelo_anos")
+        .select("id, modelo_id, ano")
+        .order("ano", { ascending: true })
+        .range(anosOffset, anosOffset + ANOS_PAGE_SIZE - 1);
 
-    if (anosErr) {
-      modeloAnosError = anosErr.message;
-    } else if (anosData) {
-      for (const row of anosData as ModeloAnoRow[]) {
+      if (anosErr) {
+        modeloAnosError = anosErr.message;
+        break;
+      }
+
+      const rows = (anosData ?? []) as ModeloAnoRow[];
+      for (const row of rows) {
         const list = anosByModelo.get(row.modelo_id) ?? [];
         list.push({ id: row.id, ano: row.ano });
         anosByModelo.set(row.modelo_id, list);
       }
+
+      if (rows.length < ANOS_PAGE_SIZE) break;
+      anosOffset += ANOS_PAGE_SIZE;
     }
   } catch (e) {
     configError = e instanceof Error ? e.message : "Erro ao carregar configuração.";
   }
-
-  const marcaFiltroValido =
-    marcaModeloFiltro.length > 0 && marcas.some((x) => x.id === marcaModeloFiltro);
-  const marcaSelectValue = marcaFiltroValido ? marcaModeloFiltro : "";
-
-  const modelosPorMarca = marcaFiltroValido
-    ? modelos.filter((m) => m.marca_id === marcaModeloFiltro)
-    : modelos;
-
-  const modeloSearchTermNormalized = modeloSearchTerm.toLocaleLowerCase("pt-BR");
-  const modelosFiltrados =
-    modeloSearchTermNormalized.length > 0
-      ? modelosPorMarca.filter((m) => {
-          const marca = marcaNomeFromRow(m.marcas);
-          const haystack = `${m.nome} ${marca} ${m.tipo_veiculo ?? ""}`.toLocaleLowerCase("pt-BR");
-          return haystack.includes(modeloSearchTermNormalized);
-        })
-      : modelosPorMarca;
 
   return (
     <div className="space-y-12">
@@ -262,14 +254,9 @@ export default async function MarcasEModelosPage({
               <div className="border-b border-gray-100 px-4 py-2.5">
                 <h3 className="text-sm font-semibold text-gray-900">Modelos cadastrados</h3>
                 <p className="mt-0.5 text-xs text-gray-500">
-                  Anos de referência por modelo; a compatibilidade do produto usa ano inicial e final.
+                  Use a busca para filtrar pelo nome; em cada linha, editar altera marca, nome e tipo. Anos de referência
+                  por modelo; a compatibilidade do produto usa ano inicial e final.
                 </p>
-                <ModelosListagemFiltros
-                  key={`${marcaSelectValue}\0${modeloSearchTerm}`}
-                  marcas={marcas}
-                  defaultMarcaId={marcaSelectValue}
-                  defaultBusca={modeloSearchTerm}
-                />
                 {modeloAnosError && (
                   <p className="mt-2 text-xs text-amber-800">
                     Não foi possível carregar anos de referência ({modeloAnosError}). Se a tabela ainda não existe,
@@ -294,25 +281,12 @@ export default async function MarcasEModelosPage({
                 </p>
               )}
 
-              {!modelosError && modelos.length > 0 && modelosFiltrados.length === 0 && (
-                <p className="px-4 py-8 text-center text-xs text-gray-500">
-                  Nenhum modelo encontrado
-                  {marcaFiltroValido && <> para a marca selecionada</>}
-                  {modeloSearchTermNormalized.length > 0 && (
-                    <>
-                      {" "}
-                      com a busca <span className="font-medium">&quot;{modeloSearchTerm}&quot;</span>
-                    </>
-                  )}
-                  .
-                </p>
-              )}
-
-              {!modelosError && modelosFiltrados.length > 0 && (
-                <ModelosListagemTabela
-                  key={`${marcaSelectValue}\0${modeloSearchTerm}`}
-                  items={modelosFiltrados.map((m) => ({
+              {!modelosError && modelos.length > 0 && (
+                <ModelosListagemComBusca
+                  marcas={marcasForSelect}
+                  items={modelos.map((m) => ({
                     modeloId: m.id,
+                    marcaId: m.marca_id,
                     nome: m.nome,
                     tipoVeiculo: m.tipo_veiculo,
                     marcaNome: marcaNomeFromRow(m.marcas),

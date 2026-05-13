@@ -2,11 +2,13 @@
 
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import type { MarcaOption } from "@/features/compatibilidade/components/ModeloForm";
 import { ModeloTableRow } from "@/features/compatibilidade/components/ModeloTableRow";
 import { deleteModelosEmLote } from "@/features/compatibilidade/services/modeloActions";
 
 export type ModeloListagemItem = {
   modeloId: string;
+  marcaId: string;
   nome: string;
   tipoVeiculo: string | null;
   marcaNome: string;
@@ -14,7 +16,13 @@ export type ModeloListagemItem = {
   modeloAnosError: boolean;
 };
 
-export function ModelosListagemTabela({ items }: { items: ModeloListagemItem[] }) {
+export function ModelosListagemTabela({
+  items,
+  marcas,
+}: {
+  items: ModeloListagemItem[];
+  marcas: MarcaOption[];
+}) {
   const visibleIds = useMemo(() => items.map((i) => i.modeloId), [items]);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   const [bulkMessage, setBulkMessage] = useState<string | null>(null);
@@ -107,7 +115,7 @@ export function ModelosListagemTabela({ items }: { items: ModeloListagemItem[] }
           </button>
         </div>
         <p className="text-[11px] text-gray-500">
-          Reflete só os modelos visíveis com marca e busca atuais.
+          Reflete só os modelos visíveis após o filtro por nome.
         </p>
       </div>
       <ConfirmDialog
@@ -120,7 +128,7 @@ export function ModelosListagemTabela({ items }: { items: ModeloListagemItem[] }
           <p>
             Você vai excluir <strong className="text-gray-800">{selectedInView.length}</strong> modelo
             {selectedInView.length === 1 ? "" : "s"} visíve
-            {selectedInView.length === 1 ? "l" : "is"} nesta listagem (marca e busca atuais). Compatibilidades de
+            {selectedInView.length === 1 ? "l" : "is"} nesta listagem (após o filtro por nome). Compatibilidades de
             produtos e anos de referência ligados{" "}
             {selectedInView.length === 1 ? "a ele serão impactados" : "a eles serão impactados"}.{" "}
             <span className="font-medium text-gray-800">Esta ação não pode ser desfeita.</span>
@@ -165,11 +173,13 @@ export function ModelosListagemTabela({ items }: { items: ModeloListagemItem[] }
               <ModeloTableRow
                 key={m.modeloId}
                 modeloId={m.modeloId}
+                marcaId={m.marcaId}
                 nome={m.nome}
                 tipoVeiculo={m.tipoVeiculo}
                 marcaNome={m.marcaNome}
                 anos={m.anos}
                 modeloAnosError={m.modeloAnosError}
+                marcas={marcas}
                 bulkCheckbox={{
                   checked: selected.has(m.modeloId),
                   onChange: (checked) => toggleOne(m.modeloId, checked),

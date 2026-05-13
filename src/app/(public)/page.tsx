@@ -11,6 +11,9 @@ import { storeShellContent, storeShellInset } from "@/config/storeShell";
 import type { CategoryListItem } from "@/types/category";
 import type { ProductSummary } from "@/types/product";
 
+/** Catálogo marcas/modelos (incl. camionete) deve refletir cadastro no Supabase sem cache de página. */
+export const dynamic = "force-dynamic";
+
 export default async function Home({
   searchParams,
 }: {

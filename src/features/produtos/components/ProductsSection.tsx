@@ -16,6 +16,7 @@ export function ProductsSection({ produtos, emptyMessage }: ProductsSectionProps
       headingId="home-produtos-heading"
       produtos={produtos}
       emptyMessage={emptyMessage ?? EMPTY_DEFAULT}
+      seeMoreHref="/produtos"
     />
   );
 }

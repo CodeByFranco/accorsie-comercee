@@ -16,6 +16,9 @@ import {
 } from "@/features/produtos/utils/catalogSearchParams";
 import { storeShellContent, storeShellInset } from "@/config/storeShell";
 
+/** Filtro por veículo usa o mesmo catálogo da home; evita lista desatualizada após alterações no admin. */
+export const dynamic = "force-dynamic";
+
 export default async function ProdutosPage({
   searchParams,
 }: {
