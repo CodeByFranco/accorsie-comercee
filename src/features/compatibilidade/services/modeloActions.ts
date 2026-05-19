@@ -190,6 +190,46 @@ export type ModeloAnoState =
   | { ok: false; message: string }
   | { ok: true; message: string };
 
+export type ModeloAnoRef = { id: string; ano: number };
+
+export type GetModeloAnosRefsResult =
+  | { ok: true; anos: ModeloAnoRef[] }
+  | { ok: false; message: string };
+
+/** Anos de referência de um modelo (admin: expandir linha na listagem). */
+export async function getModeloAnosRefs(modeloId: string): Promise<GetModeloAnosRefsResult> {
+  await requireAdmin();
+  const id = modeloId.trim();
+  if (!id) {
+    return { ok: false, message: "Modelo inválido." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("modelo_anos")
+    .select("id, ano")
+    .eq("modelo_id", id)
+    .order("ano", { ascending: true });
+
+  if (error) {
+    if (error.code === "42P01" || error.message.includes("modelo_anos")) {
+      return {
+        ok: false,
+        message:
+          "Tabela modelo_anos não encontrada. Execute a migration em supabase/migrations no painel SQL do Supabase.",
+      };
+    }
+    return { ok: false, message: error.message };
+  }
+
+  const anos = (data ?? []).map((row) => ({
+    id: String(row.id),
+    ano: Number(row.ano),
+  }));
+
+  return { ok: true, anos };
+}
+
 const ANO_MIN = 1900;
 const ANO_MAX = 2100;
 const INTERVALO_MAX = 100;

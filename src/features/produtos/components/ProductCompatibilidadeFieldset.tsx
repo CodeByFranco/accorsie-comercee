@@ -1,11 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type MouseEvent } from "react";
 import {
   TIPO_VEICULO_MODELO_LABELS,
   type TipoVeiculoModelo,
 } from "@/features/compatibilidade/constants/tipoVeiculoModelo";
+import {
+  faixasFromCompatStrings,
+  faixasParaAnos,
+  sortedUniqueInts,
+} from "@/features/compatibilidade/utils/compatAnosRanges";
 
 export type ModeloOption = {
   id: string;
@@ -19,8 +24,7 @@ export type ModeloOption = {
 export type CompatRowState = {
   key: string;
   modelo_id: string;
-  ano_inicio: string;
-  ano_fim: string;
+  anos_selecionados: number[];
 };
 
 const fieldClass =
@@ -33,60 +37,154 @@ function newKey() {
 }
 
 function emptyRow(): CompatRowState {
-  return { key: newKey(), modelo_id: "", ano_inicio: "", ano_fim: "" };
+  return { key: newKey(), modelo_id: "", anos_selecionados: [] };
 }
 
-function sortedUniqueInts(nums: number[]): number[] {
-  return [...new Set(nums)].sort((a, b) => a - b);
+function todosAnosDoModelo(modelosById: Map<string, ModeloOption>, modeloId: string): number[] {
+  return modelosById.get(modeloId)?.anos_referencia ?? [];
 }
 
-function hasContiguousInSet(set: Set<number>, ini: number, fim: number): boolean {
-  if (ini > fim) return false;
-  for (let y = ini; y <= fim; y++) {
-    if (!set.has(y)) return false;
-  }
-  return true;
-}
-
-/** Anos válidos como fim da faixa, dado o início (todos os anos do intervalo existem no catálogo). */
-function fimChoicesParaInicio(anosCatalog: number[], inicio: number): number[] {
-  const sorted = sortedUniqueInts(anosCatalog);
-  const set = new Set(sorted);
-  return sorted.filter((fim) => fim >= inicio && hasContiguousInSet(set, inicio, fim));
-}
-
-function inicioChoices(anosCatalog: number[]): number[] {
-  const sorted = sortedUniqueInts(anosCatalog);
-  return sorted.filter((ini) => fimChoicesParaInicio(anosCatalog, ini).length > 0);
-}
-
-/** Garante que o valor atual apareça no select mesmo fora da lista ideal (ex.: edição legada). */
-function withSelectedValue(opts: number[], raw: string): number[] {
-  const n = Number.parseInt(raw, 10);
-  if (raw === "" || Number.isNaN(n)) return opts;
-  if (opts.includes(n)) return opts;
-  return sortedUniqueInts([...opts, n]);
+function normalizeRow(row: CompatRowState): CompatRowState {
+  return {
+    key: row.key,
+    modelo_id: row.modelo_id ?? "",
+    anos_selecionados: sortedUniqueInts(row.anos_selecionados ?? []),
+  };
 }
 
 export function rowsToCompatJson(rows: CompatRowState[]): string {
-  const payload = rows.map(({ modelo_id, ano_inicio, ano_fim }) => ({
+  const payload = rows.map(({ modelo_id, anos_selecionados }) => ({
     modelo_id: modelo_id.trim(),
-    ano_inicio: ano_inicio.trim(),
-    ano_fim: ano_fim.trim(),
+    anos_selecionados: sortedUniqueInts(anos_selecionados ?? []),
   }));
   return JSON.stringify(payload);
 }
 
+/** Agrupa várias faixas do servidor em uma linha por modelo (checkboxes). */
 export function compatRowsFromServer(
   list: { modelo_id: string; ano_inicio: string; ano_fim: string }[]
 ): CompatRowState[] {
   if (list.length === 0) return [emptyRow()];
-  return list.map((r) => ({
+
+  const byModelo = new Map<string, number[]>();
+  for (const r of list) {
+    if (!r.modelo_id) continue;
+    const anos = faixasParaAnos(faixasFromCompatStrings([r]));
+    const prev = byModelo.get(r.modelo_id) ?? [];
+    byModelo.set(r.modelo_id, sortedUniqueInts([...prev, ...anos]));
+  }
+
+  const rows = [...byModelo.entries()].map(([modelo_id, anos_selecionados]) => ({
     key: newKey(),
-    modelo_id: r.modelo_id,
-    ano_inicio: r.ano_inicio,
-    ano_fim: r.ano_fim,
+    modelo_id,
+    anos_selecionados,
   }));
+
+  return rows.length > 0 ? rows : [emptyRow()];
+}
+
+function AnosCheckboxGrid({
+  anosCatalog,
+  selecionados,
+  disabled,
+  onChange,
+}: {
+  anosCatalog: number[];
+  selecionados: Set<number>;
+  disabled?: boolean;
+  onChange: (next: number[]) => void;
+}) {
+  if (anosCatalog.length === 0) return null;
+
+  function toggle(ano: number) {
+    const next = new Set(selecionados);
+    if (next.has(ano)) next.delete(ano);
+    else next.add(ano);
+    onChange(sortedUniqueInts([...next]));
+  }
+
+  function marcarTodos(e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    onChange([...anosCatalog]);
+  }
+
+  function desmarcarTodos(e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    onChange([]);
+  }
+
+  return (
+    <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-gray-700">Anos compatíveis</span>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={marcarTodos}
+          className="text-xs font-medium text-admin-accent hover:underline disabled:opacity-50"
+        >
+          Marcar todos
+        </button>
+        <span className="text-gray-300">·</span>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={desmarcarTodos}
+          className="text-xs font-medium text-gray-600 hover:underline disabled:opacity-50"
+        >
+          Desmarcar todos
+        </button>
+        <span className="text-xs text-gray-500">
+          ({selecionados.size}/{anosCatalog.length})
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Anos selecionados">
+        {anosCatalog.map((ano) => {
+          const checked = selecionados.has(ano);
+          return (
+            <button
+              key={ano}
+              type="button"
+              disabled={disabled}
+              aria-pressed={checked}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toggle(ano);
+              }}
+              className={`inline-flex cursor-pointer items-center rounded-md border px-2 py-1 text-xs font-medium transition ${
+                checked
+                  ? "border-admin-accent/40 bg-[#1d63ed]/10 text-gray-900"
+                  : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+              } disabled:pointer-events-none disabled:opacity-50`}
+            >
+              {ano}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function AnosLateralLista({ anos }: { anos: number[] }) {
+  if (anos.length === 0) {
+    return <span className="shrink-0 text-xs text-amber-700">Sem anos</span>;
+  }
+  return (
+    <span className="flex shrink-0 flex-wrap justify-end gap-0.5 max-w-[9rem] sm:max-w-[12rem]">
+      {anos.map((y) => (
+        <span
+          key={y}
+          className="rounded bg-gray-200/80 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-gray-700"
+        >
+          {y}
+        </span>
+      ))}
+    </span>
+  );
 }
 
 export function ProductCompatibilidadeFieldset({
@@ -98,7 +196,6 @@ export function ProductCompatibilidadeFieldset({
   modelos: ModeloOption[];
   initialRows?: { modelo_id: string; ano_inicio: string; ano_fim: string }[];
   initialAllModelos?: boolean;
-  /** Na edição: avisa que a lista enviada substitui todas as compatibilidades gravadas. */
   replaceOnSave?: boolean;
 }) {
   const [rows, setRows] = useState<CompatRowState[]>(() =>
@@ -161,18 +258,14 @@ export function ProductCompatibilidadeFieldset({
     const novasLinhas: CompatRowState[] = ids.map((modelo_id) => ({
       key: newKey(),
       modelo_id,
-      ano_inicio: "",
-      ano_fim: "",
+      anos_selecionados: [...todosAnosDoModelo(modelosById, modelo_id)],
     }));
 
     setRows((prev) => {
       const isOnlyBlank =
-        prev.length === 1 &&
-        !prev[0].modelo_id &&
-        !prev[0].ano_inicio.trim() &&
-        !prev[0].ano_fim.trim();
-      if (isOnlyBlank) return novasLinhas;
-      return [...prev, ...novasLinhas];
+        prev.length === 1 && !prev[0].modelo_id && (prev[0].anos_selecionados ?? []).length === 0;
+      if (isOnlyBlank) return novasLinhas.map(normalizeRow);
+      return [...prev.map(normalizeRow), ...novasLinhas.map(normalizeRow)];
     });
     setPickerChecked(new Set());
   }
@@ -189,23 +282,25 @@ export function ProductCompatibilidadeFieldset({
   }
 
   function patchRow(key: string, patch: Partial<Omit<CompatRowState, "key">>) {
-    setRows((r) => r.map((row) => (row.key === key ? { ...row, ...patch } : row)));
+    setRows((r) =>
+      r.map((row) => (row.key === key ? normalizeRow({ ...row, ...patch }) : normalizeRow(row)))
+    );
   }
 
   return (
     <fieldset className="rounded-xl border border-gray-200 bg-gray-50/40 p-4">
       <legend className="px-1 text-sm font-medium text-gray-800">Compatibilidade (opcional)</legend>
       <p className="mb-3 text-xs text-gray-500">
-        Para cada modelo, escolha apenas anos já cadastrados como referência desse veículo em{" "}
+        Para cada modelo, marque os anos em que a peça se aplica (somente anos cadastrados em{" "}
         <Link href="/admin/marcas-e-modelos" className="font-medium text-admin-accent hover:underline">
           Marcas e modelos
         </Link>
-        . A faixa não pode incluir um ano que não exista na lista do modelo.
+        ). Ao adicionar um modelo, todos os anos dele vêm selecionados; desmarque os que não se aplicam.
       </p>
       {replaceOnSave && (
         <p className="mb-3 text-xs text-gray-600">
-          Ao salvar, esta lista substitui toda a compatibilidade já cadastrada. Para remover todas,
-          deixe apenas linhas em branco.
+          Ao salvar, esta lista substitui toda a compatibilidade já cadastrada. Para remover todas, deixe
+          apenas linhas em branco.
         </p>
       )}
       <label className="mb-4 flex items-start gap-2 rounded-lg border border-admin-accent/25 bg-white/80 p-3 text-sm text-gray-800">
@@ -242,8 +337,8 @@ export function ProductCompatibilidadeFieldset({
         {pickerOpen && (
           <div className="mt-3 space-y-3 border-t border-gray-100 pt-3">
             <p className="text-xs text-gray-500">
-              Pesquise por nome do modelo, marca ou tipo. Marque os itens e clique em adicionar; modelos já
-              listados abaixo não são duplicados.
+              Pesquise por nome, marca ou tipo. À direita de cada modelo aparecem os anos cadastrados.
+              Ao adicionar, todos esses anos são vinculados; ajuste na lista abaixo se precisar.
             </p>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
               <div className="min-w-0 flex-1">
@@ -291,33 +386,31 @@ export function ProductCompatibilidadeFieldset({
                     const marcado = pickerChecked.has(m.id);
                     return (
                       <li key={`pick-${m.id}`}>
-                        <label
-                          className={`flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 text-sm ${
-                            jaNaLista ? "text-gray-400" : "hover:bg-white"
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            className="mt-0.5 shrink-0 rounded border-gray-300"
-                            checked={marcado}
-                            disabled={jaNaLista}
-                            onChange={() => togglePickerId(m.id)}
-                          />
-                          <span>
-                            <span className="font-medium text-gray-900">{m.marca_nome}</span>
-                            <span className="text-gray-600"> — {m.nome}</span>
-                            <span className="text-gray-500">
-                              {" "}
-                              · {TIPO_VEICULO_MODELO_LABELS[m.tipo_veiculo]}
+                        <div className={`flex items-start gap-2 rounded-md px-2 py-1.5 text-sm ${
+                          jaNaLista ? "text-gray-400" : "hover:bg-white"
+                        }`}>
+                          <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-2">
+                            <input
+                              type="checkbox"
+                              className="mt-0.5 shrink-0 rounded border-gray-300"
+                              checked={marcado}
+                              disabled={jaNaLista}
+                              onChange={() => togglePickerId(m.id)}
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className="font-medium text-gray-900">{m.marca_nome}</span>
+                              <span className="text-gray-600"> — {m.nome}</span>
+                              <span className="text-gray-500">
+                                {" "}
+                                · {TIPO_VEICULO_MODELO_LABELS[m.tipo_veiculo]}
+                              </span>
+                              {jaNaLista && (
+                                <span className="ml-1 text-xs text-gray-500">— já na lista</span>
+                              )}
                             </span>
-                            {m.anos_referencia.length === 0 && (
-                              <span className="text-amber-700"> (sem anos cadastrados)</span>
-                            )}
-                            {jaNaLista && (
-                              <span className="ml-1 text-xs text-gray-500">— já na lista</span>
-                            )}
-                          </span>
-                        </label>
+                          </label>
+                          <AnosLateralLista anos={m.anos_referencia} />
+                        </div>
                       </li>
                     );
                   })}
@@ -348,16 +441,11 @@ export function ProductCompatibilidadeFieldset({
       <ul className="flex flex-col gap-4">
         {rows.map((row, index) => {
           const modelo = row.modelo_id ? modelosById.get(row.modelo_id) : undefined;
-          const anos = modelo?.anos_referencia ?? [];
-          const semAnos = Boolean(row.modelo_id && anos.length === 0);
-          const inicioBase = inicioChoices(anos);
-          const iniNum = Number.parseInt(row.ano_inicio, 10);
-          const fimBase =
-            row.ano_inicio !== "" && !Number.isNaN(iniNum)
-              ? fimChoicesParaInicio(anos, iniNum)
-              : [];
-          const inicioOpts = withSelectedValue(inicioBase, row.ano_inicio);
-          const fimOpts = withSelectedValue(fimBase, row.ano_fim);
+          const anosCatalog = modelo?.anos_referencia ?? [];
+          const semAnos = Boolean(row.modelo_id && anosCatalog.length === 0);
+          const anosSel = row.anos_selecionados ?? [];
+          const selecionadosSet = new Set(anosSel);
+          const nenhumAnoMarcado = row.modelo_id && anosSel.length === 0;
 
           return (
             <li
@@ -387,7 +475,12 @@ export function ProductCompatibilidadeFieldset({
                     value={row.modelo_id}
                     onChange={(e) => {
                       const modelo_id = e.target.value;
-                      patchRow(row.key, { modelo_id, ano_inicio: "", ano_fim: "" });
+                      patchRow(row.key, {
+                        modelo_id,
+                        anos_selecionados: modelo_id
+                          ? [...todosAnosDoModelo(modelosById, modelo_id)]
+                          : [],
+                      });
                     }}
                   >
                     <option value="">— Nenhum —</option>
@@ -402,66 +495,25 @@ export function ProductCompatibilidadeFieldset({
                 {semAnos && (
                   <p className="text-xs text-amber-800">
                     Este modelo não tem anos de referência. Cadastre-os em{" "}
-                    <Link href="/admin/marcas-e-modelos" className="font-medium underline hover:no-underline">
+                    <Link
+                      href="/admin/marcas-e-modelos"
+                      className="font-medium underline hover:no-underline"
+                    >
                       Marcas e modelos
                     </Link>{" "}
                     antes de vincular aqui.
                   </p>
                 )}
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-medium text-gray-700" htmlFor={`ini-${row.key}`}>
-                      Ano inicial
-                    </label>
-                    <select
-                      id={`ini-${row.key}`}
-                      className={fieldClass}
-                      disabled={!row.modelo_id || anos.length === 0}
-                      value={row.ano_inicio}
-                      onChange={(e) => {
-                        const ano_inicio = e.target.value;
-                        const nextIni = Number.parseInt(ano_inicio, 10);
-                        let ano_fim = row.ano_fim;
-                        if (ano_inicio !== "" && !Number.isNaN(nextIni)) {
-                          const fims = fimChoicesParaInicio(anos, nextIni);
-                          const f = Number.parseInt(ano_fim, 10);
-                          if (ano_fim === "" || Number.isNaN(f) || !fims.includes(f)) {
-                            ano_fim = "";
-                          }
-                        } else {
-                          ano_fim = "";
-                        }
-                        patchRow(row.key, { ano_inicio, ano_fim });
-                      }}
-                    >
-                      <option value="">— Ano —</option>
-                      {inicioOpts.map((y) => (
-                        <option key={y} value={String(y)}>
-                          {y}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-sm font-medium text-gray-700" htmlFor={`fim-${row.key}`}>
-                      Ano final
-                    </label>
-                    <select
-                      id={`fim-${row.key}`}
-                      className={fieldClass}
-                      disabled={!row.modelo_id || anos.length === 0 || row.ano_inicio === ""}
-                      value={row.ano_fim}
-                      onChange={(e) => patchRow(row.key, { ano_fim: e.target.value })}
-                    >
-                      <option value="">— Ano —</option>
-                      {fimOpts.map((y) => (
-                        <option key={y} value={String(y)}>
-                          {y}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                {nenhumAnoMarcado && !semAnos && (
+                  <p className="text-xs text-amber-800">Selecione ao menos um ano para este modelo.</p>
+                )}
+                {row.modelo_id && anosCatalog.length > 0 && (
+                  <AnosCheckboxGrid
+                    anosCatalog={anosCatalog}
+                    selecionados={selecionadosSet}
+                    onChange={(anos_selecionados) => patchRow(row.key, { anos_selecionados })}
+                  />
+                )}
               </div>
             </li>
           );

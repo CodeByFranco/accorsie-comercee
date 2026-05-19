@@ -1,7 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { addModeloAno, removeModeloAno, type ModeloAnoState } from "@/features/compatibilidade/services/modeloActions";
+import { useActionState, useEffect, useState, useTransition } from "react";
+import {
+  addModeloAno,
+  removeModeloAno,
+  type ModeloAnoState,
+} from "@/features/compatibilidade/services/modeloActions";
 
 const fieldClass =
   "rounded-md border border-gray-200 bg-white px-2 py-1 text-xs text-gray-900 outline-none transition focus:border-admin-accent focus:ring-2 focus:ring-[#1d63ed]/20";
@@ -13,12 +17,30 @@ type Modo = "unico" | "intervalo";
 export function ModeloAnosCell({
   modeloId,
   anos,
+  onAnosMutated,
 }: {
   modeloId: string;
   anos: { id: string; ano: number }[];
+  onAnosMutated?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(addModeloAno, initialState);
   const [modo, setModo] = useState<Modo>("unico");
+  const [removePending, startRemoveTransition] = useTransition();
+
+  useEffect(() => {
+    if (state?.ok === true) {
+      onAnosMutated?.();
+    }
+  }, [state, onAnosMutated]);
+
+  function handleRemoveAno(anoRefId: string) {
+    startRemoveTransition(async () => {
+      const fd = new FormData();
+      fd.set("id", anoRefId);
+      await removeModeloAno(fd);
+      onAnosMutated?.();
+    });
+  }
 
   return (
     <div className="max-w-[20rem] space-y-1.5">
@@ -40,17 +62,16 @@ export function ModeloAnosCell({
               className="inline-flex items-center gap-0.5 rounded-full border border-gray-200 bg-gray-50 px-1.5 py-px text-[11px] font-medium text-gray-800"
             >
               <span>{row.ano}</span>
-              <form action={removeModeloAno} className="inline leading-none">
-                <input type="hidden" name="id" value={row.id} />
-                <button
-                  type="submit"
-                  className="ml-0.5 rounded p-0.5 text-gray-500 hover:bg-gray-200 hover:text-gray-800"
-                  aria-label={`Remover ano ${row.ano}`}
-                  title="Remover"
-                >
-                  ×
-                </button>
-              </form>
+              <button
+                type="button"
+                disabled={removePending || pending}
+                onClick={() => handleRemoveAno(row.id)}
+                className="ml-0.5 rounded p-0.5 text-gray-500 hover:bg-gray-200 hover:text-gray-800 disabled:opacity-50"
+                aria-label={`Remover ano ${row.ano}`}
+                title="Remover"
+              >
+                ×
+              </button>
             </li>
           ))}
         </ul>

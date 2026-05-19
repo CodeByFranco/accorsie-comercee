@@ -40,14 +40,14 @@ export async function assertCompatUsaAnosCadastrados(
     if (!set || set.size === 0) {
       return {
         ok: false,
-        message: `Compatibilidade (linha ${i + 1}): cadastre anos de referência para este modelo em «Marcas e modelos» antes de vincular ao produto.`,
+        message: `Compatibilidade: cadastre anos de referência para este modelo em «Marcas e modelos» antes de vincular ao produto.`,
       };
     }
     for (let y = r.ano_inicio; y <= r.ano_fim; y++) {
       if (!set.has(y)) {
         return {
           ok: false,
-          message: `Compatibilidade (linha ${i + 1}): todos os anos entre ${r.ano_inicio} e ${r.ano_fim} precisam estar cadastrados como referência desse modelo.`,
+          message: `Compatibilidade: o ano ${y} precisa estar cadastrado como referência desse modelo em «Marcas e modelos».`,
         };
       }
     }

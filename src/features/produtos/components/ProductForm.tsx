@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useActionState, useState, type FormEvent } from "react";
 import {
   ProductCompatibilidadeFieldset,
-  type CompatRowState,
   type ModeloOption,
 } from "@/features/produtos/components/ProductCompatibilidadeFieldset";
 import { ProductDimensoesFieldset } from "@/features/produtos/components/ProductDimensoesFieldset";
@@ -47,7 +46,7 @@ type ProductFormInitialValues = {
   fotos?: Array<{ foto: string; is_principal: boolean; ordem: number }>;
   em_destaque?: boolean;
   categoria_ids?: string[];
-  compat_rows?: Array<Pick<CompatRowState, "modelo_id" | "ano_inicio" | "ano_fim">>;
+  compat_rows?: Array<{ modelo_id: string; ano_inicio: string; ano_fim: string }>;
   compat_todos_modelos?: boolean;
   relacionado_ids?: string[];
   prod_comprimento_cm?: number | null;

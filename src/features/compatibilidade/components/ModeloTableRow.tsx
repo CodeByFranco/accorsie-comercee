@@ -6,7 +6,7 @@ import {
   deleteModelo,
   updateModelo,
 } from "@/features/compatibilidade/services/modeloActions";
-import { ModeloAnosCell } from "@/features/compatibilidade/components/ModeloAnosCell";
+import { ModeloAnosExpandable } from "@/features/compatibilidade/components/ModeloAnosExpandable";
 import type { MarcaOption } from "@/features/compatibilidade/components/ModeloForm";
 import {
   TIPO_VEICULO_MODELO_LABELS,
@@ -27,8 +27,6 @@ export function ModeloTableRow({
   nome,
   tipoVeiculo,
   marcaNome,
-  anos,
-  modeloAnosError,
   marcas,
   bulkCheckbox,
 }: {
@@ -37,8 +35,6 @@ export function ModeloTableRow({
   nome: string;
   tipoVeiculo: string | null;
   marcaNome: string;
-  anos: { id: string; ano: number }[];
-  modeloAnosError: boolean;
   marcas: MarcaOption[];
   bulkCheckbox?: { checked: boolean; onChange: (checked: boolean) => void };
 }) {
@@ -194,11 +190,7 @@ export function ModeloTableRow({
           )}
         </td>
         <td className="px-4 py-2">
-          {!modeloAnosError ? (
-            <ModeloAnosCell modeloId={modeloId} anos={anos} />
-          ) : (
-            <span className="text-xs text-gray-400">—</span>
-          )}
+          <ModeloAnosExpandable modeloId={modeloId} modeloAnosError={false} />
         </td>
         <td className="w-[1%] whitespace-nowrap px-3 py-2">
           <div className="flex justify-end gap-0.5">
