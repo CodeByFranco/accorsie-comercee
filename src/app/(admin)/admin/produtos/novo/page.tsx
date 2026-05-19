@@ -18,6 +18,7 @@ export default async function NovoProdutoPage({
     produtosRelacionadosOpcoes,
     configError,
     loadError,
+    modeloAnosLoadError,
     categoriasLoadError,
     embalagensLoadError,
   } = await getProductFormOptions();
@@ -157,6 +158,16 @@ export default async function NovoProdutoPage({
           role="alert"
         >
           Não foi possível carregar modelos: {loadError}
+        </div>
+      )}
+
+      {modeloAnosLoadError && !configError && !loadError && (
+        <div
+          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-sm"
+          role="alert"
+        >
+          Anos de referência dos modelos não carregados ({modeloAnosLoadError}). Modelos podem aparecer sem
+          anos na compatibilidade; recarregue a página ou confira «Marcas e modelos».
         </div>
       )}
 

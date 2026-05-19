@@ -1,10 +1,14 @@
-import { normalizeTipoVeiculoModeloFromDb } from "@/features/compatibilidade/constants/tipoVeiculoModelo";
+import { fetchAllModeloAnosPaginated } from "@/features/compatibilidade/services/fetchAllModeloAnosPaginated";
 import type { CategoriaOption } from "@/features/produtos/components/ProductCategoriasFieldset";
 import type { EmbalagemOption } from "@/features/produtos/components/ProductEmbalagemFieldset";
 import type {
   ModeloOption,
   ProdutoRelacionadoOption,
 } from "@/features/produtos/components/ProductForm";
+import {
+  mapModelosToProductOptions,
+  type ModeloDbRow,
+} from "@/features/produtos/services/mapModelosToProductOptions";
 import { createClient } from "@/services/supabase/server";
 
 export type ProductFormOptionsResult = {
@@ -14,22 +18,10 @@ export type ProductFormOptionsResult = {
   produtosRelacionadosOpcoes: ProdutoRelacionadoOption[];
   configError: string | null;
   loadError: string | null;
+  modeloAnosLoadError: string | null;
   categoriasLoadError: string | null;
   embalagensLoadError: string | null;
 };
-
-function marcaNomeFromRow(marcas: unknown): string {
-  if (marcas == null) return "?";
-  const row = Array.isArray(marcas) ? marcas[0] : marcas;
-  if (row && typeof row === "object" && "nome" in row) {
-    return String((row as { nome: string }).nome);
-  }
-  return "?";
-}
-
-function sortedUniqueInts(nums: number[]): number[] {
-  return [...new Set(nums)].sort((a, b) => a - b);
-}
 
 export async function getProductFormOptions(): Promise<ProductFormOptionsResult> {
   let modelos: ModeloOption[] = [];
@@ -38,63 +30,49 @@ export async function getProductFormOptions(): Promise<ProductFormOptionsResult>
   let produtosRelacionadosOpcoes: ProdutoRelacionadoOption[] = [];
   let configError: string | null = null;
   let loadError: string | null = null;
+  let modeloAnosLoadError: string | null = null;
   let categoriasLoadError: string | null = null;
   let embalagensLoadError: string | null = null;
 
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("modelos")
-      .select("id, nome, tipo_veiculo, marcas ( nome )")
-      .order("nome");
 
-    if (error) {
-      loadError = error.message;
-    } else if (data) {
-      const { data: anosData, error: anosError } = await supabase
-        .from("modelo_anos")
-        .select("modelo_id, ano");
+    const [modelosRes, anosResult, catRes, embRes, relProdRes] = await Promise.all([
+      supabase
+        .from("modelos")
+        .select("id, nome, tipo_veiculo, marcas ( nome )")
+        .order("nome"),
+      fetchAllModeloAnosPaginated(supabase),
+      supabase.from("categorias").select("id, nome, icone").order("nome"),
+      supabase
+        .from("embalagens")
+        .select("id, nome, comprimento_cm, largura_cm, altura_cm, peso_embalagem_kg")
+        .order("nome"),
+      supabase.from("produtos").select("id, titulo, cod_produto").order("titulo"),
+    ]);
 
-      const anosByModeloId = new Map<string, number[]>();
-      if (!anosError && anosData) {
-        for (const ar of anosData as { modelo_id: string; ano: number }[]) {
-          const list = anosByModeloId.get(ar.modelo_id) ?? [];
-          list.push(Number(ar.ano));
-          anosByModeloId.set(ar.modelo_id, list);
-        }
+    if (modelosRes.error) {
+      loadError = modelosRes.error.message;
+    } else if (modelosRes.data) {
+      if (anosResult.error) {
+        modeloAnosLoadError = anosResult.error;
       }
-
-      modelos = data.map((row) => ({
-        id: row.id,
-        nome: row.nome,
-        marca_nome: marcaNomeFromRow(row.marcas),
-        tipo_veiculo: normalizeTipoVeiculoModeloFromDb(
-          (row as { tipo_veiculo?: string | null }).tipo_veiculo
-        ),
-        anos_referencia: sortedUniqueInts(anosByModeloId.get(row.id) ?? []),
-      }));
+      modelos = mapModelosToProductOptions(
+        modelosRes.data as ModeloDbRow[],
+        anosResult.anosByModeloId
+      );
     }
 
-    const { data: catData, error: catError } = await supabase
-      .from("categorias")
-      .select("id, nome, icone")
-      .order("nome");
-
-    if (catError) {
-      categoriasLoadError = catError.message;
-    } else if (catData) {
-      categorias = catData as CategoriaOption[];
+    if (catRes.error) {
+      categoriasLoadError = catRes.error.message;
+    } else if (catRes.data) {
+      categorias = catRes.data as CategoriaOption[];
     }
 
-    const { data: embData, error: embError } = await supabase
-      .from("embalagens")
-      .select("id, nome, comprimento_cm, largura_cm, altura_cm, peso_embalagem_kg")
-      .order("nome");
-
-    if (embError) {
-      embalagensLoadError = embError.message;
-    } else if (embData) {
-      embalagens = embData.map((row) => ({
+    if (embRes.error) {
+      embalagensLoadError = embRes.error.message;
+    } else if (embRes.data) {
+      embalagens = embRes.data.map((row) => ({
         id: row.id,
         nome: row.nome,
         comprimento_cm: Number(row.comprimento_cm),
@@ -104,12 +82,8 @@ export async function getProductFormOptions(): Promise<ProductFormOptionsResult>
       }));
     }
 
-    const { data: relProdData, error: relProdError } = await supabase
-      .from("produtos")
-      .select("id, titulo, cod_produto")
-      .order("titulo");
-    if (!relProdError && relProdData) {
-      produtosRelacionadosOpcoes = relProdData as ProdutoRelacionadoOption[];
+    if (!relProdRes.error && relProdRes.data) {
+      produtosRelacionadosOpcoes = relProdRes.data as ProdutoRelacionadoOption[];
     }
   } catch (e) {
     configError = e instanceof Error ? e.message : "Erro ao carregar configuração.";
@@ -122,6 +96,7 @@ export async function getProductFormOptions(): Promise<ProductFormOptionsResult>
     produtosRelacionadosOpcoes,
     configError,
     loadError,
+    modeloAnosLoadError,
     categoriasLoadError,
     embalagensLoadError,
   };

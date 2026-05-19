@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
+import { fetchAllModeloAnosPaginated } from "@/features/compatibilidade/services/fetchAllModeloAnosPaginated";
 import { createClient } from "@/services/supabase/server";
-import { normalizeTipoVeiculoModeloFromDb } from "@/features/compatibilidade/constants/tipoVeiculoModelo";
 import type { CategoriaOption } from "@/features/produtos/components/ProductCategoriasFieldset";
 import type { EmbalagemOption } from "@/features/produtos/components/ProductEmbalagemFieldset";
 import {
@@ -9,21 +9,13 @@ import {
   type ProductEditValues,
 } from "@/features/produtos/components/ProductEditForm";
 import type { ProdutoRelacionadoOption } from "@/features/produtos/components/ProductRelacionadosFieldset";
+import {
+  extrasPorModeloFromCompatRows,
+  mapModelosToProductOptions,
+  type ModeloDbRow,
+} from "@/features/produtos/services/mapModelosToProductOptions";
 
 type PageProps = { params: Promise<{ id: string }> };
-
-function marcaNomeFromRow(marcas: unknown): string {
-  if (marcas == null) return "?";
-  const row = Array.isArray(marcas) ? marcas[0] : marcas;
-  if (row && typeof row === "object" && "nome" in row) {
-    return String((row as { nome: string }).nome);
-  }
-  return "?";
-}
-
-function sortedUniqueInts(nums: number[]): number[] {
-  return [...new Set(nums)].sort((a, b) => a - b);
-}
 
 export async function generateMetadata({ params }: PageProps) {
   const { id } = await params;
@@ -50,51 +42,73 @@ export default async function EditProdutoPage({ params }: PageProps) {
   let configError: string | null = null;
   let produtoLoadError: string | null = null;
   let modelosLoadError: string | null = null;
+  let modeloAnosLoadError: string | null = null;
   let categoriasLoadError: string | null = null;
   let embalagensLoadError: string | null = null;
 
   try {
     const supabase = await createClient();
 
-    const { data: produto, error: prodError } = await supabase
-      .from("produtos")
-      .select(
-        "id, titulo, cod_produto, descricao, valor, foto, quantidade_estoque, em_destaque, compat_todos_modelos, prod_comprimento_cm, prod_largura_cm, prod_altura_cm, prod_peso_kg, embalagem_id, desconto_pix_percent, desconto_cartao_percent"
-      )
-      .eq("id", id)
-      .maybeSingle();
+    const [
+      prodResult,
+      compResult,
+      fotosResult,
+      catLinkResult,
+      relLinkResult,
+      embResult,
+      modeloResult,
+      anosResult,
+      catResult,
+      relProdResult,
+    ] = await Promise.all([
+      supabase
+        .from("produtos")
+        .select(
+          "id, titulo, cod_produto, descricao, valor, foto, quantidade_estoque, em_destaque, compat_todos_modelos, prod_comprimento_cm, prod_largura_cm, prod_altura_cm, prod_peso_kg, embalagem_id, desconto_pix_percent, desconto_cartao_percent"
+        )
+        .eq("id", id)
+        .maybeSingle(),
+      supabase
+        .from("produto_compatibilidades")
+        .select("modelo_id, ano_inicio, ano_fim")
+        .eq("produto_id", id)
+        .order("ano_inicio"),
+      supabase
+        .from("produto_fotos")
+        .select("foto, is_principal, ordem")
+        .eq("produto_id", id)
+        .order("ordem", { ascending: true }),
+      supabase.from("produto_categorias").select("categoria_id").eq("produto_id", id),
+      supabase.from("produto_relacionados").select("relacionado_id").eq("produto_id", id),
+      supabase
+        .from("embalagens")
+        .select("id, nome, comprimento_cm, largura_cm, altura_cm, peso_embalagem_kg")
+        .order("nome"),
+      supabase
+        .from("modelos")
+        .select("id, nome, tipo_veiculo, marcas ( nome )")
+        .order("nome"),
+      fetchAllModeloAnosPaginated(supabase),
+      supabase.from("categorias").select("id, nome, icone").order("nome"),
+      supabase.from("produtos").select("id, titulo, cod_produto").neq("id", id).order("titulo"),
+    ]);
+
+    const { data: produto, error: prodError } = prodResult;
 
     if (prodError) {
       produtoLoadError = prodError.message;
     } else if (!produto) {
       notFound();
     } else {
-      const [{ data: compRows }, { data: fotosRows }] = await Promise.all([
-        supabase
-          .from("produto_compatibilidades")
-          .select("modelo_id, ano_inicio, ano_fim")
-          .eq("produto_id", id)
-          .order("ano_inicio"),
-        supabase
-          .from("produto_fotos")
-          .select("foto, is_principal, ordem")
-          .eq("produto_id", id)
-          .order("ordem", { ascending: true }),
-      ]);
-
-      const { data: catLinkRows, error: catLinkErr } = await supabase
-        .from("produto_categorias")
-        .select("categoria_id")
-        .eq("produto_id", id);
+      const compRows = compResult.data;
+      const fotosRows = fotosResult.data;
+      const catLinkRows = catLinkResult.data;
+      const catLinkErr = catLinkResult.error;
+      const relLinkRows = relLinkResult.data;
 
       if (catLinkErr) {
         categoriasLoadError = catLinkErr.message;
       }
-
-      const { data: relLinkRows } = await supabase
-        .from("produto_relacionados")
-        .select("relacionado_id")
-        .eq("produto_id", id);
 
       const p = produto as typeof produto & {
         prod_comprimento_cm?: number | string | null;
@@ -141,15 +155,10 @@ export default async function EditProdutoPage({ params }: PageProps) {
       };
     }
 
-    const { data: embData, error: embError } = await supabase
-      .from("embalagens")
-      .select("id, nome, comprimento_cm, largura_cm, altura_cm, peso_embalagem_kg")
-      .order("nome");
-
-    if (embError) {
-      embalagensLoadError = embError.message;
-    } else if (embData) {
-      embalagens = embData.map((row) => ({
+    if (embResult.error) {
+      embalagensLoadError = embResult.error.message;
+    } else if (embResult.data) {
+      embalagens = embResult.data.map((row) => ({
         id: row.id,
         nome: row.nome,
         comprimento_cm: Number(row.comprimento_cm),
@@ -159,72 +168,30 @@ export default async function EditProdutoPage({ params }: PageProps) {
       }));
     }
 
-    const { data: modeloRows, error: modeloError } = await supabase
-      .from("modelos")
-      .select("id, nome, tipo_veiculo, marcas ( nome )")
-      .order("nome");
-
-    if (modeloError) {
-      modelosLoadError = modeloError.message;
-    } else if (modeloRows) {
-      const { data: anosData } = await supabase.from("modelo_anos").select("modelo_id, ano");
-
-      const anosByModeloId = new Map<string, number[]>();
-      if (anosData) {
-        for (const ar of anosData as { modelo_id: string; ano: number }[]) {
-          const list = anosByModeloId.get(ar.modelo_id) ?? [];
-          list.push(Number(ar.ano));
-          anosByModeloId.set(ar.modelo_id, list);
-        }
+    if (modeloResult.error) {
+      modelosLoadError = modeloResult.error.message;
+    } else if (modeloResult.data) {
+      if (anosResult.error) {
+        modeloAnosLoadError = anosResult.error;
       }
-
-      const extrasPorModelo = new Map<string, Set<number>>();
-      if (productValues) {
-        for (const c of productValues.compat_rows) {
-          if (!c.modelo_id) continue;
-          const s = extrasPorModelo.get(c.modelo_id) ?? new Set<number>();
-          const ai = Number.parseInt(c.ano_inicio, 10);
-          const af = Number.parseInt(c.ano_fim, 10);
-          if (!Number.isNaN(ai)) s.add(ai);
-          if (!Number.isNaN(af)) s.add(af);
-          extrasPorModelo.set(c.modelo_id, s);
-        }
-      }
-
-      modelos = modeloRows.map((row) => {
-        const base = sortedUniqueInts(anosByModeloId.get(row.id) ?? []);
-        const ex = extrasPorModelo.get(row.id);
-        const merged = ex ? sortedUniqueInts([...base, ...ex]) : base;
-        return {
-          id: row.id,
-          nome: row.nome,
-          marca_nome: marcaNomeFromRow(row.marcas),
-          tipo_veiculo: normalizeTipoVeiculoModeloFromDb(
-            (row as { tipo_veiculo?: string | null }).tipo_veiculo
-          ),
-          anos_referencia: merged,
-        };
-      });
+      const extras = productValues
+        ? extrasPorModeloFromCompatRows(productValues.compat_rows)
+        : undefined;
+      modelos = mapModelosToProductOptions(
+        modeloResult.data as ModeloDbRow[],
+        anosResult.anosByModeloId,
+        extras
+      );
     }
 
-    const { data: catRows, error: catErr } = await supabase
-      .from("categorias")
-      .select("id, nome, icone")
-      .order("nome");
-
-    if (catErr) {
-      if (!categoriasLoadError) categoriasLoadError = catErr.message;
-    } else if (catRows) {
-      categorias = catRows as CategoriaOption[];
+    if (catResult.error) {
+      if (!categoriasLoadError) categoriasLoadError = catResult.error.message;
+    } else if (catResult.data) {
+      categorias = catResult.data as CategoriaOption[];
     }
 
-    const { data: relProdList } = await supabase
-      .from("produtos")
-      .select("id, titulo, cod_produto")
-      .neq("id", id)
-      .order("titulo");
-    if (relProdList) {
-      produtosRelacionadosOpcoes = relProdList as ProdutoRelacionadoOption[];
+    if (relProdResult.data) {
+      produtosRelacionadosOpcoes = relProdResult.data as ProdutoRelacionadoOption[];
     }
   } catch (e) {
     configError = e instanceof Error ? e.message : "Erro ao carregar configuração.";
@@ -257,6 +224,16 @@ export default async function EditProdutoPage({ params }: PageProps) {
           role="alert"
         >
           Modelos não carregados ({modelosLoadError}). Você ainda pode editar os demais campos.
+        </div>
+      )}
+
+      {modeloAnosLoadError && !configError && productValues && !modelosLoadError && (
+        <div
+          className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-sm"
+          role="alert"
+        >
+          Anos de referência dos modelos não carregados ({modeloAnosLoadError}). A compatibilidade pode
+          aparecer incompleta até recarregar a página.
         </div>
       )}
 

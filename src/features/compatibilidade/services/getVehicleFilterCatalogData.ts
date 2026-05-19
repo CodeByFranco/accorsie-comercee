@@ -1,5 +1,6 @@
 import { normalizeTipoVeiculoModeloFromDb } from "@/features/compatibilidade/constants/tipoVeiculoModelo";
 import type { TipoVeiculoModelo } from "@/features/compatibilidade/constants/tipoVeiculoModelo";
+import { fetchAllModeloAnosPaginated } from "@/features/compatibilidade/services/fetchAllModeloAnosPaginated";
 import { createClient } from "@/services/supabase/server";
 
 export type VehicleFilterMarca = { id: string; nome: string };
@@ -24,16 +25,16 @@ export async function getVehicleFilterCatalogData(): Promise<VehicleFilterCatalo
   try {
     const supabase = await createClient();
 
-    const [marcasRes, modelosRes, anosRes] = await Promise.all([
+    const [marcasRes, modelosRes, anosResult] = await Promise.all([
       supabase.from("marcas").select("id, nome").order("nome"),
       supabase.from("modelos").select("id, nome, marca_id, tipo_veiculo").order("nome"),
-      supabase.from("modelo_anos").select("modelo_id, ano"),
+      fetchAllModeloAnosPaginated(supabase),
     ]);
 
     if (process.env.NODE_ENV === "development") {
       if (marcasRes.error) console.error("[getVehicleFilterCatalogData] marcas", marcasRes.error);
       if (modelosRes.error) console.error("[getVehicleFilterCatalogData] modelos", modelosRes.error);
-      if (anosRes.error) console.error("[getVehicleFilterCatalogData] modelo_anos", anosRes.error);
+      if (anosResult.error) console.error("[getVehicleFilterCatalogData] modelo_anos", anosResult.error);
     }
 
     const marcas = (marcasRes.data ?? []) as VehicleFilterMarca[];
@@ -46,15 +47,8 @@ export async function getVehicleFilterCatalogData(): Promise<VehicleFilterCatalo
     }));
 
     const anosByModeloId: VehicleFilterAnosByModelo = {};
-    for (const row of anosRes.data ?? []) {
-      const modeloId = row.modelo_id as string;
-      const ano = Number(row.ano);
-      if (!modeloId || !Number.isFinite(ano)) continue;
-      if (!anosByModeloId[modeloId]) anosByModeloId[modeloId] = [];
-      anosByModeloId[modeloId].push(ano);
-    }
-    for (const id of Object.keys(anosByModeloId)) {
-      anosByModeloId[id] = [...new Set(anosByModeloId[id])].sort((a, b) => b - a);
+    for (const [modeloId, anos] of anosResult.anosByModeloId) {
+      anosByModeloId[modeloId] = [...anos].sort((a, b) => b - a);
     }
 
     return { marcas, modelos, anosByModeloId };

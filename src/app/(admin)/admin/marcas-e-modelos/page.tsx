@@ -31,12 +31,6 @@ type ModeloRow = {
   marcas: unknown;
 };
 
-type ModeloAnoRow = {
-  id: string;
-  modelo_id: string;
-  ano: number;
-};
-
 export default async function MarcasEModelosPage({
   searchParams,
 }: {
@@ -52,61 +46,28 @@ export default async function MarcasEModelosPage({
   let configError: string | null = null;
   let marcasError: string | null = null;
   let modelosError: string | null = null;
-  let modeloAnosError: string | null = null;
-  const anosByModelo = new Map<string, { id: string; ano: number }[]>();
-
   try {
     const supabase = await createClient();
 
-    const { data: marcasData, error: marcasErr } = await supabase
-      .from("marcas")
-      .select("id, nome")
-      .order("nome");
+    const [marcasRes, modelosRes] = await Promise.all([
+      supabase.from("marcas").select("id, nome").order("nome"),
+      supabase
+        .from("modelos")
+        .select("id, marca_id, nome, tipo_veiculo, marcas ( nome )")
+        .order("nome"),
+    ]);
 
-    if (marcasErr) {
-      marcasError = marcasErr.message;
-    } else if (marcasData) {
-      marcas = marcasData as MarcaListRow[];
-      marcasForSelect = marcasData as MarcaOption[];
+    if (marcasRes.error) {
+      marcasError = marcasRes.error.message;
+    } else if (marcasRes.data) {
+      marcas = marcasRes.data as MarcaListRow[];
+      marcasForSelect = marcasRes.data as MarcaOption[];
     }
 
-    const { data: modelosData, error: modelosErr } = await supabase
-      .from("modelos")
-      .select("id, marca_id, nome, tipo_veiculo, marcas ( nome )")
-      .order("nome");
-
-    if (modelosErr) {
-      modelosError = modelosErr.message;
-    } else if (modelosData) {
-      modelos = modelosData as ModeloRow[];
-    }
-
-    // Pagina manualmente porque o PostgREST do Supabase limita a 1000 linhas por padrão e o catálogo
-    // de modelo_anos já passa de 1800 linhas (ver migration 20260429120000_backfill_modelo_anos_catalogo_seed.sql).
-    // Sem isso, alguns anos não aparecem na UI e o cadastro falha com "ano já cadastrado" por causa do UNIQUE.
-    const ANOS_PAGE_SIZE = 1000;
-    let anosOffset = 0;
-    while (true) {
-      const { data: anosData, error: anosErr } = await supabase
-        .from("modelo_anos")
-        .select("id, modelo_id, ano")
-        .order("ano", { ascending: true })
-        .range(anosOffset, anosOffset + ANOS_PAGE_SIZE - 1);
-
-      if (anosErr) {
-        modeloAnosError = anosErr.message;
-        break;
-      }
-
-      const rows = (anosData ?? []) as ModeloAnoRow[];
-      for (const row of rows) {
-        const list = anosByModelo.get(row.modelo_id) ?? [];
-        list.push({ id: row.id, ano: row.ano });
-        anosByModelo.set(row.modelo_id, list);
-      }
-
-      if (rows.length < ANOS_PAGE_SIZE) break;
-      anosOffset += ANOS_PAGE_SIZE;
+    if (modelosRes.error) {
+      modelosError = modelosRes.error.message;
+    } else if (modelosRes.data) {
+      modelos = modelosRes.data as ModeloRow[];
     }
   } catch (e) {
     configError = e instanceof Error ? e.message : "Erro ao carregar configuração.";
@@ -254,17 +215,9 @@ export default async function MarcasEModelosPage({
               <div className="border-b border-gray-100 px-4 py-2.5">
                 <h3 className="text-sm font-semibold text-gray-900">Modelos cadastrados</h3>
                 <p className="mt-0.5 text-xs text-gray-500">
-                  Use a busca para filtrar pelo nome; em cada linha, editar altera marca, nome e tipo. Anos de referência
-                  por modelo; a compatibilidade do produto usa ano inicial e final.
+                  Filtre por marca ou nome. Os anos de referência de cada modelo são carregados ao clicar em
+                  &quot;Gerenciar anos&quot; na linha.
                 </p>
-                {modeloAnosError && (
-                  <p className="mt-2 text-xs text-amber-800">
-                    Não foi possível carregar anos de referência ({modeloAnosError}). Se a tabela ainda não existe,
-                    rode o SQL em{" "}
-                    <code className="rounded bg-gray-100 px-1">supabase/migrations/20260409120000_modelo_anos.sql</code>
-                    .
-                  </p>
-                )}
               </div>
 
               {modelosError && (
@@ -290,8 +243,6 @@ export default async function MarcasEModelosPage({
                     nome: m.nome,
                     tipoVeiculo: m.tipo_veiculo,
                     marcaNome: marcaNomeFromRow(m.marcas),
-                    anos: anosByModelo.get(m.id) ?? [],
-                    modeloAnosError: Boolean(modeloAnosError),
                   }))}
                 />
               )}

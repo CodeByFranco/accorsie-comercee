@@ -12,8 +12,6 @@ export type ModeloListagemItem = {
   nome: string;
   tipoVeiculo: string | null;
   marcaNome: string;
-  anos: { id: string; ano: number }[];
-  modeloAnosError: boolean;
 };
 
 export function ModelosListagemTabela({
@@ -115,7 +113,7 @@ export function ModelosListagemTabela({
           </button>
         </div>
         <p className="text-[11px] text-gray-500">
-          Reflete só os modelos visíveis após o filtro por nome.
+          Reflete só os modelos visíveis após os filtros por marca e nome.
         </p>
       </div>
       <ConfirmDialog
@@ -177,8 +175,6 @@ export function ModelosListagemTabela({
                 nome={m.nome}
                 tipoVeiculo={m.tipoVeiculo}
                 marcaNome={m.marcaNome}
-                anos={m.anos}
-                modeloAnosError={m.modeloAnosError}
                 marcas={marcas}
                 bulkCheckbox={{
                   checked: selected.has(m.modeloId),

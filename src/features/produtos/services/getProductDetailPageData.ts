@@ -171,7 +171,7 @@ export async function getProductDetailPageData(productId: string): Promise<Produ
       .select("ano_inicio, ano_fim, modelos ( nome, marcas ( nome ) )")
       .eq("produto_id", productId)
       .order("ano_inicio")
-      .limit(12);
+      .limit(24);
 
     if (produtoRow.compat_todos_modelos) {
       produto.compatibilidades = ["Todos os modelos de veículo"];

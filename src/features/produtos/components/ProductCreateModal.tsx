@@ -46,7 +46,12 @@ export function ProductCreateModal({
             className="absolute inset-0 bg-black/50"
             onClick={() => setOpen(false)}
           />
-          <div className="relative z-10 w-full max-w-5xl overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl">
+          <div
+            className="relative z-10 w-full max-w-5xl overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
             <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 sm:px-6">
               <div>
                 <h3 className="text-base font-semibold text-gray-900">Novo produto</h3>
