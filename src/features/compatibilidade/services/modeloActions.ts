@@ -6,8 +6,49 @@ import { createClient } from "@/services/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { parseTipoVeiculoModelo } from "@/features/compatibilidade/constants/tipoVeiculoModelo";
+import type { ModeloListagemItem } from "@/features/compatibilidade/components/ModelosListagemTabela";
+import {
+  fetchModelosAdminPaginated,
+  marcaNomeFromModeloRow,
+} from "@/features/compatibilidade/services/fetchModelosAdminPaginated";
 
 export type CreateModeloState = { ok: false; message: string } | null;
+
+export type ListModelosAdminParams = {
+  marcaId?: string;
+  nome?: string;
+};
+
+export type ListModelosAdminResult =
+  | { ok: true; items: ModeloListagemItem[] }
+  | { ok: false; message: string };
+
+/** Lista modelos no admin com paginação completa (sem limite de 1000 por requisição). */
+export async function listModelosAdmin(
+  params: ListModelosAdminParams = {}
+): Promise<ListModelosAdminResult> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { rows, error } = await fetchModelosAdminPaginated(supabase, {
+    marcaId: params.marcaId,
+    nome: params.nome,
+  });
+
+  if (error) {
+    return { ok: false, message: error };
+  }
+
+  return {
+    ok: true,
+    items: rows.map((m) => ({
+      modeloId: m.id,
+      marcaId: m.marca_id,
+      nome: m.nome,
+      tipoVeiculo: m.tipo_veiculo,
+      marcaNome: marcaNomeFromModeloRow(m.marcas),
+    })),
+  };
+}
 
 /** Slug único entre os modelos da mesma marca. `excludeModeloId` ignora a própria linha ao editar. */
 async function allocateModeloSlug(

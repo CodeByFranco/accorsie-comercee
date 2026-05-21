@@ -4,31 +4,19 @@ import { MarcaForm } from "@/features/marcas/components/MarcaForm";
 import { MarcaRow } from "@/features/marcas/components/MarcaRow";
 import { ModeloForm, type MarcaOption } from "@/features/compatibilidade/components/ModeloForm";
 import { ModelosListagemComBusca } from "@/features/compatibilidade/components/ModelosListagemComBusca";
+import type { ModeloListagemItem } from "@/features/compatibilidade/components/ModelosListagemTabela";
+import {
+  fetchModelosAdminPaginated,
+  marcaNomeFromModeloRow,
+} from "@/features/compatibilidade/services/fetchModelosAdminPaginated";
 
 export const metadata = {
   title: "Marcas e modelos | Admin",
 };
 
-function marcaNomeFromRow(marcas: unknown): string {
-  if (marcas == null) return "?";
-  const row = Array.isArray(marcas) ? marcas[0] : marcas;
-  if (row && typeof row === "object" && "nome" in row) {
-    return String((row as { nome: string }).nome);
-  }
-  return "?";
-}
-
 type MarcaListRow = {
   id: string;
   nome: string;
-};
-
-type ModeloRow = {
-  id: string;
-  marca_id: string;
-  nome: string;
-  tipo_veiculo: string | null;
-  marcas: unknown;
 };
 
 export default async function MarcasEModelosPage({
@@ -42,19 +30,18 @@ export default async function MarcasEModelosPage({
 
   let marcas: MarcaListRow[] = [];
   let marcasForSelect: MarcaOption[] = [];
-  let modelos: ModeloRow[] = [];
+  let modelosItems: ModeloListagemItem[] = [];
+  let modelosCatalogTotal = 0;
   let configError: string | null = null;
   let marcasError: string | null = null;
   let modelosError: string | null = null;
   try {
     const supabase = await createClient();
 
-    const [marcasRes, modelosRes] = await Promise.all([
+    const [marcasRes, modelosResult, modelosCountRes] = await Promise.all([
       supabase.from("marcas").select("id, nome").order("nome"),
-      supabase
-        .from("modelos")
-        .select("id, marca_id, nome, tipo_veiculo, marcas ( nome )")
-        .order("nome"),
+      fetchModelosAdminPaginated(supabase),
+      supabase.from("modelos").select("id", { count: "exact", head: true }),
     ]);
 
     if (marcasRes.error) {
@@ -64,10 +51,22 @@ export default async function MarcasEModelosPage({
       marcasForSelect = marcasRes.data as MarcaOption[];
     }
 
-    if (modelosRes.error) {
-      modelosError = modelosRes.error.message;
-    } else if (modelosRes.data) {
-      modelos = modelosRes.data as ModeloRow[];
+    if (modelosResult.error) {
+      modelosError = modelosResult.error;
+    } else {
+      modelosItems = modelosResult.rows.map((m) => ({
+        modeloId: m.id,
+        marcaId: m.marca_id,
+        nome: m.nome,
+        tipoVeiculo: m.tipo_veiculo,
+        marcaNome: marcaNomeFromModeloRow(m.marcas),
+      }));
+    }
+
+    if (!modelosCountRes.error && modelosCountRes.count != null) {
+      modelosCatalogTotal = modelosCountRes.count;
+    } else {
+      modelosCatalogTotal = modelosItems.length;
     }
   } catch (e) {
     configError = e instanceof Error ? e.message : "Erro ao carregar configuração.";
@@ -215,7 +214,7 @@ export default async function MarcasEModelosPage({
               <div className="border-b border-gray-100 px-4 py-2.5">
                 <h3 className="text-sm font-semibold text-gray-900">Modelos cadastrados</h3>
                 <p className="mt-0.5 text-xs text-gray-500">
-                  Filtre por marca ou nome. Os anos de referência de cada modelo são carregados ao clicar em
+                  Busca e filtros consultam todo o catálogo no servidor. Anos de referência são carregados ao clicar em
                   &quot;Gerenciar anos&quot; na linha.
                 </p>
               </div>
@@ -224,7 +223,7 @@ export default async function MarcasEModelosPage({
                 <p className="px-4 py-4 text-xs text-red-700">Erro ao listar modelos: {modelosError}</p>
               )}
 
-              {!modelosError && modelos.length === 0 && (
+              {!modelosError && modelosCatalogTotal === 0 && (
                 <p className="px-4 py-8 text-center text-xs text-gray-500">
                   Nenhum modelo ainda. Cadastre o primeiro ao lado ou em{" "}
                   <Link href="/admin/produtos/novo" className="font-medium text-admin-accent hover:underline">
@@ -234,16 +233,11 @@ export default async function MarcasEModelosPage({
                 </p>
               )}
 
-              {!modelosError && modelos.length > 0 && (
+              {!modelosError && modelosCatalogTotal > 0 && (
                 <ModelosListagemComBusca
                   marcas={marcasForSelect}
-                  items={modelos.map((m) => ({
-                    modeloId: m.id,
-                    marcaId: m.marca_id,
-                    nome: m.nome,
-                    tipoVeiculo: m.tipo_veiculo,
-                    marcaNome: marcaNomeFromRow(m.marcas),
-                  }))}
+                  initialItems={modelosItems}
+                  catalogTotal={modelosCatalogTotal}
                 />
               )}
             </div>
