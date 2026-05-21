@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { fetchAllModeloAnosPaginated } from "@/features/compatibilidade/services/fetchAllModeloAnosPaginated";
+import { fetchModelosAdminPaginated } from "@/features/compatibilidade/services/fetchModelosAdminPaginated";
 import { createClient } from "@/services/supabase/server";
 import type { CategoriaOption } from "@/features/produtos/components/ProductCategoriasFieldset";
 import type { EmbalagemOption } from "@/features/produtos/components/ProductEmbalagemFieldset";
@@ -84,10 +85,7 @@ export default async function EditProdutoPage({ params }: PageProps) {
         .from("embalagens")
         .select("id, nome, comprimento_cm, largura_cm, altura_cm, peso_embalagem_kg")
         .order("nome"),
-      supabase
-        .from("modelos")
-        .select("id, nome, tipo_veiculo, marcas ( nome )")
-        .order("nome"),
+      fetchModelosAdminPaginated(supabase),
       fetchAllModeloAnosPaginated(supabase),
       supabase.from("categorias").select("id, nome, icone").order("nome"),
       supabase.from("produtos").select("id, titulo, cod_produto").neq("id", id).order("titulo"),
@@ -169,8 +167,8 @@ export default async function EditProdutoPage({ params }: PageProps) {
     }
 
     if (modeloResult.error) {
-      modelosLoadError = modeloResult.error.message;
-    } else if (modeloResult.data) {
+      modelosLoadError = modeloResult.error;
+    } else {
       if (anosResult.error) {
         modeloAnosLoadError = anosResult.error;
       }
@@ -178,7 +176,7 @@ export default async function EditProdutoPage({ params }: PageProps) {
         ? extrasPorModeloFromCompatRows(productValues.compat_rows)
         : undefined;
       modelos = mapModelosToProductOptions(
-        modeloResult.data as ModeloDbRow[],
+        modeloResult.rows as ModeloDbRow[],
         anosResult.anosByModeloId,
         extras
       );

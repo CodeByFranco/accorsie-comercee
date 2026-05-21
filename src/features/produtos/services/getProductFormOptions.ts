@@ -1,4 +1,5 @@
 import { fetchAllModeloAnosPaginated } from "@/features/compatibilidade/services/fetchAllModeloAnosPaginated";
+import { fetchModelosAdminPaginated } from "@/features/compatibilidade/services/fetchModelosAdminPaginated";
 import type { CategoriaOption } from "@/features/produtos/components/ProductCategoriasFieldset";
 import type { EmbalagemOption } from "@/features/produtos/components/ProductEmbalagemFieldset";
 import type {
@@ -37,11 +38,8 @@ export async function getProductFormOptions(): Promise<ProductFormOptionsResult>
   try {
     const supabase = await createClient();
 
-    const [modelosRes, anosResult, catRes, embRes, relProdRes] = await Promise.all([
-      supabase
-        .from("modelos")
-        .select("id, nome, tipo_veiculo, marcas ( nome )")
-        .order("nome"),
+    const [modelosResult, anosResult, catRes, embRes, relProdRes] = await Promise.all([
+      fetchModelosAdminPaginated(supabase),
       fetchAllModeloAnosPaginated(supabase),
       supabase.from("categorias").select("id, nome, icone").order("nome"),
       supabase
@@ -51,14 +49,14 @@ export async function getProductFormOptions(): Promise<ProductFormOptionsResult>
       supabase.from("produtos").select("id, titulo, cod_produto").order("titulo"),
     ]);
 
-    if (modelosRes.error) {
-      loadError = modelosRes.error.message;
-    } else if (modelosRes.data) {
+    if (modelosResult.error) {
+      loadError = modelosResult.error;
+    } else {
       if (anosResult.error) {
         modeloAnosLoadError = anosResult.error;
       }
       modelos = mapModelosToProductOptions(
-        modelosRes.data as ModeloDbRow[],
+        modelosResult.rows as ModeloDbRow[],
         anosResult.anosByModeloId
       );
     }
