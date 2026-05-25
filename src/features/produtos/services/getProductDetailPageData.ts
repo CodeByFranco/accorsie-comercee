@@ -1,6 +1,10 @@
 import { createClient } from "@/services/supabase/server";
 import { resolveProductImagePublicUrl } from "@/features/produtos/utils/resolveProductImagePublicUrl";
-import { clampPercent } from "@/features/produtos/utils/paymentDiscount";
+import {
+  mapProductSummaryRow,
+  PRODUCT_SUMMARY_SELECT,
+  type ProductSummaryRow,
+} from "@/features/produtos/utils/mapProductSummaryRow";
 import type { ProductSummary } from "@/types/product";
 
 type ProductDetail = ProductSummary & {
@@ -27,39 +31,14 @@ type ProdutoBaseRow = {
   compat_todos_modelos?: boolean | null;
 };
 
-type ProdutoSummaryRow = {
-  id: string;
-  titulo: string;
-  cod_produto: string;
-  valor: unknown;
-  foto: string | null;
-  quantidade_estoque: unknown;
-  desconto_pix_percent?: unknown;
-  desconto_cartao_percent?: unknown;
-};
-
 type ProdutoFotoRow = {
   foto: string | null;
   is_principal: boolean | null;
   ordem: number | null;
 };
 
-function toStock(raw: unknown): number {
-  const n = Number(raw);
-  return Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
-}
-
-function toSummary(row: ProdutoSummaryRow): ProductSummary {
-  return {
-    id: row.id,
-    titulo: row.titulo,
-    cod_produto: row.cod_produto,
-    valor: Number(row.valor),
-    imageUrl: resolveProductImagePublicUrl(row.foto),
-    quantidade_estoque: toStock(row.quantidade_estoque),
-    desconto_pix_percent: clampPercent(row.desconto_pix_percent),
-    desconto_cartao_percent: clampPercent(row.desconto_cartao_percent),
-  };
+function toSummary(row: ProductSummaryRow): ProductSummary {
+  return mapProductSummaryRow(row);
 }
 
 function compatibilityLabelFromRow(raw: unknown): string | null {
@@ -105,10 +84,10 @@ async function fetchSummariesInOrder(
   if (unique.length === 0) return [];
   const { data, error } = await supabase
     .from("produtos")
-    .select("id, titulo, cod_produto, valor, foto, quantidade_estoque, desconto_pix_percent, desconto_cartao_percent")
+    .select(PRODUCT_SUMMARY_SELECT)
     .in("id", unique);
   if (error || !data) return [];
-  const byId = new Map((data as ProdutoSummaryRow[]).map((row) => [row.id, toSummary(row)]));
+  const byId = new Map((data as ProductSummaryRow[]).map((row) => [row.id, toSummary(row)]));
   return unique.map((id) => byId.get(id)).filter((p): p is ProductSummary => p != null);
 }
 
@@ -121,12 +100,12 @@ async function fetchSummariesSorted(
   if (clean.length === 0 || limit <= 0) return [];
   const { data, error } = await supabase
     .from("produtos")
-    .select("id, titulo, cod_produto, valor, foto, quantidade_estoque, desconto_pix_percent, desconto_cartao_percent")
+    .select(PRODUCT_SUMMARY_SELECT)
     .in("id", clean)
     .order("titulo")
     .limit(limit);
   if (error || !data) return [];
-  return (data as ProdutoSummaryRow[]).map((row) => toSummary(row));
+  return (data as ProductSummaryRow[]).map((row) => toSummary(row));
 }
 
 export async function getProductDetailPageData(productId: string): Promise<ProductDetailPageData> {
@@ -136,7 +115,7 @@ export async function getProductDetailPageData(productId: string): Promise<Produ
     const { data: produtoData, error: produtoError } = await supabase
       .from("produtos")
       .select(
-        "id, titulo, cod_produto, valor, foto, quantidade_estoque, descricao, desconto_pix_percent, desconto_cartao_percent, compat_todos_modelos",
+        `id, titulo, cod_produto, valor, foto, quantidade_estoque, descricao, desconto_pix_percent, desconto_cartao_percent, somente_retirada_loja, compat_todos_modelos`,
       )
       .eq("id", productId)
       .maybeSingle();
@@ -147,7 +126,7 @@ export async function getProductDetailPageData(productId: string): Promise<Produ
 
     const produtoRow = produtoData as ProdutoBaseRow;
     const produto: ProductDetail = {
-      ...toSummary(produtoRow as ProdutoSummaryRow),
+      ...toSummary(produtoRow as ProductSummaryRow),
       descricao: (produtoRow.descricao ?? "").trim(),
       compatibilidades: [],
       imageUrls: [],
@@ -258,12 +237,12 @@ export async function getProductDetailPageData(productId: string): Promise<Produ
     if (relacionados.length < limit) {
       const { data: fallbackData } = await supabase
         .from("produtos")
-        .select("id, titulo, cod_produto, valor, foto, quantidade_estoque, desconto_pix_percent, desconto_cartao_percent")
+        .select(PRODUCT_SUMMARY_SELECT)
         .neq("id", productId)
         .order("titulo")
         .limit(24);
       const rest = (fallbackData ?? [])
-        .map((row) => toSummary(row as ProdutoSummaryRow))
+        .map((row) => toSummary(row as ProductSummaryRow))
         .filter((p) => !used.has(p.id))
         .slice(0, limit - relacionados.length);
       relacionados = [...relacionados, ...rest];

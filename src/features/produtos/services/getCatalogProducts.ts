@@ -1,35 +1,15 @@
 import { createClient } from "@/services/supabase/server";
-import { resolveProductImagePublicUrl } from "@/features/produtos/utils/resolveProductImagePublicUrl";
 import { fetchProductIdsMatchingSearchTerm } from "@/features/produtos/services/productSearchMatchingIds";
 import type { CatalogFilters } from "@/features/produtos/utils/catalogSearchParams";
-import { clampPercent } from "@/features/produtos/utils/paymentDiscount";
+import {
+  mapProductSummaryRow,
+  PRODUCT_SUMMARY_SELECT,
+  type ProductSummaryRow,
+} from "@/features/produtos/utils/mapProductSummaryRow";
 import type { ProductSummary } from "@/types/product";
 
-type ProdutoRow = {
-  id: string;
-  titulo: string;
-  cod_produto: string;
-  valor: unknown;
-  foto: string | null;
-  quantidade_estoque: unknown;
-  desconto_pix_percent?: unknown;
-  desconto_cartao_percent?: unknown;
-};
-
-function mapRows(rows: ProdutoRow[]): ProductSummary[] {
-  return rows.map((row) => ({
-    id: row.id,
-    titulo: row.titulo,
-    cod_produto: row.cod_produto,
-    valor: Number(row.valor),
-    imageUrl: resolveProductImagePublicUrl(row.foto),
-    quantidade_estoque: (() => {
-      const q = Number(row.quantidade_estoque);
-      return Number.isFinite(q) ? Math.max(0, Math.floor(q)) : 0;
-    })(),
-    desconto_pix_percent: clampPercent(row.desconto_pix_percent),
-    desconto_cartao_percent: clampPercent(row.desconto_cartao_percent),
-  }));
+function mapRows(rows: ProductSummaryRow[]): ProductSummary[] {
+  return rows.map((row) => mapProductSummaryRow(row));
 }
 
 function intersect(a: string[], bSet: Set<string>): string[] {
@@ -146,7 +126,7 @@ export async function getCatalogProducts(
 
     let produtosQuery = supabase
       .from("produtos")
-      .select("id, titulo, cod_produto, valor, foto, quantidade_estoque, desconto_pix_percent, desconto_cartao_percent")
+      .select(PRODUCT_SUMMARY_SELECT)
       .order("titulo");
     if (candidateIds) produtosQuery = produtosQuery.in("id", candidateIds);
     if (filters.precoMin != null && filters.precoMin > 0) produtosQuery = produtosQuery.gte("valor", filters.precoMin);
@@ -156,7 +136,7 @@ export async function getCatalogProducts(
 
     const { data, error } = await produtosQuery;
     if (error || !data) return [];
-    return mapRows(data as ProdutoRow[]);
+    return mapRows(data as ProductSummaryRow[]);
   } catch {
     return [];
   }

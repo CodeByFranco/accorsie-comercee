@@ -11,4 +11,6 @@ export type ProductSummary = {
   desconto_pix_percent: number;
   /** 0–100; desconto sobre o valor base ao pagar com cartão (opcional). */
   desconto_cartao_percent: number;
+  /** Quando true, o item não pode ser enviado; checkout do pedido fica só com retirada na loja. */
+  somente_retirada_loja: boolean;
 };

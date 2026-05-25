@@ -8,6 +8,7 @@ import { storeShellContent, storeShellInset } from "@/config/storeShell";
 import { CART_ICON_SRC } from "@/features/carrinho/constants";
 import { useCart } from "@/features/carrinho/CartContext";
 import { useFreteQuote } from "@/features/frete/hooks/useFreteQuote";
+import { cartRequiresSomenteRetirada } from "@/features/produtos/utils/mapProductSummaryRow";
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -39,12 +40,17 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
     () => lines.map((l) => ({ produto_id: l.id, quantidade: l.quantity })),
     [lines],
   );
+  const exigeRetiradaLoja = useMemo(() => cartRequiresSomenteRetirada(lines), [lines]);
   const profileCep = initialProfileCep.trim();
-  const missingProfileCep = hasItems && profileCep.replace(/\D/g, "").length !== 8;
-  const frete = useFreteQuote(itensPayload, profileCep);
-  const shipping = hasItems && !missingProfileCep ? frete.freteValue : 0;
+  const missingProfileCep =
+    hasItems && !exigeRetiradaLoja && profileCep.replace(/\D/g, "").length !== 8;
+  const frete = useFreteQuote(itensPayload, profileCep, hasItems && !exigeRetiradaLoja);
+  const shipping =
+    hasItems && !exigeRetiradaLoja && !missingProfileCep ? frete.freteValue : 0;
   const total = subtotal + shipping;
-  const canGoCheckout = hasItems && !missingProfileCep && Boolean(frete.selectedOption);
+  const canGoCheckout =
+    hasItems &&
+    (exigeRetiradaLoja || (!missingProfileCep && Boolean(frete.selectedOption)));
 
   return (
     <div className={`flex flex-1 flex-col py-8 sm:py-10 ${storeShellInset}`}>
@@ -205,7 +211,12 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
             </dl>
             {hasItems ? (
               <div className="mt-4 rounded-sm border border-store-line/70 bg-store-subtle/30 p-3 text-xs text-store-navy">
-                {missingProfileCep ? (
+                {exigeRetiradaLoja ? (
+                  <p>
+                    Este pedido inclui produtos <strong>somente para retirada na loja</strong>. O frete não se
+                    aplica; no checkout você confirma os dados para retirada.
+                  </p>
+                ) : missingProfileCep ? (
                   <p>
                     Defina seu CEP no <Link href="/conta" className="font-semibold underline">perfil</Link> para
                     calcular o frete.

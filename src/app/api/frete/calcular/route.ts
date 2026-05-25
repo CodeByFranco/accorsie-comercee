@@ -103,7 +103,7 @@ export async function POST(request: Request) {
   const { data: prodRows, error: prodErr } = await supabase
     .from("produtos")
     .select(
-      "id, valor, quantidade_estoque, prod_comprimento_cm, prod_largura_cm, prod_altura_cm, prod_peso_kg, embalagem_id",
+      "id, valor, quantidade_estoque, prod_comprimento_cm, prod_largura_cm, prod_altura_cm, prod_peso_kg, embalagem_id, somente_retirada_loja",
     )
     .in("id", ids);
 
@@ -114,7 +114,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const rows = (prodRows ?? []) as ProdutoFreteRow[];
+  const rows = (prodRows ?? []) as (ProdutoFreteRow & { somente_retirada_loja?: boolean | null })[];
   if (rows.length !== ids.length) {
     return Response.json(
       { error: "Um ou mais produtos não foram encontrados." },
@@ -140,6 +140,16 @@ export async function POST(request: Request) {
     for (const e of (embData ?? []) as EmbalagemRow[]) {
       embalagens.set(e.id, e);
     }
+  }
+
+  if (rows.some((r) => r.somente_retirada_loja === true)) {
+    return Response.json(
+      {
+        error:
+          "Um ou mais produtos do carrinho estão disponíveis apenas para retirada na loja. Não é possível calcular frete.",
+      },
+      { status: 400 },
+    );
   }
 
   const linhas: MelhorEnvioQuoteLine[] = [];

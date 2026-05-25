@@ -13,6 +13,7 @@ import type { CheckoutPayload } from "@/features/checkout/types";
 import { criarPedidoECheckout } from "@/features/checkout/services/criarPedidoECheckout";
 import { previewCupomDesconto } from "@/features/checkout/services/previewCupomDesconto";
 import type { FormaPagamentoCheckout } from "@/features/produtos/utils/paymentDiscount";
+import { cartRequiresSomenteRetirada } from "@/features/produtos/utils/mapProductSummaryRow";
 import { unitPriceAfterPaymentDiscount } from "@/features/produtos/utils/paymentDiscount";
 import type { ProfileEndereco } from "@/types/profileDelivery";
 import { emptyProfileEndereco } from "@/types/profileDelivery";
@@ -77,12 +78,23 @@ export function CheckoutPage({
   const [formError, setFormError] = useState<string | null>(null);
   const [checkoutBusy, setCheckoutBusy] = useState(false);
   const [modoEntrega, setModoEntrega] = useState<ModoEntrega>("envio");
+  const exigeRetiradaLoja = useMemo(() => cartRequiresSomenteRetirada(lines), [lines]);
+
+  useEffect(() => {
+    if (exigeRetiradaLoja) {
+      setModoEntrega("retirada");
+    }
+  }, [exigeRetiradaLoja]);
 
   const itensPayload = useMemo(
     () => lines.map((l) => ({ produto_id: l.id, quantidade: l.quantity })),
     [lines],
   );
-  const frete = useFreteQuote(itensPayload, cep, modoEntrega === "envio" && hasItems);
+  const frete = useFreteQuote(
+    itensPayload,
+    cep,
+    modoEntrega === "envio" && hasItems && !exigeRetiradaLoja,
+  );
   const shipping =
     !hasItems ? 0 : modoEntrega === "retirada" ? 0 : frete.freteValue;
   const [cupomInput, setCupomInput] = useState("");
@@ -137,6 +149,13 @@ export function CheckoutPage({
       setFormError("Seu carrinho está vazio. Adicione produtos antes de finalizar.");
       return;
     }
+    if (exigeRetiradaLoja && modoEntrega !== "retirada") {
+      setFormError(
+        "Este pedido contém produtos disponíveis apenas para retirada na loja. Selecione retirada na loja.",
+      );
+      return;
+    }
+
     if (modoEntrega === "envio" && !frete.selectedOption) {
       setFormError("Selecione uma opcao de frete antes de ir para o pagamento.");
       return;
@@ -148,7 +167,7 @@ export function CheckoutPage({
       return;
     }
 
-    const retirada = modoEntrega === "retirada";
+    const retirada = exigeRetiradaLoja || modoEntrega === "retirada";
     if (retirada && !lojaRetirada) {
       setFormError("Retirada na loja nao esta disponivel no momento.");
       return;
@@ -223,7 +242,7 @@ export function CheckoutPage({
       setCupomMensagem("Digite o código do cupom.");
       return;
     }
-    if (modoEntrega === "envio" && !frete.selectedOption) {
+    if (!exigeRetiradaLoja && modoEntrega === "envio" && !frete.selectedOption) {
       setCupomMensagem("Selecione o frete antes de aplicar o cupom.");
       return;
     }
@@ -304,7 +323,15 @@ export function CheckoutPage({
                   </p>
                 ) : null}
 
-                {lojaRetirada ? (
+                {exigeRetiradaLoja ? (
+                  <div className="mt-6 rounded-md border border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-900">
+                    <p className="font-semibold">Somente retirada na loja</p>
+                    <p className="mt-1 text-slate-700">
+                      Um ou mais itens do carrinho não podem ser enviados. Este pedido será finalizado apenas com
+                      retirada no balcão da loja.
+                    </p>
+                  </div>
+                ) : lojaRetirada ? (
                   <fieldset className="mt-6 space-y-3">
                     <legend className="text-sm font-medium text-store-navy">Como deseja receber</legend>
                     <label className="flex cursor-pointer items-center gap-2 rounded-sm border border-store-line bg-store-subtle/40 px-4 py-3 text-sm font-medium text-store-navy has-[:checked]:border-store-navy has-[:checked]:bg-white">
@@ -706,8 +733,8 @@ export function CheckoutPage({
                 type="submit"
                 disabled={
                   checkoutBusy ||
-                  (modoEntrega === "envio" && !frete.selectedOption) ||
-                  (modoEntrega === "retirada" && !lojaRetirada)
+                  (!exigeRetiradaLoja && modoEntrega === "envio" && !frete.selectedOption) ||
+                  ((exigeRetiradaLoja || modoEntrega === "retirada") && !lojaRetirada)
                 }
                 className="mt-6 w-full rounded-sm bg-store-accent py-3.5 text-center text-sm font-bold text-black shadow-sm transition enabled:hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-70"
               >

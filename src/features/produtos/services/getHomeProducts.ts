@@ -1,7 +1,10 @@
 import { createClient } from "@/services/supabase/server";
 import { fetchProductIdsMatchingSearchTerm } from "@/features/produtos/services/productSearchMatchingIds";
-import { resolveProductImagePublicUrl } from "@/features/produtos/utils/resolveProductImagePublicUrl";
-import { clampPercent } from "@/features/produtos/utils/paymentDiscount";
+import {
+  mapProductSummaryRow,
+  PRODUCT_SUMMARY_SELECT,
+  type ProductSummaryRow,
+} from "@/features/produtos/utils/mapProductSummaryRow";
 import type { ProductSummary } from "@/types/product";
 
 function intersectIds(a: string[], bSet: Set<string>): string[] {
@@ -16,31 +19,8 @@ async function fetchCompatTodosModelosIds(
   return data.map((r) => r.id as string).filter(Boolean);
 }
 
-type ProdutoRow = {
-  id: string;
-  titulo: string;
-  cod_produto: string;
-  valor: unknown;
-  foto: string | null;
-  quantidade_estoque: unknown;
-  desconto_pix_percent?: unknown;
-  desconto_cartao_percent?: unknown;
-};
-
-function mapRows(rows: ProdutoRow[]): ProductSummary[] {
-  return rows.map((row) => ({
-    id: row.id,
-    titulo: row.titulo,
-    cod_produto: row.cod_produto,
-    valor: Number(row.valor),
-    imageUrl: resolveProductImagePublicUrl(row.foto),
-    quantidade_estoque: (() => {
-      const q = Number(row.quantidade_estoque);
-      return Number.isFinite(q) ? Math.max(0, Math.floor(q)) : 0;
-    })(),
-    desconto_pix_percent: clampPercent(row.desconto_pix_percent),
-    desconto_cartao_percent: clampPercent(row.desconto_cartao_percent),
-  }));
+function mapRows(rows: ProductSummaryRow[]): ProductSummary[] {
+  return rows.map((row) => mapProductSummaryRow(row));
 }
 
 export async function getHomeProducts(opts?: {
@@ -90,19 +70,19 @@ export async function getHomeProducts(opts?: {
 
     let destQuery = supabase
       .from("produtos")
-      .select("id, titulo, cod_produto, valor, foto, quantidade_estoque, desconto_pix_percent, desconto_cartao_percent")
+      .select(PRODUCT_SUMMARY_SELECT)
       .eq("em_destaque", true)
       .order("titulo")
       .limit(15);
     if (filterIds) destQuery = destQuery.in("id", filterIds);
 
     const destRes = await destQuery;
-    const destaque = !destRes.error && destRes.data ? mapRows(destRes.data as ProdutoRow[]) : [];
+    const destaque = !destRes.error && destRes.data ? mapRows(destRes.data as ProductSummaryRow[]) : [];
     const destIds = destaque.map((p) => p.id);
 
     let vitQuery = supabase
       .from("produtos")
-      .select("id, titulo, cod_produto, valor, foto, quantidade_estoque, desconto_pix_percent, desconto_cartao_percent")
+      .select(PRODUCT_SUMMARY_SELECT)
       .order("titulo")
       .limit(10);
     if (filterIds) vitQuery = vitQuery.in("id", filterIds);
@@ -118,7 +98,7 @@ export async function getHomeProducts(opts?: {
 
     return {
       destaque,
-      vitrine: !prodRes.error && prodRes.data ? mapRows(prodRes.data as ProdutoRow[]) : [],
+      vitrine: !prodRes.error && prodRes.data ? mapRows(prodRes.data as ProductSummaryRow[]) : [],
     };
   } catch {
     return { destaque: [], vitrine: [] };

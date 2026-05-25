@@ -42,6 +42,7 @@ export async function updateProduct(
   }
   const foto = galleryParsed.principalFoto;
   const em_destaque = formData.get("em_destaque") === "on";
+  const somente_retirada_loja = formData.get("somente_retirada_loja") === "on";
   const quantidadeRaw = String(formData.get("quantidade_estoque") ?? "").trim();
   const compatJson = String(formData.get("compat_json") ?? "");
   const compat_all_modelos = String(formData.get("compat_all_modelos") ?? "") === "1";
@@ -115,6 +116,7 @@ export async function updateProduct(
       desconto_pix_percent,
       desconto_cartao_percent,
       compat_todos_modelos: compat_all_modelos,
+      somente_retirada_loja,
     })
     .eq("id", id);
 
