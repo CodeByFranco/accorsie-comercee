@@ -9,6 +9,10 @@ import { createClient } from "@/services/supabase/server";
 import { createPreference, isTestAccessToken, pickInitPoint } from "@/services/mercadopago/client";
 import { sendPedidoTransactionalEmail } from "@/services/email/transactionalPedidoEmail";
 import { buildMercadoPagoPreferenceItems } from "@/features/checkout/utils/buildMercadoPagoPreferenceItems";
+import {
+  fetchCheckoutSomenteRetiradaFlags,
+  validateCheckoutEntregaPayload,
+} from "@/features/checkout/utils/validateCheckoutEntrega";
 
 export type CriarPedidoCheckoutError = { ok: false; message: string };
 
@@ -124,6 +128,9 @@ function rpcErrorMessage(message: string): string {
   if (message.includes("não foram encontrados")) {
     return "Um ou mais produtos não estão mais disponíveis.";
   }
+  if (message.includes("apenas para retirada na loja")) {
+    return "Este pedido contém produtos disponíveis apenas para retirada na loja.";
+  }
   return message;
 }
 
@@ -178,6 +185,24 @@ export async function criarPedidoECheckout(
 
   const forma = payload.forma_pagamento === "pix" ? "pix" : "cartao";
   const retirada = payload.retirada_loja === true;
+  const freteInformado = Number(payload.frete);
+
+  const entregaFlags = await fetchCheckoutSomenteRetiradaFlags(
+    supabase,
+    p_itens.map((l) => l.produto_id),
+  );
+  if (entregaFlags.error) {
+    return { ok: false, message: entregaFlags.error };
+  }
+  const entregaError = validateCheckoutEntregaPayload(
+    retirada,
+    freteInformado,
+    entregaFlags.hasSomenteRetirada,
+  );
+  if (entregaError) {
+    return { ok: false, message: entregaError };
+  }
+
   const loja = retirada ? getStorePickupAddress() : null;
   if (retirada && !loja) {
     return {

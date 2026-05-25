@@ -57,6 +57,7 @@ function parseStoredLine(o: unknown): CartLine | null {
 
   const desconto_pix_percent = clampPercent(r.desconto_pix_percent ?? 0);
   const desconto_cartao_percent = clampPercent(r.desconto_cartao_percent ?? 0);
+  const somente_retirada_loja = r.somente_retirada_loja === true;
 
   return {
     id: r.id,
@@ -67,6 +68,7 @@ function parseStoredLine(o: unknown): CartLine | null {
     quantidade_estoque: stock,
     desconto_pix_percent,
     desconto_cartao_percent,
+    somente_retirada_loja,
     quantity,
   };
 }

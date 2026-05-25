@@ -17,6 +17,7 @@ import {
   type CategoriaOption,
 } from "@/features/produtos/components/ProductCategoriasFieldset";
 import { ProductDestaqueField } from "@/features/produtos/components/ProductDestaqueField";
+import { ProductSomenteRetiradaField } from "@/features/produtos/components/ProductSomenteRetiradaField";
 import { ProductPhotoPanel } from "@/features/produtos/components/ProductPhotoPanel";
 import {
   ProductRelacionadosFieldset,
@@ -47,6 +48,7 @@ export type ProductEditValues = {
   }>;
   quantidade_estoque: number;
   em_destaque: boolean;
+  somente_retirada_loja: boolean;
   compat_todos_modelos: boolean;
   categoria_ids: string[];
   compat_rows: ProductCompatRow[];
@@ -251,6 +253,11 @@ export function ProductEditForm({
                 <ProductPhotoPanel initialFoto={product.foto} initialFotos={product.fotos} />
 
                 <ProductDestaqueField key={product.id} defaultChecked={product.em_destaque} />
+
+                <ProductSomenteRetiradaField
+                  key={`retirada-${product.id}`}
+                  defaultChecked={product.somente_retirada_loja}
+                />
 
                 <ProductCategoriasFieldset categorias={categorias} selectedIds={product.categoria_ids} />
 

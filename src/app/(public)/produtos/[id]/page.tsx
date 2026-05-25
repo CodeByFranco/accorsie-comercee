@@ -106,7 +106,10 @@ export default async function ProdutoDetalhePage({ params }: PageProps) {
 
               <ProductMercadoPagoInstallments amountBrl={precoCartao} />
 
-              <ProductFreteCepConsult productId={produto.id} />
+              <ProductFreteCepConsult
+                productId={produto.id}
+                somenteRetiradaLoja={produto.somente_retirada_loja}
+              />
 
               <div className="space-y-3">
                 <ProductDetailAddToCart product={produto} />

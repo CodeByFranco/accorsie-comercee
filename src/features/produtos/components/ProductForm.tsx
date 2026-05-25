@@ -17,6 +17,7 @@ import {
   type CategoriaOption,
 } from "@/features/produtos/components/ProductCategoriasFieldset";
 import { ProductDestaqueField } from "@/features/produtos/components/ProductDestaqueField";
+import { ProductSomenteRetiradaField } from "@/features/produtos/components/ProductSomenteRetiradaField";
 import { ProductPhotoPanel } from "@/features/produtos/components/ProductPhotoPanel";
 import {
   ProductRelacionadosFieldset,
@@ -45,6 +46,7 @@ type ProductFormInitialValues = {
   foto?: string;
   fotos?: Array<{ foto: string; is_principal: boolean; ordem: number }>;
   em_destaque?: boolean;
+  somente_retirada_loja?: boolean;
   categoria_ids?: string[];
   compat_rows?: Array<{ modelo_id: string; ano_inicio: string; ano_fim: string }>;
   compat_todos_modelos?: boolean;
@@ -277,6 +279,10 @@ export function ProductForm({
               />
 
               <ProductDestaqueField defaultChecked={Boolean(initialValues?.em_destaque)} />
+
+              <ProductSomenteRetiradaField
+                defaultChecked={Boolean(initialValues?.somente_retirada_loja)}
+              />
 
               <ProductCategoriasFieldset
                 categorias={categorias}

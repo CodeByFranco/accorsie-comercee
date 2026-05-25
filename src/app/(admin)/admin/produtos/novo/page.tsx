@@ -38,6 +38,7 @@ export default async function NovoProdutoPage({
         foto?: string;
         fotos?: Array<{ foto: string; is_principal: boolean; ordem: number }>;
         em_destaque?: boolean;
+        somente_retirada_loja?: boolean;
         categoria_ids?: string[];
         compat_rows?: Array<{ modelo_id: string; ano_inicio: string; ano_fim: string }>;
         compat_todos_modelos?: boolean;
@@ -56,7 +57,7 @@ export default async function NovoProdutoPage({
       const { data: produto, error: prodError } = await supabase
         .from("produtos")
         .select(
-          "id, titulo, cod_produto, descricao, valor, foto, quantidade_estoque, em_destaque, compat_todos_modelos, prod_comprimento_cm, prod_largura_cm, prod_altura_cm, prod_peso_kg, embalagem_id, desconto_pix_percent, desconto_cartao_percent"
+          "id, titulo, cod_produto, descricao, valor, foto, quantidade_estoque, em_destaque, somente_retirada_loja, compat_todos_modelos, prod_comprimento_cm, prod_largura_cm, prod_altura_cm, prod_peso_kg, embalagem_id, desconto_pix_percent, desconto_cartao_percent"
         )
         .eq("id", duplicarId)
         .maybeSingle();
@@ -98,6 +99,7 @@ export default async function NovoProdutoPage({
             ordem: Number.isFinite(row.ordem) ? Number(row.ordem) : 0,
           })),
           em_destaque: false,
+          somente_retirada_loja: Boolean(produto.somente_retirada_loja),
           categoria_ids: (catRows ?? []).map((row) => row.categoria_id),
           compat_rows: (compRows ?? []).map((row) => ({
             modelo_id: row.modelo_id,

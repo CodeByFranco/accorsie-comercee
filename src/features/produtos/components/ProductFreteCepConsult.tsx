@@ -14,13 +14,30 @@ type ProductFreteCepConsultProps = {
   productId: string;
   /** Quantidade usada na cotação (padrão 1). */
   quantidade?: number;
+  somenteRetiradaLoja?: boolean;
 };
 
 function onlyDigits(raw: string): string {
   return raw.replace(/\D/g, "").slice(0, 8);
 }
 
-export function ProductFreteCepConsult({ productId, quantidade = 1 }: ProductFreteCepConsultProps) {
+export function ProductFreteCepConsult({
+  productId,
+  quantidade = 1,
+  somenteRetiradaLoja = false,
+}: ProductFreteCepConsultProps) {
+  if (somenteRetiradaLoja) {
+    return (
+      <div className="space-y-1 pt-1">
+        <p className="text-xs font-semibold text-store-navy">Entrega</p>
+        <p className="text-sm text-store-navy-muted">
+          Este produto está disponível <strong className="text-store-navy">somente para retirada na loja</strong>.
+          Não é possível calcular frete para envio.
+        </p>
+      </div>
+    );
+  }
+
   const [inputCep, setInputCep] = useState("");
   const [cepConsulta, setCepConsulta] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
