@@ -8,14 +8,13 @@ import { AdminProdutosPagination } from "@/features/produtos/components/AdminPro
 import { ProductCompatReportButton } from "@/features/produtos/components/ProductCompatReportButton";
 import { ProductCreateButton } from "@/features/produtos/components/ProductCreateButton";
 import { ProductWegaImportButton } from "@/features/produtos/components/ProductWegaImportButton";
+import { RevealValorEstoque } from "@/features/produtos/components/RevealValorEstoque";
 import { normalizeProductSearchInput } from "@/features/produtos/services/productSearchMatchingIds";
 import {
   parseProductStatus,
   type ProductStatus,
 } from "@/features/produtos/utils/productStatus";
 import { createClient } from "@/services/supabase/server";
-
-const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 export const metadata = {
   title: "Produtos | Admin",
@@ -233,10 +232,7 @@ export default async function AdminProdutosPage({
           <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Itens em estoque</p>
           <p className="mt-2 text-2xl font-bold tracking-tight text-gray-900">{totalItens}</p>
         </article>
-        <article className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Valor em estoque</p>
-          <p className="mt-2 text-2xl font-bold tracking-tight text-gray-900">{money.format(valorEstoque)}</p>
-        </article>
+        <RevealValorEstoque valor={valorEstoque} />
       </section>
 
       <section className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">

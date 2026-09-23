@@ -1,7 +1,10 @@
 "use server";
 
 import { requireAdmin } from "@/lib/auth/requireAdmin";
-import { assertCompatUsaAnosCadastrados } from "@/features/compatibilidade/utils/assertCompatModeloAnos";
+import {
+  assertCompatUsaAnosCadastrados,
+  type MissingModeloAno,
+} from "@/features/compatibilidade/utils/assertCompatModeloAnos";
 import { parseCompatibilidadesJson } from "@/features/compatibilidade/utils/compatibilidadesForm";
 import { fetchValidCategoriaIds, parseCategoriaIdsFromFormData } from "@/features/categorias/utils/productCategoriasForm";
 import { parseOptionalDimension } from "@/features/produtos/utils/parseOptionalDimension";
@@ -24,7 +27,7 @@ import { revalidateStoreCatalogCache } from "@/features/produtos/utils/catalogCa
 
 export type UpdateProductState =
   | { ok: true; message: string }
-  | { ok: false; message: string };
+  | { ok: false; message: string; missingModeloAnos?: MissingModeloAno[] };
 
 export async function updateProduct(
   _prev: UpdateProductState | null,
@@ -124,13 +127,6 @@ export async function updateProduct(
 
   const embalagem_id = await resolveEmbalagemId(supabase, embalagemRaw);
 
-  if (!compat_all_modelos) {
-    const anosOk = await assertCompatUsaAnosCadastrados(supabase, compatRows);
-    if (!anosOk.ok) {
-      return { ok: false, message: anosOk.message };
-    }
-  }
-
   const [{ data: before }, { data: beforePhotos }] = await Promise.all([
     supabase.from("produtos").select("foto").eq("id", id).maybeSingle(),
     supabase.from("produto_fotos").select("foto").eq("produto_id", id),
@@ -202,36 +198,6 @@ export async function updateProduct(
     }
   }
 
-  const { error: delCompError } = await supabase
-    .from("produto_compatibilidades")
-    .delete()
-    .eq("produto_id", id);
-
-  if (delCompError) {
-    return {
-      ok: false,
-      message: `Dados salvos, mas ao atualizar compatibilidade: ${delCompError.message}`,
-    };
-  }
-
-  if (!compat_all_modelos && compatRows.length > 0) {
-    const { error: compError } = await supabase.from("produto_compatibilidades").insert(
-      compatRows.map((r) => ({
-        produto_id: id,
-        modelo_id: r.modelo_id,
-        ano_inicio: r.ano_inicio,
-        ano_fim: r.ano_fim,
-      }))
-    );
-
-    if (compError) {
-      return {
-        ok: false,
-        message: `Produto atualizado, mas compatibilidade falhou: ${compError.message}`,
-      };
-    }
-  }
-
   const { error: delCatError } = await supabase.from("produto_categorias").delete().eq("produto_id", id);
   if (delCatError) {
     return {
@@ -269,6 +235,50 @@ export async function updateProduct(
       return {
         ok: false,
         message: `Produto atualizado, mas relacionados falharam: ${relError.message}`,
+      };
+    }
+  }
+
+  // Compatibilidade por último: se faltar ano de referência, o restante (código, título, etc.) já ficou salvo.
+  if (!compat_all_modelos) {
+    const anosOk = await assertCompatUsaAnosCadastrados(supabase, compatRows);
+    if (!anosOk.ok) {
+      revalidatePath(`/admin/produtos/${id}/edit`);
+      revalidatePath("/admin/produtos");
+      return {
+        ok: false,
+        message: `${anosOk.message} Os demais dados do produto (código, título, etc.) já foram salvos.`,
+        ...(anosOk.missingAnos?.length ? { missingModeloAnos: anosOk.missingAnos } : {}),
+      };
+    }
+  }
+
+  const { error: delCompError } = await supabase
+    .from("produto_compatibilidades")
+    .delete()
+    .eq("produto_id", id);
+
+  if (delCompError) {
+    return {
+      ok: false,
+      message: `Dados salvos, mas ao atualizar compatibilidade: ${delCompError.message}`,
+    };
+  }
+
+  if (!compat_all_modelos && compatRows.length > 0) {
+    const { error: compError } = await supabase.from("produto_compatibilidades").insert(
+      compatRows.map((r) => ({
+        produto_id: id,
+        modelo_id: r.modelo_id,
+        ano_inicio: r.ano_inicio,
+        ano_fim: r.ano_fim,
+      }))
+    );
+
+    if (compError) {
+      return {
+        ok: false,
+        message: `Produto atualizado, mas compatibilidade falhou: ${compError.message}`,
       };
     }
   }

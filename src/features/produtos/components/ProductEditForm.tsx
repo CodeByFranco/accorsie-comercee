@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useRouter } from "next/navigation";
+import { useActionState, useEffect, useRef, useState } from "react";
 import {
   ProductCompatibilidadeFieldset,
   type ModeloOption,
@@ -25,6 +26,8 @@ import {
 } from "@/features/produtos/components/ProductRelacionadosFieldset";
 import { ProductDescriptionEditor } from "@/features/produtos/components/ProductDescriptionEditor";
 import { ProductPublishActions } from "@/features/produtos/components/ProductPublishActions";
+import { AddMissingModeloAnosButton } from "@/features/produtos/components/AddMissingModeloAnosButton";
+import { publishProduct } from "@/features/produtos/services/publishProduct";
 import { updateProduct, type UpdateProductState } from "@/features/produtos/services/updateProduct";
 import type { ProductStatus } from "@/features/produtos/utils/productStatus";
 
@@ -70,6 +73,8 @@ const fieldClass =
 
 const initialState: UpdateProductState | null = null;
 
+type AnosFixFlow = "idle" | "saving" | "publishing" | "publish_error";
+
 function numOrEmpty(n: number | null | undefined): string {
   if (n == null || Number.isNaN(Number(n))) return "";
   return String(n);
@@ -88,14 +93,98 @@ export function ProductEditForm({
   embalagens: EmbalagemOption[];
   produtosRelacionadosOpcoes: ProdutoRelacionadoOption[];
 }) {
+  const router = useRouter();
   const [state, formAction, pending] = useActionState(updateProduct, initialState);
   const fieldsRequired = product.status === "published";
+  const formRef = useRef<HTMLFormElement>(null);
+  const [anosFixFlow, setAnosFixFlow] = useState<AnosFixFlow>("idle");
+  const [publishFlowError, setPublishFlowError] = useState<string | null>(null);
+  const publishStartedRef = useRef(false);
+  const sawPendingForFixRef = useRef(false);
+
+  const missingModeloAnos =
+    state && !state.ok && state.missingModeloAnos?.length ? state.missingModeloAnos : null;
+
+  /** Após corrigir anos: permanece no cadastro (não some o formulário). */
+  const keepCadastroVisible =
+    anosFixFlow === "saving" ||
+    anosFixFlow === "publishing" ||
+    anosFixFlow === "publish_error";
+
+  const showForm = !state?.ok || keepCadastroVisible;
+
+  useEffect(() => {
+    if (anosFixFlow !== "saving") return;
+
+    if (pending) {
+      sawPendingForFixRef.current = true;
+      return;
+    }
+
+    // Ainda não começou o submit deste fluxo (estado antigo do erro).
+    if (!sawPendingForFixRef.current) return;
+    if (!state) return;
+
+    if (!state.ok) {
+      setAnosFixFlow("idle");
+      publishStartedRef.current = false;
+      return;
+    }
+
+    if (publishStartedRef.current) return;
+    publishStartedRef.current = true;
+
+    if (product.status === "published") {
+      setAnosFixFlow("idle");
+      router.refresh();
+      return;
+    }
+
+    setAnosFixFlow("publishing");
+    setPublishFlowError(null);
+
+    void (async () => {
+      const result = await publishProduct(product.id);
+      if (!result.ok) {
+        setAnosFixFlow("publish_error");
+        setPublishFlowError(result.message);
+        publishStartedRef.current = false;
+        return;
+      }
+      // Recarrega a mesma tela de cadastro já com status publicado.
+      window.location.assign(`/admin/produtos/${product.id}/edit`);
+    })();
+  }, [anosFixFlow, state, pending, product.id, product.status, router]);
 
   return (
     <>
       <ProductPublishActions productId={product.id} status={product.status} />
 
-      {state?.ok && (
+      {(anosFixFlow === "saving" || anosFixFlow === "publishing") && (
+        <div
+          className="mb-6 rounded-xl border border-admin-accent/30 bg-[#edf3ff] px-5 py-4 shadow-sm"
+          role="status"
+        >
+          <p className="font-semibold text-[#123a8c]">Publicar agora!</p>
+          <p className="mt-1 text-sm text-[#1a4bb8]/95">
+            {anosFixFlow === "saving"
+              ? "Anos cadastrados. Salvando o produto…"
+              : "Checando se está tudo certo e publicando o produto…"}
+          </p>
+        </div>
+      )}
+
+      {anosFixFlow === "publish_error" && publishFlowError && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-5 py-4 shadow-sm" role="alert">
+          <p className="font-semibold text-red-900">Anos cadastrados, mas a publicação falhou</p>
+          <p className="mt-1 text-sm text-red-800/95">{publishFlowError}</p>
+          <p className="mt-2 text-xs text-red-800/80">
+            O produto foi salvo. Corrija o que falta e use o botão «Publicar Produto» acima.
+          </p>
+        </div>
+      )}
+
+      {state?.ok && anosFixFlow === "idle" && (
         <div
           className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 shadow-sm"
           role="status"
@@ -119,10 +208,23 @@ export function ProductEditForm({
         </div>
       )}
 
-      {state && !state.ok && (
+      {state && !state.ok && anosFixFlow === "idle" && (
         <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-5 py-4 shadow-sm" role="alert">
           <p className="font-semibold text-red-900">Algo deu errado</p>
           <p className="mt-1 text-sm text-red-800/95">{state.message}</p>
+          {missingModeloAnos ? (
+            <AddMissingModeloAnosButton
+              missing={missingModeloAnos}
+              pendingLabel="Cadastrando anos…"
+              onAdded={() => {
+                sawPendingForFixRef.current = false;
+                publishStartedRef.current = false;
+                setPublishFlowError(null);
+                setAnosFixFlow("saving");
+                formRef.current?.requestSubmit();
+              }}
+            />
+          ) : null}
           <Link
             href="/admin"
             className="mt-3 inline-block text-sm font-semibold text-admin-accent hover:underline"
@@ -132,7 +234,7 @@ export function ProductEditForm({
         </div>
       )}
 
-      {state?.ok ? null : Number(product.quantidade_estoque) === 1 ? (
+      {showForm && Number(product.quantidade_estoque) === 1 ? (
         <div
           className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4 shadow-sm"
           role="status"
@@ -144,8 +246,8 @@ export function ProductEditForm({
         </div>
       ) : null}
 
-      {state?.ok ? null : (
-        <form action={formAction} className="flex flex-col gap-5">
+      {showForm ? (
+        <form ref={formRef} action={formAction} className="flex flex-col gap-5">
           <input type="hidden" name="id" value={product.id} />
 
           <ProductFormTabsLayout
@@ -307,7 +409,7 @@ export function ProductEditForm({
             {pending ? "Salvando…" : "Salvar alterações"}
           </button>
         </form>
-      )}
+      ) : null}
     </>
   );
 }

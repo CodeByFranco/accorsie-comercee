@@ -234,6 +234,104 @@ export type ModeloAnoState =
   | { ok: false; message: string }
   | { ok: true; message: string };
 
+const ANO_MIN = 1900;
+const ANO_MAX = 2100;
+const INTERVALO_MAX = 100;
+
+export type EnsureModeloAnosResult =
+  | { ok: true; message: string }
+  | { ok: false; message: string };
+
+/** Insere anos de referência faltantes (ex.: a partir do aviso no cadastro de produto). */
+export async function ensureModeloAnosCadastrados(
+  missing: Array<{ modelo_id: string; ano: number }>
+): Promise<EnsureModeloAnosResult> {
+  await requireAdmin();
+
+  const byModelo = new Map<string, Set<number>>();
+  for (const item of missing) {
+    const modeloId = String(item.modelo_id ?? "").trim();
+    const ano = Number(item.ano);
+    if (!modeloId) continue;
+    if (Number.isNaN(ano) || ano < ANO_MIN || ano > ANO_MAX) {
+      return { ok: false, message: `Ano inválido: ${item.ano}.` };
+    }
+    const set = byModelo.get(modeloId) ?? new Set<number>();
+    set.add(ano);
+    byModelo.set(modeloId, set);
+  }
+
+  if (byModelo.size === 0) {
+    return { ok: false, message: "Nenhum ano para cadastrar." };
+  }
+
+  const supabase = await createClient();
+  const paraInserir: Array<{ modelo_id: string; ano: number }> = [];
+
+  for (const [modeloId, anos] of byModelo) {
+    const lista = [...anos].sort((a, b) => a - b);
+    const anoIni = lista[0];
+    const anoFim = lista[lista.length - 1];
+
+    const { data: existentes, error: selErr } = await supabase
+      .from("modelo_anos")
+      .select("ano")
+      .eq("modelo_id", modeloId)
+      .gte("ano", anoIni)
+      .lte("ano", anoFim);
+
+    if (selErr) {
+      if (selErr.code === "42P01" || selErr.message.includes("modelo_anos")) {
+        return {
+          ok: false,
+          message:
+            "Tabela modelo_anos não encontrada. Execute a migration em supabase/migrations no painel SQL do Supabase.",
+        };
+      }
+      return { ok: false, message: `Não foi possível verificar anos existentes: ${selErr.message}` };
+    }
+
+    const jaExistem = new Set<number>((existentes ?? []).map((r) => Number(r.ano)));
+    for (const ano of lista) {
+      if (!jaExistem.has(ano)) {
+        paraInserir.push({ modelo_id: modeloId, ano });
+      }
+    }
+  }
+
+  if (paraInserir.length === 0) {
+    return { ok: true, message: "Esses anos já estavam cadastrados." };
+  }
+
+  const { error: insErr } = await supabase.from("modelo_anos").insert(paraInserir);
+
+  if (insErr) {
+    if (insErr.code === "23505") {
+      return { ok: true, message: "Anos já cadastrados (ou parcialmente)." };
+    }
+    if (insErr.code === "42P01" || insErr.message.includes("modelo_anos")) {
+      return {
+        ok: false,
+        message:
+          "Tabela modelo_anos não encontrada. Execute a migration em supabase/migrations no painel SQL do Supabase.",
+      };
+    }
+    return { ok: false, message: `Não foi possível salvar: ${insErr.message}` };
+  }
+
+  revalidatePath("/admin/marcas-e-modelos");
+  revalidatePath("/admin/modelos");
+  // Não revalida a tela de edição do produto: evita remount do formulário e perda de campos ainda não gravados na compat.
+
+  const anosLabel = [...new Set(paraInserir.map((r) => r.ano))].sort((a, b) => a - b);
+  const anosTxt =
+    anosLabel.length === 1
+      ? `Ano ${anosLabel[0]}`
+      : `${anosLabel.length} anos (${anosLabel[0]}–${anosLabel[anosLabel.length - 1]})`;
+
+  return { ok: true, message: `${anosTxt} adicionado(s) aos modelos cadastrados.` };
+}
+
 export type ModeloAnoRef = { id: string; ano: number };
 
 export type GetModeloAnosRefsResult =
@@ -273,10 +371,6 @@ export async function getModeloAnosRefs(modeloId: string): Promise<GetModeloAnos
 
   return { ok: true, anos };
 }
-
-const ANO_MIN = 1900;
-const ANO_MAX = 2100;
-const INTERVALO_MAX = 100;
 
 export async function addModeloAno(
   _prev: ModeloAnoState,

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { fetchAllModeloAnosPaginated } from "@/features/compatibilidade/services/fetchAllModeloAnosPaginated";
 import { fetchModelosAdminPaginated } from "@/features/compatibilidade/services/fetchModelosAdminPaginated";
 import { createClient } from "@/services/supabase/server";
@@ -202,6 +203,13 @@ export default async function EditProdutoPage({ params }: PageProps) {
 
   return (
     <div className="w-full space-y-6">
+      <Link
+        href="/admin/produtos"
+        className="inline-flex text-sm font-semibold text-admin-accent hover:underline"
+      >
+        ← Voltar aos produtos
+      </Link>
+
       {configError && (
         <div
           className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-sm"
