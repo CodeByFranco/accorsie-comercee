@@ -125,7 +125,18 @@ function resizeImageToSquare(
           return;
         }
 
-        const scale = Math.max(targetWidth / img.naturalWidth, targetHeight / img.naturalHeight);
+        if (img.naturalWidth < 1 || img.naturalHeight < 1) {
+          URL.revokeObjectURL(previewUrl);
+          reject(new Error("Imagem sem dimensão válida."));
+          return;
+        }
+
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, targetWidth, targetHeight);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+
+        const scale = Math.min(targetWidth / img.naturalWidth, targetHeight / img.naturalHeight);
         const drawWidth = img.naturalWidth * scale;
         const drawHeight = img.naturalHeight * scale;
         const offsetX = (targetWidth - drawWidth) / 2;
@@ -287,12 +298,6 @@ export function ProductPhotoPanel({
 
     let fileToUpload = file;
     if (width !== REQUIRED_IMAGE_WIDTH || height !== REQUIRED_IMAGE_HEIGHT) {
-      if (file.type === "image/gif") {
-        setError(
-          `GIF fora do padrão não pode ser convertido automaticamente. Envie GIF em ${REQUIRED_IMAGE_WIDTH}x${REQUIRED_IMAGE_HEIGHT}px ou use PNG/JPEG/WEBP para ajuste automático.`
-        );
-        return null;
-      }
       try {
         fileToUpload = await resizeImageToSquare(file, REQUIRED_IMAGE_WIDTH, REQUIRED_IMAGE_HEIGHT);
       } catch (e) {
@@ -580,7 +585,7 @@ export function ProductPhotoPanel({
           <path d="M21 15l-5-5-4 4-2-2-5 5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
         <p>
-          Padrão: 1200×1200 px use PNG OU JPEG máximo 5 MB por arquivo.
+          Padrão: 1200×1200 px. Fora desse tamanho, a foto entra inteira num fundo branco, sem corte. Máximo 5 MB por arquivo.
         </p>
       </div>
     </div>

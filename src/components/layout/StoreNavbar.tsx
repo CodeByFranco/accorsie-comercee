@@ -31,6 +31,9 @@ const HOME_LOGO_MOBILE = "/home/logo-navbar-mobile.png";
 const ICON_PX = 32;
 const iconImgClass = "h-7 w-7 shrink-0 object-contain sm:h-8 sm:w-8";
 
+/** Mesmo ponto do breakpoint `xl` do Tailwind (1280px). */
+const DESKTOP_NAV_MIN_PX = 1280;
+
 function IconMenu({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -73,8 +76,7 @@ type StoreNavbarProps = {
 
 function navLinkClass(active: boolean) {
   return [
-    "shrink-0 text-sm font-bold uppercase tracking-wide transition-colors",
-    "h-full flex items-end",
+    "inline-flex shrink-0 items-center whitespace-nowrap py-1 text-sm font-bold uppercase tracking-wide transition-colors",
     active
       ? "border-b-2 border-store-navy text-store-navy"
       : "border-b-2 border-transparent text-store-navy-muted hover:text-store-accent",
@@ -130,7 +132,7 @@ export function StoreNavbar({
 
   useEffect(() => {
     const syncViewport = () => {
-      const desktop = window.innerWidth >= 768;
+      const desktop = window.innerWidth >= DESKTOP_NAV_MIN_PX;
       setIsDesktopNav(desktop);
       if (desktop) setMobileNavOpen(false);
     };
@@ -178,7 +180,7 @@ export function StoreNavbar({
 
     const openFromHash = () => {
       if (window.location.hash !== "#categorias") return;
-      if (window.innerWidth >= 768) {
+      if (window.innerWidth >= DESKTOP_NAV_MIN_PX) {
         setCategoriasOpen(true);
         setMobileNavOpen(false);
       } else {
@@ -224,11 +226,11 @@ export function StoreNavbar({
       <div className="sticky top-0 z-[100] bg-store-cream shadow-[0_1px_0_0_rgba(0,0,0,0.06)]">
         <div className={storeShellInset}>
           <div className={storeShellContent}>
-            <div className="px-4 sm:px-6 md:px-8 lg:px-10">
-            <div className="flex items-center gap-1 py-1 sm:gap-1 sm:py-1 lg:gap-5">
+            <div className="px-1 sm:px-2">
+            <div className="flex items-center gap-1 py-1 sm:gap-2 xl:gap-4">
               <Link
                 href="/"
-                className="min-w-0 shrink-0 self-center rounded-sm outline-none ring-store-navy/30 focus-visible:ring-2"
+                className="min-w-0 max-w-[6.75rem] shrink self-center overflow-hidden rounded-sm outline-none ring-store-navy/30 focus-visible:ring-2 sm:max-w-[11rem] xl:max-w-[17rem]"
                 aria-label="Accorsi Auto Peças — início"
               >
                 <Image
@@ -236,8 +238,8 @@ export function StoreNavbar({
                   alt="Accorsi Auto Peças"
                   width={240}
                   height={72}
-                  className="h-9 w-auto max-w-[10rem] object-contain object-left sm:hidden"
-                  sizes="10rem"
+                  className="h-8 w-auto max-w-full object-contain object-left sm:hidden"
+                  sizes="6.75rem"
                   unoptimized
                 />
                 <Image
@@ -245,14 +247,14 @@ export function StoreNavbar({
                   alt="Accorsi Auto Peças"
                   width={300}
                   height={96}
-                  className="hidden h-12 w-auto max-w-[14rem] object-contain object-left sm:block sm:h-16 sm:max-w-[17rem]"
-                  sizes="(max-width: 640px) 14rem, 17rem"
+                  className="hidden h-12 w-auto max-w-full object-contain object-left sm:block xl:h-16"
+                  sizes="(max-width: 1279px) 11rem, 17rem"
                   unoptimized
                 />
               </Link>
               {isDesktopNav ? (
                 <nav
-                  className="hidden min-w-0 flex-1 flex-wrap items-center justify-center gap-x-5 gap-y-2 sm:gap-x-8 md:flex lg:gap-x-10 xl:gap-12"
+                  className="hidden min-w-0 flex-1 flex-nowrap items-center justify-center gap-x-4 whitespace-nowrap xl:flex xl:gap-x-6"
                   aria-label="Principal"
                 >
                 <Link href="/" className={navLinkClass(pathname === "/")}>
@@ -317,11 +319,11 @@ export function StoreNavbar({
                 </nav>
               ) : null}
 
-              <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-4 lg:ml-0 lg:gap-5">
+              <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2 xl:gap-3">
                 <button
                   type="button"
                   onClick={openGarage}
-                  className="flex max-w-[min(100%,16rem)] items-center gap-1.5 rounded-full border border-store-line bg-store-subtle px-1.5 py-1.5 text-left transition hover:border-store-navy-muted/50 sm:max-w-none sm:gap-2.5 sm:px-4 sm:py-2 lg:gap-3"
+                  className="flex shrink-0 items-center gap-1.5 rounded-full border border-store-line bg-store-subtle px-1.5 py-1.5 text-left transition hover:border-store-navy-muted/50 xl:gap-2.5 xl:px-4 xl:py-2"
                   aria-label="Minha garagem"
                 >
                   <Image
@@ -331,9 +333,9 @@ export function StoreNavbar({
                     height={ICON_PX}
                     className={iconImgClass}
                   />
-                  <span className="min-w-0 leading-tight sm:block">
-                    <span className="hidden text-sm font-bold text-store-navy sm:block">Minha Garagem</span>
-                    <span className="hidden text-xs font-normal text-store-navy-muted md:block">
+                  <span className="hidden min-w-0 leading-tight xl:block">
+                    <span className="block text-sm font-bold text-store-navy">Minha Garagem</span>
+                    <span className="block text-xs font-normal text-store-navy-muted">
                       Adicione seu veículo
                     </span>
                   </span>
@@ -368,7 +370,7 @@ export function StoreNavbar({
                 {accountUser && showAdminLink ? (
                   <Link
                     href="/admin"
-                    className="hidden items-center rounded-lg px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-store-navy-muted transition hover:bg-black/[0.04] hover:text-store-navy sm:flex"
+                    className="hidden items-center whitespace-nowrap rounded-lg px-2 py-1.5 text-xs font-bold uppercase tracking-wide text-store-navy-muted transition hover:bg-black/[0.04] hover:text-store-navy xl:flex"
                   >
                     Admin
                   </Link>
@@ -376,7 +378,7 @@ export function StoreNavbar({
                 {accountUser ? (
                   <Link
                     href="/conta"
-                    className="hidden h-9 w-9 items-center justify-center rounded-lg transition hover:bg-black/[0.04] sm:flex sm:h-10 sm:w-10"
+                    className="hidden h-9 w-9 items-center justify-center rounded-lg transition hover:bg-black/[0.04] xl:flex xl:h-10 xl:w-10"
                     aria-label="Minha conta"
                   >
                     <Image
@@ -390,7 +392,7 @@ export function StoreNavbar({
                 ) : (
                   <Link
                     href="/login?next=%2Fconta"
-                    className="hidden h-9 w-9 items-center justify-center rounded-lg transition hover:bg-black/[0.04] sm:flex sm:h-10 sm:w-10"
+                    className="hidden h-9 w-9 items-center justify-center rounded-lg transition hover:bg-black/[0.04] xl:flex xl:h-10 xl:w-10"
                     aria-label="Entrar"
                   >
                     <Image
@@ -405,7 +407,7 @@ export function StoreNavbar({
                 {!isDesktopNav ? (
                   <button
                     type="button"
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-store-line/80 text-store-navy transition hover:bg-store-subtle sm:h-10 sm:w-10 md:hidden"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-store-line/80 text-store-navy transition hover:bg-store-subtle sm:h-10 sm:w-10 xl:hidden"
                     aria-expanded={mobileNavOpen}
                     aria-controls="store-mobile-nav"
                     aria-label={mobileNavOpen ? "Fechar menu" : "Abrir menu"}
@@ -423,7 +425,7 @@ export function StoreNavbar({
           {mobileNavOpen && !isDesktopNav ? (
             <div
               id="store-mobile-nav"
-              className="store-nav-categorias-dropdown border-b border-store-line/50 bg-white px-4 py-3 shadow-sm md:hidden"
+              className="store-nav-categorias-dropdown border-b border-store-line/50 bg-white px-4 py-3 shadow-sm xl:hidden"
             >
               <nav className="mx-auto flex max-w-store flex-col gap-1 pb-[max(0.25rem,env(safe-area-inset-bottom))]" aria-label="Principal">
                 <Link href="/" className={mobileNavRowClass(pathname === "/")} onClick={closeMobileNav}>

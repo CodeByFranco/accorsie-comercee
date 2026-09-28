@@ -5,9 +5,7 @@ import { AdminDashboardProductSearch } from "@/features/admin/components/AdminDa
 import { AdminCatalogTabs } from "@/features/kits/components/AdminCatalogTabs";
 import { AdminProdutosListagemTabela } from "@/features/produtos/components/AdminProdutosListagemTabela";
 import { AdminProdutosPagination } from "@/features/produtos/components/AdminProdutosPagination";
-import { ProductCompatReportButton } from "@/features/produtos/components/ProductCompatReportButton";
 import { ProductCreateButton } from "@/features/produtos/components/ProductCreateButton";
-import { ProductWegaImportButton } from "@/features/produtos/components/ProductWegaImportButton";
 import { RevealValorEstoque } from "@/features/produtos/components/RevealValorEstoque";
 import { normalizeProductSearchInput } from "@/features/produtos/services/productSearchMatchingIds";
 import {
@@ -275,8 +273,6 @@ export default async function AdminProdutosPage({
               <AdminDashboardProductSearch />
             </Suspense>
             <div className="flex flex-wrap items-stretch gap-2 lg:items-center">
-              <ProductWegaImportButton />
-              <ProductCompatReportButton />
               <ProductCreateButton />
             </div>
           </div>
