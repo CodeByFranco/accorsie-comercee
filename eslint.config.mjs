@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Cópia antiga do projeto (clone aninhado), fora do build.
+    "accorsie-comercee/**",
   ]),
 ]);
 

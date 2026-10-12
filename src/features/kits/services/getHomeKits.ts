@@ -1,11 +1,11 @@
-import { createClient } from "@/services/supabase/server";
+import { createPublicClient } from "@/services/supabase/public";
 import { KIT_STATUS_PUBLISHED } from "@/features/kits/utils/kitStatus";
 import { KIT_LIST_SELECT, mapKitSummary, type KitRowWithItems } from "@/features/kits/utils/mapKitRow";
 import type { KitSummary } from "@/types/kit";
 
 export async function getHomeKits(limit = 8): Promise<KitSummary[]> {
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data, error } = await supabase
       .from("kits")
       .select(KIT_LIST_SELECT)
@@ -25,7 +25,7 @@ export async function searchPublishedKits(term: string, limit = 12): Promise<Kit
   const q = term.trim().replace(/[%_]/g, "").slice(0, 80);
   if (!q) return [];
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const pattern = `%${q}%`;
     const [byNome, bySlug] = await Promise.all([
       supabase

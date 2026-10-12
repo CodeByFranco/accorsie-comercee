@@ -9,6 +9,7 @@ import { StoreProductSearchBar } from "@/components/store/StoreProductSearchBar"
 import { storeShellContent, storeShellInset } from "@/config/storeShell";
 import { CART_ICON_SRC } from "@/features/carrinho/constants";
 import { useCart } from "@/features/carrinho/CartContext";
+import { useStoreAccount } from "@/features/auth/hooks/useStoreAccount";
 import { HomeBannerCarousel } from "@/components/layout/HomeBannerCarousel";
 import {
   buildCatalogQueryString,
@@ -24,7 +25,8 @@ const LINK_NAV_AFTER_CATEGORIAS = [
 const ICON_GARAGE = "/icons/garagem%201.png";
 const ICON_PROFILE = "/icons/perfil.png";
 
-const HOME_LOGO = "/home/logo-removebg-preview%20%281%29.png";
+/** Nome real do arquivo (sem %-encoding): o otimizador do next/image codifica a URL sozinho. */
+const HOME_LOGO = "/home/logo-removebg-preview (1).png";
 const HOME_LOGO_MOBILE = "/home/logo-navbar-mobile.png";
 
 /** Base em px para Next/Image; o tamanho na tela vem das classes (mobile menor que sm+). */
@@ -51,27 +53,11 @@ function IconSearch({ className }: { className?: string }) {
   );
 }
 
-export type StoreNavbarAccountUser = {
-  email: string;
-};
-
 type StoreNavbarProps = {
   categorias: CategoryListItem[];
   catalogSliderMax: number;
   /** URLs dos banners da home (rotação). Pelo menos uma (fallback no layout se vazio no banco). */
   homeBannerSrcs: string[];
-  /** Quando definido, o ícone de perfil leva à área logada; caso contrário, ao login. */
-  accountUser: StoreNavbarAccountUser | null;
-  garageVehicles: {
-    id: number;
-    placa: string;
-    marca: string | null;
-    modelo: string | null;
-    modelo_id: string | null;
-    ano: number | null;
-  }[];
-  /** Link discreto para o painel (somente role admin). */
-  showAdminLink?: boolean;
 };
 
 function navLinkClass(active: boolean) {
@@ -94,10 +80,9 @@ export function StoreNavbar({
   categorias,
   catalogSliderMax,
   homeBannerSrcs,
-  accountUser,
-  garageVehicles,
-  showAdminLink = false,
 }: StoreNavbarProps) {
+  /** Conta lida no navegador: o ícone de perfil leva à área logada; o link do painel só para admin. */
+  const { accountUser, showAdminLink, garageVehicles, refreshGarage } = useStoreAccount();
   const pathname = usePathname();
   const router = useRouter();
   const { itemCount } = useCart();
@@ -200,6 +185,7 @@ export function StoreNavbar({
       return;
     }
     if (pathname === "/") {
+      void refreshGarage();
       setGarageModalOpen(true);
       return;
     }
@@ -240,7 +226,6 @@ export function StoreNavbar({
                   height={72}
                   className="h-8 w-auto max-w-full object-contain object-left sm:hidden"
                   sizes="6.75rem"
-                  unoptimized
                 />
                 <Image
                   src={HOME_LOGO}
@@ -249,7 +234,6 @@ export function StoreNavbar({
                   height={96}
                   className="hidden h-12 w-auto max-w-full object-contain object-left sm:block xl:h-16"
                   sizes="(max-width: 1279px) 11rem, 17rem"
-                  unoptimized
                 />
               </Link>
               {isDesktopNav ? (
@@ -493,6 +477,7 @@ export function StoreNavbar({
                     className={mobileNavRowClass(false)}
                     onClick={() => {
                       closeMobileNav();
+                      void refreshGarage();
                       setGarageModalOpen(true);
                     }}
                   >

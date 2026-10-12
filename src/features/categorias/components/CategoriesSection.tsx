@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { CategoryListItem } from "@/types/category";
+import { isSupabaseStorageUrl } from "@/utils/isSupabaseStorageUrl";
 
 export type { CategoryListItem };
 
@@ -158,7 +159,7 @@ export function CategoriesSection({ categorias }: CategoriesSectionProps) {
                         width={56}
                         height={56}
                         className="h-full w-full object-contain"
-                        unoptimized
+                        unoptimized={!isSupabaseStorageUrl(src)}
                       />
                     ) : (
                       <span className="text-store-accent" aria-hidden>

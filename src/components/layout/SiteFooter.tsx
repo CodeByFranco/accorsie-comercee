@@ -98,7 +98,6 @@ export function SiteFooter() {
                 height={96}
                 className="h-10 w-auto max-w-[12rem] object-contain object-left sm:h-12 sm:max-w-[14rem]"
                 sizes="(max-width: 640px) 12rem, 14rem"
-                unoptimized
               />
             </Link>
             <p className="text-sm leading-relaxed text-white/90">

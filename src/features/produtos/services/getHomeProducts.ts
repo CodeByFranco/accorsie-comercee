@@ -58,10 +58,12 @@ async function fetchHomeProducts(opts?: {
       if (ano != null && Number.isFinite(ano)) {
         compQuery = compQuery.lte("ano_inicio", ano).gte("ano_fim", ano);
       }
-      const { data: compRows, error: compErr } = await compQuery;
+      const [{ data: compRows, error: compErr }, todosModelosIds] = await Promise.all([
+        compQuery,
+        fetchCompatTodosModelosIds(supabase),
+      ]);
       if (compErr) return { destaque: [], vitrine: [] };
       const ids = new Set((compRows ?? []).map((r) => r.produto_id as string).filter(Boolean));
-      const todosModelosIds = await fetchCompatTodosModelosIds(supabase);
       for (const pid of todosModelosIds) ids.add(pid);
       if (ids.size === 0) return { destaque: [], vitrine: [] };
       vehicleIds = [...ids];

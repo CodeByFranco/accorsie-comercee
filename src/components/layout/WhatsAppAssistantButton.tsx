@@ -35,7 +35,6 @@ export function WhatsAppAssistantButton() {
           alt="Assistente virtual da Accorsi"
           sizes="80px"
           className="object-cover object-top drop-shadow-[0_8px_22px_rgba(0,0,0,0.22)]"
-          priority
           fill
         />
       </span>
@@ -53,7 +52,6 @@ export function WhatsAppAssistantButton() {
             alt="Assistente virtual da Accorsi"
             sizes="152px"
             className="object-cover object-top drop-shadow-[0_8px_20px_rgba(0,0,0,0.25)]"
-            priority
             fill
           />
         </span>

@@ -4,6 +4,8 @@ import Image from "next/image";
 import { useEffect, useId, useState } from "react";
 
 const INTERVAL_MS = 6500;
+/** Fallback caso o `onLoad` do 1º banner não dispare (ex.: já estava em cache antes da hidratação). */
+const REST_SLIDES_FALLBACK_MS = 2500;
 
 type HomeBannerCarouselProps = {
   srcs: string[];
@@ -20,6 +22,8 @@ export function HomeBannerCarousel({
   const slides = srcs.filter(Boolean);
   const [index, setIndex] = useState(0);
   const [reduceMotion, setReduceMotion] = useState(false);
+  /** Banners 2+ só entram depois do 1º: não disputam banda com o maior elemento da tela (LCP). */
+  const [restReady, setRestReady] = useState(false);
   const dotGroupId = useId();
 
   useEffect(() => {
@@ -31,12 +35,17 @@ export function HomeBannerCarousel({
   }, []);
 
   useEffect(() => {
-    if (slides.length < 2 || reduceMotion) return;
+    const t = window.setTimeout(() => setRestReady(true), REST_SLIDES_FALLBACK_MS);
+    return () => window.clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    if (slides.length < 2 || reduceMotion || !restReady) return;
     const t = window.setInterval(() => {
       setIndex((i) => (i + 1) % slides.length);
     }, INTERVAL_MS);
     return () => window.clearInterval(t);
-  }, [slides.length, reduceMotion]);
+  }, [slides.length, reduceMotion, restReady]);
 
   useEffect(() => {
     if (index >= slides.length) setIndex(0);
@@ -64,15 +73,17 @@ export function HomeBannerCarousel({
             ].join(" ")}
             aria-hidden={i !== index}
           >
-            <Image
-              src={src}
-              alt={i === 0 ? "Accorsi Auto Peças — banner" : `Accorsi Auto Peças — banner ${i + 1}`}
-              fill
-              className="object-contain"
-              sizes="100vw"
-              priority={i === 0}
-              unoptimized
-            />
+            {i === 0 || restReady ? (
+              <Image
+                src={src}
+                alt={i === 0 ? "Accorsi Auto Peças — banner" : `Accorsi Auto Peças — banner ${i + 1}`}
+                fill
+                className="object-contain"
+                sizes="(max-width: 1920px) 100vw, 1920px"
+                priority={i === 0}
+                onLoad={i === 0 ? () => setRestReady(true) : undefined}
+              />
+            ) : null}
           </div>
         ))}
       </div>
@@ -94,7 +105,10 @@ export function HomeBannerCarousel({
                 "h-2 w-2 rounded-full transition-[transform,background-color] duration-200",
                 i === index ? "scale-110 bg-white shadow-sm" : "bg-white/50 hover:bg-white/80",
               ].join(" ")}
-              onClick={() => setIndex(i)}
+              onClick={() => {
+                setRestReady(true);
+                setIndex(i);
+              }}
             />
           ))}
         </div>

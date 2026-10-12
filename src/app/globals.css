@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Cópia antiga do projeto (clone aninhado) — não escanear classes dela. */
+@source not "../../accorsie-comercee";
 
 :root {
   --background: #ffffff;

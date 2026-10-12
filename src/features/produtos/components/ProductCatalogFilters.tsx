@@ -5,6 +5,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import type { VehicleFilterAnosByModelo, VehicleFilterModelo } from "@/features/compatibilidade/services/getVehicleFilterCatalogData";
 import { getModeloAnos } from "@/features/compatibilidade/services/getModeloAnos";
+import { useModelosPorMarca } from "@/features/compatibilidade/hooks/useModelosPorMarca";
 import type { StoreMarcaOption } from "@/features/marcas/services/getStoreMarcas";
 import {
   buildCatalogQueryString,
@@ -63,6 +64,7 @@ export function ProductCatalogFilters({
   const [vehicleMarcaId, setVehicleMarcaId] = useState("");
   const [anosCache, setAnosCache] = useState<VehicleFilterAnosByModelo>(() => anosByModeloId);
   const anosRequestedRef = useRef<Set<string>>(new Set(Object.keys(anosByModeloId)));
+  const { porMarca, loadingMarcaIds, carregarMarca, findModelo } = useModelosPorMarca(modelosVeiculo);
 
   useEffect(() => {
     const f = parseCatalogSearchParamsFromUrlSearchParams(sp);
@@ -75,6 +77,10 @@ export function ProductCatalogFilters({
       setVehicleMarcaId("");
     }
   }, [sp, sliderMax, modelosVeiculo]);
+
+  useEffect(() => {
+    if (vehicleMarcaId) void carregarMarca(vehicleMarcaId);
+  }, [vehicleMarcaId, carregarMarca]);
 
   useEffect(() => {
     setAnosCache((prev) => ({ ...anosByModeloId, ...prev }));
@@ -139,12 +145,16 @@ export function ProductCatalogFilters({
 
   const modelosVeiculoFiltrados = useMemo(
     () =>
-      modelosVeiculo
-        .filter((m) => !vehicleMarcaId || m.marca_id === vehicleMarcaId)
-        .slice()
-        .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR")),
-    [modelosVeiculo, vehicleMarcaId]
+      vehicleMarcaId
+        ? (porMarca[vehicleMarcaId] ?? []).slice().sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+        : [],
+    [porMarca, vehicleMarcaId]
   );
+  const modeloPlaceholder = !vehicleMarcaId
+    ? "Escolha a marca"
+    : loadingMarcaIds.has(vehicleMarcaId)
+      ? "Carregando…"
+      : "Selecione";
   const anosModeloSelecionado = f.modeloId ? anosCache[f.modeloId] ?? [] : [];
   const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -186,7 +196,7 @@ export function ProductCatalogFilters({
                   onChange={(e) => {
                     const nextMarca = e.target.value;
                     setVehicleMarcaId(nextMarca);
-                    const currentModel = f.modeloId ? modelosVeiculo.find((m) => m.id === f.modeloId) : undefined;
+                    const currentModel = findModelo(f.modeloId);
                     if (currentModel && currentModel.marca_id !== nextMarca) {
                       replaceFilters({ ...f, modeloId: null, ano: null });
                     }
@@ -210,9 +220,10 @@ export function ProductCatalogFilters({
                     const modeloId = e.target.value || null;
                     replaceFilters({ ...f, modeloId, ano: null });
                   }}
-                  className="mt-1 block w-full rounded-md border border-store-line bg-white px-2.5 py-2 text-sm text-store-navy outline-none transition focus:border-store-navy focus:ring-1 focus:ring-store-navy/20"
+                  disabled={!vehicleMarcaId}
+                  className="mt-1 block w-full rounded-md border border-store-line bg-white px-2.5 py-2 text-sm text-store-navy outline-none transition disabled:cursor-not-allowed disabled:bg-store-subtle/60 focus:border-store-navy focus:ring-1 focus:ring-store-navy/20"
                 >
-                  <option value="">Selecione</option>
+                  <option value="">{modeloPlaceholder}</option>
                   {modelosVeiculoFiltrados.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.nome}

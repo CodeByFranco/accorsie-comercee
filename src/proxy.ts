@@ -11,6 +11,18 @@ function isProtectedAdminRoute(pathname: string): boolean {
   return true;
 }
 
+/**
+ * Vitrine pública (catálogo/produto/kit/institucionais): não lê sessão no servidor — dados vêm do
+ * cache público e a conta é lida no navegador. Pular o Supabase Auth aqui evita uma ida à rede
+ * por requisição. Demais rotas (conta, checkout, pedidos, admin, API) seguem renovando a sessão.
+ */
+function isPublicCatalogRoute(pathname: string): boolean {
+  if (pathname === "/" || pathname === "/produtos") return true;
+  if (/^\/produtos\/[^/]+\/?$/.test(pathname)) return true;
+  if (pathname.startsWith("/kit/")) return true;
+  return ["/sobre", "/termos", "/privacidade", "/em-construcao"].includes(pathname);
+}
+
 function applyResponseCookies(from: NextResponse, to: NextResponse): NextResponse {
   from.cookies.getAll().forEach(({ name, value }) => {
     to.cookies.set(name, value);
@@ -38,10 +50,14 @@ function serviceUnavailableResponse(request: NextRequest): NextResponse {
   );
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   const pathname = request.nextUrl.pathname;
+  if (!MAINTENANCE_MODE && isPublicCatalogRoute(pathname)) {
+    return response;
+  }
+
   const needsAdmin =
     isProtectedAdminRoute(pathname) ||
     pathname.startsWith("/api/admin") ||

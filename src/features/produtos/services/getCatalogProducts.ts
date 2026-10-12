@@ -1,7 +1,10 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 
-import { fetchProductIdsMatchingSearchTerm } from "@/features/produtos/services/productSearchMatchingIds";
+import {
+  fetchProductIdsCompatComMarcas,
+  fetchProductIdsMatchingSearchTerm,
+} from "@/features/produtos/services/productSearchMatchingIds";
 import { CATALOG_CACHE_TAGS } from "@/features/produtos/utils/catalogCacheTags";
 import type { CatalogFilters } from "@/features/produtos/utils/catalogSearchParams";
 import {
@@ -60,19 +63,11 @@ async function resolveCandidateIds(
   }
 
   if (filters.marcaIds.length > 0) {
-    const { data: modelosRows, error: modErr } = await supabase
-      .from("modelos")
-      .select("id")
-      .in("marca_id", filters.marcaIds);
-    if (modErr || !modelosRows?.length) return null;
-    const modeloIds = modelosRows.map((r) => r.id as string);
-    const { data: compRows, error: compErr } = await supabase
-      .from("produto_compatibilidades")
-      .select("produto_id")
-      .in("modelo_id", modeloIds);
-    if (compErr) return null;
-    const marcaSet = new Set((compRows ?? []).map((r) => r.produto_id as string));
-    const todosModelosIds = await fetchCompatTodosModelosIds(supabase);
+    const [compIds, todosModelosIds] = await Promise.all([
+      fetchProductIdsCompatComMarcas(supabase, filters.marcaIds),
+      fetchCompatTodosModelosIds(supabase),
+    ]);
+    const marcaSet = new Set(compIds);
     for (const pid of todosModelosIds) marcaSet.add(pid);
     if (marcaSet.size === 0) return null;
     candidateIds = candidateIds ? intersect(candidateIds, marcaSet) : [...marcaSet];
@@ -87,10 +82,12 @@ async function resolveCandidateIds(
     if (filters.ano != null) {
       compQuery = compQuery.lte("ano_inicio", filters.ano).gte("ano_fim", filters.ano);
     }
-    const { data: compRows, error: compErr } = await compQuery;
+    const [{ data: compRows, error: compErr }, todosModelosIds] = await Promise.all([
+      compQuery,
+      fetchCompatTodosModelosIds(supabase),
+    ]);
     if (compErr) return null;
     const modelSet = new Set((compRows ?? []).map((r) => r.produto_id as string));
-    const todosModelosIds = await fetchCompatTodosModelosIds(supabase);
     for (const pid of todosModelosIds) modelSet.add(pid);
     if (modelSet.size === 0) return null;
     candidateIds = candidateIds ? intersect(candidateIds, modelSet) : [...modelSet];

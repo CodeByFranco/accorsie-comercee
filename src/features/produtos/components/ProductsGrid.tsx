@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { ProductSummary } from "@/types/product";
 import { ProductAddCartButton } from "@/features/produtos/components/ProductAddCartButton";
 import { unitPriceAfterPaymentDiscount } from "@/features/produtos/utils/paymentDiscount";
+import { isSupabaseStorageUrl } from "@/utils/isSupabaseStorageUrl";
 
 export type { ProductSummary };
 
@@ -19,15 +20,6 @@ type ProductsGridProps = {
   /** Selo PIX na foto; por padrão segue `variant` (ex.: `catalog` + `pixStyle="home"`). */
   pixStyle?: "home" | "catalog";
 };
-
-function isSupabaseStorageUrl(src: string): boolean {
-  try {
-    const host = new URL(src).hostname;
-    return host.endsWith(".supabase.co") || host === "127.0.0.1" || host === "localhost";
-  } catch {
-    return false;
-  }
-}
 
 function ProductImage({ src, alt }: { src: string | null; alt: string }) {
   if (!src) {

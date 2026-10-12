@@ -7,6 +7,7 @@ export const CATALOG_CACHE_TAGS = {
   vehicleFilter: "store-vehicle-filter",
   homeProducts: "store-home-products",
   catalogProducts: "store-catalog-products",
+  siteLayout: "store-site-layout",
 } as const;
 
 /** Invalida imediatamente o cache de catálogo após mutações no admin. */

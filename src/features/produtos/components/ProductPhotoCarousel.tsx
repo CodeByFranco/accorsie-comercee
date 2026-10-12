@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
+import { isSupabaseStorageUrl } from "@/utils/isSupabaseStorageUrl";
 
 type ProductPhotoCarouselProps = {
   photos: string[];
@@ -11,15 +12,6 @@ type ProductPhotoCarouselProps = {
 const photoShellClassName =
   "relative flex aspect-square w-full max-w-[min(100%,22rem)] items-center justify-center rounded-lg border border-store-line/80 bg-white p-3 shadow-sm sm:max-w-[26rem] " +
   "lg:max-h-full lg:max-w-full lg:min-h-0 lg:min-w-0 lg:shadow-none";
-
-function isSupabaseStorageUrl(src: string): boolean {
-  try {
-    const host = new URL(src).hostname;
-    return host.endsWith(".supabase.co") || host === "127.0.0.1" || host === "localhost";
-  } catch {
-    return false;
-  }
-}
 
 function ProductPhotoFallback() {
   return (

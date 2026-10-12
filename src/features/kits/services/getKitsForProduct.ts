@@ -1,4 +1,4 @@
-import { createClient } from "@/services/supabase/server";
+import { createPublicClient } from "@/services/supabase/public";
 import { KIT_STATUS_PUBLISHED } from "@/features/kits/utils/kitStatus";
 import { KIT_LIST_SELECT, mapKitSummary, type KitRowWithItems } from "@/features/kits/utils/mapKitRow";
 import type { KitSummary } from "@/types/kit";
@@ -7,7 +7,7 @@ export async function getKitsForProduct(productId: string): Promise<KitSummary[]
   const id = productId.trim();
   if (!id) return [];
   try {
-    const supabase = await createClient();
+    const supabase = createPublicClient();
     const { data: links, error: linkErr } = await supabase
       .from("kit_items")
       .select("kit_id")

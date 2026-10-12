@@ -4,47 +4,21 @@ import { StoreNavbar } from "@/components/layout/StoreNavbar";
 import { WhatsAppAssistantButton } from "@/components/layout/WhatsAppAssistantButton";
 import { CartProvider } from "@/features/carrinho/CartContext";
 import { getHomeCategories } from "@/features/categorias/services/getHomeCategories";
-import { getSiteLayout } from "@/features/site-layout/services/getSiteLayout";
+import { getStoreSiteLayout } from "@/features/site-layout/services/getSiteLayout";
 import { getCatalogSliderMax } from "@/features/produtos/services/getCatalogProducts";
-import { createClient } from "@/services/supabase/server";
 
 const FALLBACK_HOME_BANNER = "/home/Banner%20inicial.png";
 
+/**
+ * Layout da vitrine: só dados públicos em cache (sem cookies). Conta/garagem/link do painel
+ * são lidos no navegador pela navbar (`useStoreAccount`).
+ */
 export default async function PublicLayout({ children }: { children: ReactNode }) {
-  const [categorias, catalogSliderMax, siteLayout, supabase] = await Promise.all([
+  const [categorias, catalogSliderMax, siteLayout] = await Promise.all([
     getHomeCategories(),
     getCatalogSliderMax(),
-    getSiteLayout(),
-    createClient(),
+    getStoreSiteLayout(),
   ]);
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const accountUser = user ? { email: user.email ?? "" } : null;
-  let showAdminLink = false;
-  let garageVehicles: {
-    id: number;
-    placa: string;
-    marca: string | null;
-    modelo: string | null;
-    modelo_id: string | null;
-    ano: number | null;
-  }[] = [];
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle();
-    showAdminLink = profile?.role === "admin";
-
-    const { data: garageData } = await supabase
-      .from("garagem_veiculos")
-      .select("id, placa, marca, modelo, modelo_id, ano")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-    garageVehicles = garageData ?? [];
-  }
 
   const fromDb = [siteLayout.banner_1_url, siteLayout.banner_2_url]
     .map((s) => s.trim())
@@ -57,9 +31,6 @@ export default async function PublicLayout({ children }: { children: ReactNode }
         categorias={categorias}
         catalogSliderMax={catalogSliderMax}
         homeBannerSrcs={homeBannerSrcs}
-        accountUser={accountUser}
-        garageVehicles={garageVehicles}
-        showAdminLink={showAdminLink}
       />
       {children}
       <WhatsAppAssistantButton />

@@ -11,6 +11,7 @@ import type {
   VehicleFilterModelo,
 } from "@/features/compatibilidade/services/getVehicleFilterCatalogData";
 import { getModeloAnos } from "@/features/compatibilidade/services/getModeloAnos";
+import { useModelosPorMarca } from "@/features/compatibilidade/hooks/useModelosPorMarca";
 import { storeShellContent, storeShellInset } from "@/config/storeShell";
 import { PlateVehicleFinder } from "@/features/compatibilidade/components/PlateVehicleFinder";
 
@@ -79,6 +80,8 @@ type VehicleFilterFieldsProps = {
   marcasFiltradas: VehicleFilterMarca[];
   modelosFiltrados: VehicleFilterModelo[];
   anosDisponiveis: number[];
+  /** Texto da opção vazia de Modelo (ex.: pedir a marca antes / carregando). */
+  modeloPlaceholder: string;
   canSearch: boolean;
   onMarcaChange: (id: string) => void;
   onModeloChange: (id: string) => void;
@@ -96,6 +99,7 @@ function VehicleFilterFields({
   marcasFiltradas,
   modelosFiltrados,
   anosDisponiveis,
+  modeloPlaceholder,
   canSearch,
   onMarcaChange,
   onModeloChange,
@@ -155,8 +159,9 @@ function VehicleFilterFields({
               className={selectClassMarcaModelo}
               value={modeloId}
               onChange={(e) => onModeloChange(e.target.value)}
+              disabled={!marcaId}
             >
-              <option value="">Selecione</option>
+              <option value="">{modeloPlaceholder}</option>
               {modelosFiltrados.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.nome}
@@ -254,10 +259,16 @@ export function VehicleFilter({
   const sp = useSearchParams();
   const baseId = useId();
 
-  const appliedModel = useMemo(
-    () => (appliedModeloId ? modelos.find((m) => m.id === appliedModeloId) : undefined),
-    [appliedModeloId, modelos]
-  );
+  const { porMarca, loadingMarcaIds, carregarMarca } = useModelosPorMarca(modelos);
+
+  const appliedModel = useMemo(() => {
+    if (!appliedModeloId) return undefined;
+    for (const lista of Object.values(porMarca)) {
+      const found = lista.find((m) => m.id === appliedModeloId);
+      if (found) return found;
+    }
+    return undefined;
+  }, [appliedModeloId, porMarca]);
 
   const [category, setCategory] = useState<VehicleCategory>(() =>
     appliedModel ? tipoToTab(appliedModel.tipo_veiculo) : "carros"
@@ -332,19 +343,30 @@ export function VehicleFilter({
     };
   }, [modeloId]);
 
+  useEffect(() => {
+    if (marcaId) void carregarMarca(marcaId);
+  }, [marcaId, carregarMarca]);
+
   const tipoAtual = TAB_TO_TIPO[category];
 
-  const marcasFiltradas = useMemo(() => {
-    const marcaIds = new Set(modelos.filter((m) => m.tipo_veiculo === tipoAtual).map((m) => m.marca_id));
-    return marcas.filter((b) => marcaIds.has(b.id));
-  }, [marcas, modelos, tipoAtual]);
+  const marcasFiltradas = useMemo(
+    () => marcas.filter((b) => !b.tipos || b.tipos.includes(tipoAtual)),
+    [marcas, tipoAtual]
+  );
 
   const modelosFiltrados = useMemo(() => {
-    return modelos
-      .filter((m) => m.tipo_veiculo === tipoAtual && (marcaId === "" || m.marca_id === marcaId))
+    if (!marcaId) return [];
+    return (porMarca[marcaId] ?? [])
+      .filter((m) => m.tipo_veiculo === tipoAtual)
       .slice()
       .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
-  }, [modelos, tipoAtual, marcaId]);
+  }, [porMarca, tipoAtual, marcaId]);
+
+  const modeloPlaceholder = !marcaId
+    ? "Escolha a marca"
+    : loadingMarcaIds.has(marcaId)
+      ? "Carregando…"
+      : "Selecione";
 
   const anosDisponiveis = modeloId ? anosCache[modeloId] ?? [] : [];
 
@@ -392,17 +414,14 @@ export function VehicleFilter({
     setMobileFilterOpen(false);
   };
 
-  const onPlateResolvedVehicle = (resolvedModeloId: string, resolvedAno: number | null) => {
-    const resolvedModel = modelos.find((m) => m.id === resolvedModeloId);
-    if (resolvedModel) {
-      setCategory(tipoToTab(resolvedModel.tipo_veiculo));
-      setMarcaId(resolvedModel.marca_id);
-      setModeloId(resolvedModel.id);
-      setAno(resolvedAno != null ? String(resolvedAno) : "");
-    }
+  const onPlateResolvedVehicle = (resolvedModel: VehicleFilterModelo, resolvedAno: number | null) => {
+    setCategory(tipoToTab(resolvedModel.tipo_veiculo));
+    setMarcaId(resolvedModel.marca_id);
+    setModeloId(resolvedModel.id);
+    setAno(resolvedAno != null ? String(resolvedAno) : "");
 
     replaceVehicleQuery((p) => {
-      p.set("modelo", resolvedModeloId);
+      p.set("modelo", resolvedModel.id);
       if (resolvedAno != null && Number.isFinite(resolvedAno)) p.set("ano", String(resolvedAno));
       else p.delete("ano");
     });
@@ -564,6 +583,7 @@ export function VehicleFilter({
         marcasFiltradas={marcasFiltradas}
         modelosFiltrados={modelosFiltrados}
         anosDisponiveis={anosDisponiveis}
+        modeloPlaceholder={modeloPlaceholder}
         canSearch={canSearch}
         onMarcaChange={onMarcaChange}
         onModeloChange={onModeloChange}
@@ -614,6 +634,7 @@ export function VehicleFilter({
                 marcasFiltradas={marcasFiltradas}
                 modelosFiltrados={modelosFiltrados}
                 anosDisponiveis={anosDisponiveis}
+                modeloPlaceholder={modeloPlaceholder}
                 canSearch={canSearch}
                 onMarcaChange={onMarcaChange}
                 onModeloChange={onModeloChange}
@@ -637,8 +658,7 @@ export function VehicleFilter({
   const plateToolbar = (
     <PlateVehicleFinder
       marcas={marcas}
-      modelos={modelos}
-      anosByModeloId={anosByModeloId}
+      carregarMarca={carregarMarca}
       onResolvedVehicle={onPlateResolvedVehicle}
       variant="filterToolbar"
     />

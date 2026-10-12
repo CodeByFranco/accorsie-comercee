@@ -1,8 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 
 import { requireAdmin } from "@/lib/auth/requireAdmin";
+import { CATALOG_CACHE_TAGS } from "@/features/produtos/utils/catalogCacheTags";
 import { createClient } from "@/services/supabase/server";
 
 export type SaveSiteLayoutState =
@@ -32,6 +33,7 @@ export async function saveSiteLayout(
     return { ok: false, message: error.message };
   }
 
+  updateTag(CATALOG_CACHE_TAGS.siteLayout);
   revalidatePath("/");
   revalidatePath("/admin/layout");
 
