@@ -5,6 +5,7 @@ import { AdminDashboardProductSearch } from "@/features/admin/components/AdminDa
 import { AdminCatalogTabs } from "@/features/kits/components/AdminCatalogTabs";
 import { AdminProdutosListagemTabela } from "@/features/produtos/components/AdminProdutosListagemTabela";
 import { AdminProdutosPagination } from "@/features/produtos/components/AdminProdutosPagination";
+import { ProductBulkPhotoUpload } from "@/features/produtos/components/ProductBulkPhotoUpload";
 import { ProductCreateButton } from "@/features/produtos/components/ProductCreateButton";
 import { RevealValorEstoque } from "@/features/produtos/components/RevealValorEstoque";
 import { normalizeProductSearchInput } from "@/features/produtos/services/productSearchMatchingIds";
@@ -273,6 +274,7 @@ export default async function AdminProdutosPage({
               <AdminDashboardProductSearch />
             </Suspense>
             <div className="flex flex-wrap items-stretch gap-2 lg:items-center">
+              <ProductBulkPhotoUpload />
               <ProductCreateButton />
             </div>
           </div>
