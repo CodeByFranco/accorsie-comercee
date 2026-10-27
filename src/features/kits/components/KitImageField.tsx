@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import { createClient } from "@/services/supabase/client";
 import { parseProductImageStoragePath } from "@/services/storage/productImagePath";
+import { generateKitCollage } from "@/features/kits/services/kitCollage";
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -21,10 +22,42 @@ function publicUrl(ref: string): string {
   return createClient().storage.from(bucket()).getPublicUrl(t.replace(/^\/+/, "")).data.publicUrl;
 }
 
-export function KitImageField({ initialImagem = "" }: { initialImagem?: string }) {
+export function KitImageField({
+  initialImagem = "",
+  productIds = [],
+}: {
+  initialImagem?: string;
+  productIds?: string[];
+}) {
   const [imagem, setImagem] = useState(initialImagem);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const replaceImagem = useCallback(async (url: string) => {
+    const prev = imagem;
+    setImagem(url);
+    if (prev) {
+      const oldPath = parseProductImageStoragePath(prev, bucket());
+      if (oldPath?.startsWith("kits/")) await createClient().storage.from(bucket()).remove([oldPath]);
+    }
+  }, [imagem]);
+
+  const onGenerate = useCallback(async () => {
+    setError(null);
+    setBusy(true);
+    try {
+      const result = await generateKitCollage(productIds);
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      await replaceImagem(result.url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao gerar a montagem.");
+    } finally {
+      setBusy(false);
+    }
+  }, [productIds, replaceImagem]);
 
   const onFile = useCallback(async (file: File | null) => {
     if (!file) return;
@@ -50,19 +83,13 @@ export function KitImageField({ initialImagem = "" }: { initialImagem?: string }
         setError(upErr.message);
         return;
       }
-      const url = supabase.storage.from(bucket()).getPublicUrl(path).data.publicUrl;
-      const prev = imagem;
-      setImagem(url);
-      if (prev) {
-        const oldPath = parseProductImageStoragePath(prev, bucket());
-        if (oldPath) await supabase.storage.from(bucket()).remove([oldPath]);
-      }
+      await replaceImagem(supabase.storage.from(bucket()).getPublicUrl(path).data.publicUrl);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha no upload.");
     } finally {
       setBusy(false);
     }
-  }, [imagem]);
+  }, [replaceImagem]);
 
   return (
     <div className="space-y-2">
@@ -83,6 +110,14 @@ export function KitImageField({ initialImagem = "" }: { initialImagem?: string }
         className={fieldClass}
         onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
       />
+      <button
+        type="button"
+        disabled={busy || productIds.length === 0}
+        onClick={() => void onGenerate()}
+        className="w-fit rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-800 transition hover:bg-gray-50 disabled:opacity-50"
+      >
+        Gerar montagem com as fotos dos produtos
+      </button>
       {busy && <p className="text-xs text-gray-500">Enviando…</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
       {imagem && (
