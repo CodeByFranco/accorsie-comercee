@@ -40,7 +40,7 @@ function IconOverview({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
       <path
-        d="M4 5a1 1 0 0 1 1-1h4a1 1 0 0 1 1v5H4V5zm0 7h6v8H5a1 1 0 0 1-1-1v-7zm8-8h4a1 1 0 0 1 1 1v4h-6V4zm0 6h6v9a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-9z"
+        d="M4 5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v5H4V5zm0 7h6v8H5a1 1 0 0 1-1-1v-7zm8-8h4a1 1 0 0 1 1 1v4h-6V4zm0 6h6v9a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-9z"
         fill="currentColor"
         opacity="0.9"
       />
