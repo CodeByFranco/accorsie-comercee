@@ -36,6 +36,27 @@ function newKey() {
     : `row-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
+/**
+ * Limite de itens renderizados nas listas de modelos. O catálogo tem milhares de modelos;
+ * renderizar todos (um `<select>` completo por linha) travava a página em produtos com muitas linhas.
+ */
+const MAX_MODELOS_RENDERIZADOS = 200;
+const MAX_SUGESTOES_LINHA = 30;
+
+function modeloLabel(m: ModeloOption): string {
+  return `${m.marca_nome} — ${m.nome} · ${TIPO_VEICULO_MODELO_LABELS[m.tipo_veiculo]}`;
+}
+
+function filtrarModelos(modelos: ModeloOption[], query: string): ModeloOption[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return modelos;
+  return modelos.filter((m) => {
+    const tipo = TIPO_VEICULO_MODELO_LABELS[m.tipo_veiculo];
+    const hay = `${m.nome} ${m.marca_nome} ${tipo}`.toLowerCase();
+    return hay.includes(q);
+  });
+}
+
 function emptyRow(): CompatRowState {
   return { key: newKey(), modelo_id: "", anos_selecionados: [] };
 }
@@ -187,6 +208,89 @@ function AnosLateralLista({ anos }: { anos: number[] }) {
   );
 }
 
+/** Escolha do modelo de uma linha: busca com poucas sugestões em vez de um `<select>` com o catálogo todo. */
+function ModeloRowSelect({
+  inputId,
+  modelos,
+  modelo,
+  modeloId,
+  onChange,
+}: {
+  inputId: string;
+  modelos: ModeloOption[];
+  modelo: ModeloOption | undefined;
+  modeloId: string;
+  onChange: (modeloId: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+
+  const sugestoes = useMemo(
+    () => (query.trim() ? filtrarModelos(modelos, query).slice(0, MAX_SUGESTOES_LINHA) : []),
+    [modelos, query]
+  );
+
+  if (modeloId) {
+    return (
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm font-medium text-gray-700">Modelo</span>
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900">
+          <span className="min-w-0">
+            {modelo ? modeloLabel(modelo) : `Modelo não encontrado (${modeloId})`}
+            {modelo && modelo.anos_referencia.length === 0 ? " (sem anos cadastrados)" : ""}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setQuery("");
+              onChange("");
+            }}
+            className="shrink-0 text-xs font-medium text-admin-accent hover:underline"
+          >
+            Trocar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-sm font-medium text-gray-700" htmlFor={inputId}>
+        Modelo
+      </label>
+      <input
+        id={inputId}
+        type="search"
+        autoComplete="off"
+        placeholder="Buscar modelo por nome, marca ou tipo…"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        className={fieldClass}
+      />
+      {query.trim() && (
+        <ul className="max-h-56 overflow-y-auto rounded-lg border border-gray-200 bg-white p-1">
+          {sugestoes.length === 0 ? (
+            <li className="px-2 py-2 text-sm text-gray-500">Nenhum modelo com esse termo.</li>
+          ) : (
+            sugestoes.map((m) => (
+              <li key={m.id}>
+                <button
+                  type="button"
+                  onClick={() => onChange(m.id)}
+                  className="w-full rounded-md px-2 py-1.5 text-left text-sm text-gray-800 hover:bg-gray-50"
+                >
+                  {modeloLabel(m)}
+                  {m.anos_referencia.length === 0 ? " (sem anos cadastrados)" : ""}
+                </button>
+              </li>
+            ))
+          )}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export function ProductCompatibilidadeFieldset({
   modelos,
   initialRows,
@@ -216,15 +320,11 @@ export function ProductCompatibilidadeFieldset({
     [rows]
   );
 
-  const modelosFiltradosPicker = useMemo(() => {
-    const q = pickerQuery.trim().toLowerCase();
-    if (!q) return modelos;
-    return modelos.filter((m) => {
-      const tipo = TIPO_VEICULO_MODELO_LABELS[m.tipo_veiculo];
-      const hay = `${m.nome} ${m.marca_nome} ${tipo}`.toLowerCase();
-      return hay.includes(q);
-    });
-  }, [modelos, pickerQuery]);
+  const modelosFiltradosPicker = useMemo(
+    () => filtrarModelos(modelos, pickerQuery),
+    [modelos, pickerQuery]
+  );
+  const modelosVisiveisPicker = modelosFiltradosPicker.slice(0, MAX_MODELOS_RENDERIZADOS);
 
   function togglePickerId(id: string) {
     setPickerChecked((prev) => {
@@ -238,7 +338,7 @@ export function ProductCompatibilidadeFieldset({
   function selecionarTodosFiltrados() {
     setPickerChecked((prev) => {
       const next = new Set(prev);
-      for (const m of modelosFiltradosPicker) {
+      for (const m of modelosVisiveisPicker) {
         if (!existingModeloIds.has(m.id)) next.add(m.id);
       }
       return next;
@@ -381,7 +481,13 @@ export function ProductCompatibilidadeFieldset({
                 <p className="px-2 py-4 text-center text-sm text-gray-500">Nenhum modelo com esse termo.</p>
               ) : (
                 <ul className="space-y-1">
-                  {modelosFiltradosPicker.map((m) => {
+                  {modelosFiltradosPicker.length > modelosVisiveisPicker.length && (
+                    <li className="px-2 py-1 text-xs text-gray-500">
+                      Mostrando {modelosVisiveisPicker.length} de {modelosFiltradosPicker.length} modelos.
+                      Refine a busca para ver os demais.
+                    </li>
+                  )}
+                  {modelosVisiveisPicker.map((m) => {
                     const jaNaLista = existingModeloIds.has(m.id);
                     const marcado = pickerChecked.has(m.id);
                     return (
@@ -465,33 +571,20 @@ export function ProductCompatibilidadeFieldset({
                 </button>
               </div>
               <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-sm font-medium text-gray-700" htmlFor={`modelo-${row.key}`}>
-                    Modelo
-                  </label>
-                  <select
-                    id={`modelo-${row.key}`}
-                    className={fieldClass}
-                    value={row.modelo_id}
-                    onChange={(e) => {
-                      const modelo_id = e.target.value;
-                      patchRow(row.key, {
-                        modelo_id,
-                        anos_selecionados: modelo_id
-                          ? [...todosAnosDoModelo(modelosById, modelo_id)]
-                          : [],
-                      });
-                    }}
-                  >
-                    <option value="">— Nenhum —</option>
-                    {modelos.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.marca_nome} — {m.nome} · {TIPO_VEICULO_MODELO_LABELS[m.tipo_veiculo]}
-                        {m.anos_referencia.length === 0 ? " (sem anos cadastrados)" : ""}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <ModeloRowSelect
+                  inputId={`modelo-${row.key}`}
+                  modelos={modelos}
+                  modelo={modelo}
+                  modeloId={row.modelo_id}
+                  onChange={(modelo_id) =>
+                    patchRow(row.key, {
+                      modelo_id,
+                      anos_selecionados: modelo_id
+                        ? [...todosAnosDoModelo(modelosById, modelo_id)]
+                        : [],
+                    })
+                  }
+                />
                 {semAnos && (
                   <p className="text-xs text-amber-800">
                     Este modelo não tem anos de referência. Cadastre-os em{" "}
