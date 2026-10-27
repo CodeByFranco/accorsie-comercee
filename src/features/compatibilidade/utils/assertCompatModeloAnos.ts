@@ -11,6 +11,8 @@ export type AssertCompatModeloAnosResult =
   | { ok: true }
   | { ok: false; message: string; missingAnos?: MissingModeloAno[] };
 
+const PAGE_SIZE = 1000;
+
 function formatMissingAnosMessage(missing: MissingModeloAno[]): string {
   const anosUnicos = [...new Set(missing.map((m) => m.ano))].sort((a, b) => a - b);
   if (anosUnicos.length === 1) {
@@ -30,10 +32,29 @@ export async function assertCompatUsaAnosCadastrados(
   if (rows.length === 0) return { ok: true };
 
   const modeloIds = [...new Set(rows.map((r) => r.modelo_id))];
-  const { data, error } = await supabase
-    .from("modelo_anos")
-    .select("modelo_id, ano")
-    .in("modelo_id", modeloIds);
+  const anoMin = Math.min(...rows.map((r) => r.ano_inicio));
+  const anoMax = Math.max(...rows.map((r) => r.ano_fim));
+
+  // Pagina: o PostgREST corta em 1000 linhas e kits com muitos modelos passam disso.
+  const data: Array<{ modelo_id: string; ano: number }> = [];
+  let error: { code?: string; message: string } | null = null;
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const { data: page, error: pageError } = await supabase
+      .from("modelo_anos")
+      .select("modelo_id, ano")
+      .in("modelo_id", modeloIds)
+      .gte("ano", anoMin)
+      .lte("ano", anoMax)
+      .order("modelo_id")
+      .order("ano", { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (pageError) {
+      error = pageError;
+      break;
+    }
+    data.push(...((page ?? []) as Array<{ modelo_id: string; ano: number }>));
+    if ((page ?? []).length < PAGE_SIZE) break;
+  }
 
   if (error) {
     const msg = error.message ?? String(error);

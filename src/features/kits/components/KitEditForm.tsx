@@ -48,6 +48,7 @@ export function KitEditForm({
   const [precoFinal, setPrecoFinal] = useState(kit.preco_final);
   const [nome, setNome] = useState(kit.nome);
   const [slug, setSlug] = useState(kit.slug);
+  const [itemProductIds, setItemProductIds] = useState(() => kit.items.map((it) => it.product_id));
 
   return (
     <>
@@ -109,7 +110,7 @@ export function KitEditForm({
             <textarea id="descricao" name="descricao" rows={4} defaultValue={kit.descricao} className={fieldClass} />
           </div>
 
-          <KitImageField initialImagem={kit.imagem} />
+          <KitImageField initialImagem={kit.imagem} productIds={itemProductIds} />
 
           <fieldset className="space-y-3 rounded-xl border border-gray-100 bg-gray-50/50 p-4">
             <legend className="text-sm font-semibold text-gray-900">Desconto do kit</legend>
@@ -176,6 +177,7 @@ export function KitEditForm({
             tipoDesconto={tipo}
             valorDesconto={valorDesconto}
             precoFinal={precoFinal}
+            onItemsChange={(items) => setItemProductIds(items.map((it) => it.product_id))}
           />
 
           <fieldset className="space-y-3 rounded-xl border border-gray-100 bg-gray-50/50 p-4">

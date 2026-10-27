@@ -3,6 +3,7 @@
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { createKitFromProducts } from "@/features/kits/services/kitCollage";
 import { ProductDestaqueStarForm } from "@/features/produtos/components/ProductDestaqueStarForm";
 import { ProductRowActions } from "@/features/produtos/components/ProductRowActions";
 import { ProductStatusBadge } from "@/features/produtos/components/ProductStatusBadge";
@@ -32,6 +33,7 @@ export function AdminProdutosListagemTabela({ produtos }: { produtos: AdminProdu
   const [bulkMessage, setBulkMessage] = useState<string | null>(null);
   const [bulkMessageTone, setBulkMessageTone] = useState<"ok" | "warn">("ok");
   const [pending, startTransition] = useTransition();
+  const [creatingKit, setCreatingKit] = useState(false);
   const headerCheckboxRef = useRef<HTMLInputElement>(null);
 
   const selectedInView = useMemo(
@@ -82,6 +84,22 @@ export function AdminProdutosListagemTabela({ produtos }: { produtos: AdminProdu
   const openBulkDeleteConfirm = () => {
     if (selectedInView.length === 0 || pending) return;
     setBulkDeleteConfirmOpen(true);
+  };
+
+  const runCreateKit = () => {
+    if (selectedInView.length === 0 || pending) return;
+    const idsSnapshot = [...selectedInView];
+    setBulkMessage(null);
+    setCreatingKit(true);
+    startTransition(async () => {
+      // Em caso de sucesso a action redireciona para a edição do kit.
+      const result = await createKitFromProducts(idsSnapshot);
+      setCreatingKit(false);
+      if (result && !result.ok) {
+        setBulkMessageTone("warn");
+        setBulkMessage(result.message);
+      }
+    });
   };
 
   const runBulkDelete = () => {
@@ -137,6 +155,14 @@ export function AdminProdutosListagemTabela({ produtos }: { produtos: AdminProdu
                 className="rounded-lg border border-[#1857d1] bg-admin-accent px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#1857d1] disabled:opacity-50"
               >
                 Reutilizar imagem ({selectedInView.length})
+              </button>
+              <button
+                type="button"
+                onClick={runCreateKit}
+                disabled={pending}
+                className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-800 transition hover:bg-gray-50 disabled:opacity-50"
+              >
+                {creatingKit ? "Criando kit…" : `Criar kit com selecionados (${selectedInView.length})`}
               </button>
               <button
                 type="button"

@@ -27,14 +27,22 @@ export function KitItemsPicker({
   tipoDesconto,
   valorDesconto,
   precoFinal,
+  onItemsChange,
 }: {
   products: KitPickerProduct[];
   initialItems: KitPickerItem[];
   tipoDesconto: KitDiscountType;
   valorDesconto: number;
   precoFinal: number | null;
+  onItemsChange?: (items: KitPickerItem[]) => void;
 }) {
-  const [items, setItems] = useState<KitPickerItem[]>(initialItems);
+  const [items, setItemsState] = useState<KitPickerItem[]>(initialItems);
+
+  function setItems(update: (prev: KitPickerItem[]) => KitPickerItem[]) {
+    const next = update(items);
+    setItemsState(next);
+    onItemsChange?.(next);
+  }
   const [q, setQ] = useState("");
 
   const byId = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
