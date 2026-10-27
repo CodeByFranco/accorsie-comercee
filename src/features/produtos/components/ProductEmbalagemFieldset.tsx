@@ -29,7 +29,7 @@ export function ProductEmbalagemFieldset({
 }) {
   const router = useRouter();
   const [tabEmbalagemId, setTabEmbalagemId] = useState(defaultEmbalagemId ?? "");
-  const [prodPesoTick, setProdPesoTick] = useState(0);
+  const [prodPesoKg, setProdPesoKg] = useState(0);
   const [createState, createAction, createPending] = useActionState(createEmbalagem, null);
   const [deletePending, startDelete] = useTransition();
   const [deleteErr, setDeleteErr] = useState<string | null>(null);
@@ -46,11 +46,16 @@ export function ProductEmbalagemFieldset({
   const selected = tabEmbalagemId ? byId.get(tabEmbalagemId) : undefined;
 
   useEffect(() => {
-    const el = document.getElementById("prod_peso_kg");
+    const el = document.getElementById("prod_peso_kg") as HTMLInputElement | null;
     if (!el) return;
-    const onInput = () => setProdPesoTick((t) => t + 1);
-    el.addEventListener("input", onInput);
-    return () => el.removeEventListener("input", onInput);
+    const read = () => {
+      const raw = el.value.trim();
+      const n = raw ? Number.parseFloat(raw.replace(",", ".")) : 0;
+      setProdPesoKg(Number.isFinite(n) ? n : 0);
+    };
+    read();
+    el.addEventListener("input", read);
+    return () => el.removeEventListener("input", read);
   }, []);
 
   useEffect(() => {
@@ -59,16 +64,6 @@ export function ProductEmbalagemFieldset({
       router.refresh();
     }
   }, [createState?.ok, router]);
-
-  const prodPesoKg = (() => {
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync read for display
-    void prodPesoTick;
-    const el = document.getElementById("prod_peso_kg") as HTMLInputElement | null;
-    const raw = el?.value?.trim() ?? "";
-    if (!raw) return 0;
-    const n = Number.parseFloat(raw.replace(",", "."));
-    return Number.isFinite(n) ? n : 0;
-  })();
 
   const pesoTotal =
     selected != null ? Number(selected.peso_embalagem_kg) + prodPesoKg : null;
