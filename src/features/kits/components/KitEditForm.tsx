@@ -8,9 +8,10 @@ import {
   type KitPickerItem,
   type KitPickerProduct,
 } from "@/features/kits/components/KitItemsPicker";
+import { KitChoicesEditor } from "@/features/kits/components/KitChoicesEditor";
 import { KitPublishActions } from "@/features/kits/components/KitPublishActions";
 import { updateKit, type UpdateKitState } from "@/features/kits/services/updateKit";
-import type { KitDiscountType } from "@/types/kit";
+import type { KitChoiceInput, KitDiscountType } from "@/types/kit";
 import type { KitStatus } from "@/features/kits/utils/kitStatus";
 import { slugify } from "@/utils/slugify";
 
@@ -26,8 +27,12 @@ export type KitEditValues = {
   seo_title: string;
   seo_description: string;
   status: KitStatus;
+  categoria_id: string;
   items: KitPickerItem[];
+  choices: KitChoiceInput[];
 };
+
+export type KitCategoriaOption = { id: string; nome: string };
 
 const fieldClass =
   "rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-admin-accent focus:ring-2 focus:ring-[#1d63ed]/20";
@@ -37,9 +42,11 @@ const initialState: UpdateKitState | null = null;
 export function KitEditForm({
   kit,
   products,
+  categorias,
 }: {
   kit: KitEditValues;
   products: KitPickerProduct[];
+  categorias: KitCategoriaOption[];
 }) {
   const [state, formAction, pending] = useActionState(updateKit, initialState);
   const fieldsRequired = kit.status === "published";
@@ -48,7 +55,13 @@ export function KitEditForm({
   const [precoFinal, setPrecoFinal] = useState(kit.preco_final);
   const [nome, setNome] = useState(kit.nome);
   const [slug, setSlug] = useState(kit.slug);
-  const [itemProductIds, setItemProductIds] = useState(() => kit.items.map((it) => it.product_id));
+  const [fixedItems, setFixedItems] = useState<KitPickerItem[]>(kit.items);
+  const [choiceCount, setChoiceCount] = useState(kit.choices.length);
+  const temEscolha = choiceCount > 0;
+  const tipoEfetivo: KitDiscountType = temEscolha ? "percentual" : tipo;
+  const itemProductIds = fixedItems.map((it) => it.product_id);
+  const priceById = new Map(products.map((p) => [p.id, p.valor]));
+  const fixedTotal = fixedItems.reduce((s, it) => s + (priceById.get(it.product_id) ?? 0) * it.quantidade, 0);
 
   return (
     <>
@@ -106,6 +119,19 @@ export function KitEditForm({
           </div>
 
           <div className="flex flex-col gap-1.5">
+            <label htmlFor="categoria_id" className="text-sm font-medium text-gray-700">Categoria</label>
+            <select id="categoria_id" name="categoria_id" defaultValue={kit.categoria_id} className={fieldClass}>
+              <option value="">Sem categoria</option>
+              {categorias.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nome}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-gray-500">Usada no atalho do site, ex.: todos os kits de Suspensão.</p>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
             <label htmlFor="descricao" className="text-sm font-medium text-gray-700">Descrição</label>
             <textarea id="descricao" name="descricao" rows={4} defaultValue={kit.descricao} className={fieldClass} />
           </div>
@@ -122,19 +148,28 @@ export function KitEditForm({
                   ["preco_fixo", "Preço fixo do kit"],
                 ] as const
               ).map(([value, label]) => (
-                <label key={value} className="flex items-center gap-2 text-sm text-gray-800">
+                <label
+                  key={value}
+                  className={`flex items-center gap-2 text-sm ${temEscolha && value !== "percentual" ? "text-gray-400" : "text-gray-800"}`}
+                >
                   <input
                     type="radio"
                     name="tipo_desconto"
                     value={value}
-                    checked={tipo === value}
+                    checked={tipoEfetivo === value}
+                    disabled={temEscolha && value !== "percentual"}
                     onChange={() => setTipo(value)}
                   />
                   {label}
                 </label>
               ))}
             </div>
-            {tipo === "preco_fixo" ? (
+            {temEscolha ? (
+              <p className="text-xs text-gray-500">
+                Este kit tem item de escolha do cliente, então o desconto é sempre percentual.
+              </p>
+            ) : null}
+            {tipoEfetivo === "preco_fixo" ? (
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="preco_final" className="text-sm font-medium text-gray-700">Preço do kit (R$)</label>
                 <input
@@ -153,14 +188,14 @@ export function KitEditForm({
             ) : (
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="valor_desconto" className="text-sm font-medium text-gray-700">
-                  {tipo === "percentual" ? "Percentual (%)" : "Valor do desconto (R$)"}
+                  {tipoEfetivo === "percentual" ? "Percentual (%)" : "Valor do desconto (R$)"}
                 </label>
                 <input
                   id="valor_desconto"
                   name="valor_desconto"
                   type="number"
                   min={0}
-                  max={tipo === "percentual" ? 100 : undefined}
+                  max={tipoEfetivo === "percentual" ? 100 : undefined}
                   step="0.01"
                   required={fieldsRequired}
                   value={valorDesconto}
@@ -174,10 +209,20 @@ export function KitEditForm({
           <KitItemsPicker
             products={products}
             initialItems={kit.items}
-            tipoDesconto={tipo}
+            tipoDesconto={tipoEfetivo}
             valorDesconto={valorDesconto}
             precoFinal={precoFinal}
-            onItemsChange={(items) => setItemProductIds(items.map((it) => it.product_id))}
+            onItemsChange={setFixedItems}
+            hideSummary={temEscolha}
+          />
+
+          <KitChoicesEditor
+            products={products}
+            categorias={categorias}
+            initialChoices={kit.choices}
+            descontoPercent={tipoEfetivo === "percentual" ? valorDesconto : 0}
+            fixedTotal={fixedTotal}
+            onChange={(choices) => setChoiceCount(choices.length)}
           />
 
           <fieldset className="space-y-3 rounded-xl border border-gray-100 bg-gray-50/50 p-4">

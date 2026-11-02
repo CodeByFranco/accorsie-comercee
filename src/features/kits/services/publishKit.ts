@@ -17,7 +17,7 @@ export async function publishKit(kitId: string): Promise<PublishKitState> {
   if (!id) return { ok: false, message: "Kit não identificado." };
 
   const supabase = await createClient();
-  const [{ data: kit, error }, { count }] = await Promise.all([
+  const [{ data: kit, error }, { data: itemRows }] = await Promise.all([
     supabase
       .from("kits")
       .select("id, nome, slug, tipo_desconto, valor_desconto, preco_final, status")
@@ -25,7 +25,7 @@ export async function publishKit(kitId: string): Promise<PublishKitState> {
       .maybeSingle(),
     supabase
       .from("kit_items")
-      .select("id", { count: "exact", head: true })
+      .select("id, tipo, nome, kit_item_opcoes ( product_id )")
       .eq("kit_id", id),
   ]);
 
@@ -38,7 +38,13 @@ export async function publishKit(kitId: string): Promise<PublishKitState> {
     tipo_desconto: parseKitDiscountType(kit.tipo_desconto),
     valor_desconto: Number(kit.valor_desconto),
     preco_final: kit.preco_final != null ? Number(kit.preco_final) : null,
-    itemCount: count ?? 0,
+    itemCount: itemRows?.length ?? 0,
+    escolhas: (itemRows ?? [])
+      .filter((r) => r.tipo === "escolha")
+      .map((r) => ({
+        nome: String(r.nome ?? ""),
+        opcoesCount: Array.isArray(r.kit_item_opcoes) ? r.kit_item_opcoes.length : 0,
+      })),
   });
   if (!validation.ok) {
     return { ok: false, message: validation.message, pending: validation.pending };

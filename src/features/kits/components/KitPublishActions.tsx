@@ -67,6 +67,14 @@ export function KitPublishActions({ kitId, status }: { kitId: string; status: Ki
             {pending ? "Despublicando…" : "Despublicar"}
           </button>
         )}
+        <a
+          href={`/kit/preview/${kitId}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm font-semibold text-admin-accent hover:underline"
+        >
+          Ver prévia
+        </a>
       </div>
       {status === "draft" && (
         <p className="text-xs text-gray-500">

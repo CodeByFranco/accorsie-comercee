@@ -211,7 +211,9 @@ export function CheckoutPage({
     const payload: CheckoutPayload = {
       ...payloadBase,
       ...(codigoCupom ? { cupom_codigo: codigoCupom } : {}),
-      ...(kitClaims.length > 0 ? { kit_ids: kitClaims.map((c) => c.kitId) } : {}),
+      ...(kitClaims.length > 0
+        ? { kits: kitClaims.map((c) => ({ kit_id: c.kitId, ...(c.escolhas ? { escolhas: c.escolhas } : {}) })) }
+        : {}),
     };
 
     setCheckoutBusy(true);

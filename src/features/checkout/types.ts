@@ -1,4 +1,5 @@
 import type { FormaPagamentoCheckout } from "@/features/produtos/utils/paymentDiscount";
+import type { KitChoiceSelection } from "@/types/kit";
 
 /** Linha enviada pelo cliente para o servidor recalcular preço e estoque (RPC). */
 export type CheckoutCartLineInput = {
@@ -30,6 +31,11 @@ export type CheckoutPayload = CheckoutEntregaInput & {
   retirada_loja?: boolean;
   /** Código do cupom (opcional); validado na RPC `criar_pedido_checkout`. */
   cupom_codigo?: string;
-  /** Kits aplicados (desconto oficial validado na RPC). */
-  kit_ids?: string[];
+  /** Kits aplicados com as escolhas do cliente (desconto oficial validado na RPC). */
+  kits?: CheckoutKitInput[];
+};
+
+export type CheckoutKitInput = {
+  kit_id: string;
+  escolhas?: KitChoiceSelection[];
 };

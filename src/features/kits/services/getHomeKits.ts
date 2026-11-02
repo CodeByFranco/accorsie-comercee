@@ -53,3 +53,49 @@ export async function searchPublishedKits(term: string, limit = 12): Promise<Kit
     return [];
   }
 }
+
+export type KitCategoria = { id: string; nome: string; slug: string };
+
+/** Categorias que têm ao menos um kit publicado (atalhos tipo "Kits de Suspensão"). */
+export async function getKitCategorias(): Promise<KitCategoria[]> {
+  try {
+    const supabase = createPublicClient();
+    const { data, error } = await supabase
+      .from("kits")
+      .select("categorias ( id, nome, slug )")
+      .eq("status", KIT_STATUS_PUBLISHED)
+      .not("categoria_id", "is", null);
+    if (error || !data) return [];
+    const map = new Map<string, KitCategoria>();
+    for (const row of data as Array<{ categorias: KitCategoria | KitCategoria[] | null }>) {
+      const c = Array.isArray(row.categorias) ? row.categorias[0] : row.categorias;
+      if (c?.id && c.nome && c.slug) map.set(c.id, c);
+    }
+    return [...map.values()].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  } catch {
+    return [];
+  }
+}
+
+/** Kits publicados, opcionalmente filtrados pelo slug da categoria. */
+export async function getPublishedKits(categoriaSlug?: string | null): Promise<KitSummary[]> {
+  try {
+    const supabase = createPublicClient();
+    let categoriaId: string | null = null;
+    const slug = categoriaSlug?.trim();
+    if (slug) {
+      const { data: cat } = await supabase.from("categorias").select("id").eq("slug", slug).maybeSingle();
+      if (!cat) return [];
+      categoriaId = cat.id as string;
+    }
+    let query = supabase.from("kits").select(KIT_LIST_SELECT).eq("status", KIT_STATUS_PUBLISHED);
+    if (categoriaId) query = query.eq("categoria_id", categoriaId);
+    const { data, error } = await query.order("nome");
+    if (error || !data) return [];
+    return (data as KitRowWithItems[])
+      .map((row) => mapKitSummary(row))
+      .filter((k): k is KitSummary => k != null && k.itemCount > 0);
+  } catch {
+    return [];
+  }
+}

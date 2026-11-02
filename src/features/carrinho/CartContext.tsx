@@ -14,6 +14,7 @@ import {
 
 import { clampPercent } from "@/features/produtos/utils/paymentDiscount";
 import type { ProductSummary } from "@/types/product";
+import type { KitChoiceSelection } from "@/types/kit";
 
 const STORAGE_KEY = "accorsi-store-cart-v2";
 
@@ -28,6 +29,8 @@ export type CartKitClaim = {
   items: Record<string, number>;
   /** Catalog economia at add time (preview; checkout recalculates). */
   economia: number;
+  /** Escolhas do cliente (ex.: óleo e litros); validadas na RPC. */
+  escolhas?: KitChoiceSelection[];
 };
 
 type CartContextValue = {
@@ -99,11 +102,23 @@ function parseStoredClaim(o: unknown): CartKitClaim | null {
   }
   if (Object.keys(items).length === 0) return null;
   const economia = Number(r.economia);
+  const escolhas: KitChoiceSelection[] = [];
+  if (Array.isArray(r.escolhas)) {
+    for (const e of r.escolhas as unknown[]) {
+      if (!e || typeof e !== "object") continue;
+      const s = e as Record<string, unknown>;
+      const quantidade = Number(s.quantidade);
+      if (typeof s.kit_item_id !== "string" || typeof s.product_id !== "string") continue;
+      if (!Number.isInteger(quantidade) || quantidade < 1) continue;
+      escolhas.push({ kit_item_id: s.kit_item_id, product_id: s.product_id, quantidade });
+    }
+  }
   return {
     kitId: r.kitId,
     nome: r.nome,
     items,
     economia: Number.isFinite(economia) && economia > 0 ? economia : 0,
+    ...(escolhas.length > 0 ? { escolhas } : {}),
   };
 }
 

@@ -8,13 +8,17 @@ export async function getKitsForProduct(productId: string): Promise<KitSummary[]
   if (!id) return [];
   try {
     const supabase = createPublicClient();
-    const { data: links, error: linkErr } = await supabase
-      .from("kit_items")
-      .select("kit_id")
-      .eq("product_id", id);
-    if (linkErr || !links?.length) return [];
+    const [{ data: links, error: linkErr }, { data: optLinks }] = await Promise.all([
+      supabase.from("kit_items").select("kit_id").eq("product_id", id),
+      supabase.from("kit_item_opcoes").select("kit_items ( kit_id )").eq("product_id", id),
+    ]);
+    if (linkErr) return [];
 
-    const kitIds = [...new Set(links.map((r) => r.kit_id as string).filter(Boolean))];
+    const optKitIds = (optLinks ?? []).flatMap((r) => {
+      const ki = (r as { kit_items: { kit_id: string } | { kit_id: string }[] | null }).kit_items;
+      return (Array.isArray(ki) ? ki : ki ? [ki] : []).map((x) => x.kit_id);
+    });
+    const kitIds = [...new Set([...(links ?? []).map((r) => r.kit_id as string), ...optKitIds].filter(Boolean))];
     if (kitIds.length === 0) return [];
 
     const { data, error } = await supabase

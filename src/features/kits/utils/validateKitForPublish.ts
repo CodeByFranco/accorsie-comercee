@@ -8,6 +8,8 @@ export type PublishKitFields = {
   valor_desconto: number | null | undefined;
   preco_final: number | null | undefined;
   itemCount: number;
+  /** Itens de escolha do cliente: nome e quantas opções cada um tem. */
+  escolhas?: Array<{ nome: string; opcoesCount: number }>;
 };
 
 export function getPendingKitPublishFields(fields: PublishKitFields): string[] {
@@ -17,6 +19,13 @@ export function getPendingKitPublishFields(fields: PublishKitFields): string[] {
   if (fields.itemCount < 1) pending.push("Itens do kit (ao menos 1)");
 
   const tipo = parseKitDiscountType(fields.tipo_desconto);
+  const escolhas = fields.escolhas ?? [];
+  for (const e of escolhas) {
+    if (e.opcoesCount < 1) pending.push(`Opções da escolha "${e.nome.trim() || "sem nome"}"`);
+  }
+  if (escolhas.length > 0 && tipo !== "percentual") {
+    pending.push("Kits com escolha do cliente usam desconto percentual");
+  }
   if (tipo === "preco_fixo") {
     if (fields.preco_final == null || !Number.isFinite(fields.preco_final) || fields.preco_final < 0) {
       pending.push("Preço fixo do kit");

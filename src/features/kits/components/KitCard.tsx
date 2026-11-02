@@ -24,9 +24,15 @@ export function KitCard({ kit }: { kit: KitSummary }) {
           {kit.economia > 0 ? (
             <p className="text-sm text-store-navy/55 line-through tabular-nums">{money.format(kit.precoNormal)}</p>
           ) : null}
-          <p className="text-lg font-bold tabular-nums text-store-navy">{money.format(kit.precoKit)}</p>
+          <p className="text-lg font-bold tabular-nums text-store-navy">
+            {kit.temEscolha ? <span className="text-xs font-semibold text-store-navy/60">A partir de </span> : null}
+            {money.format(kit.precoKit)}
+          </p>
           {kit.economia > 0 ? (
-            <p className="text-xs font-semibold text-emerald-800">Economia de {money.format(kit.economia)}</p>
+            <p className="text-xs font-semibold text-emerald-800">
+              {kit.temEscolha ? "Economize a partir de " : "Economia de "}
+              {money.format(kit.economia)}
+            </p>
           ) : null}
         </div>
         <Link

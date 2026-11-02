@@ -7,7 +7,7 @@ import { getVehicleFilterCatalogData } from "@/features/compatibilidade/services
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { getHomeCategories } from "@/features/categorias/services/getHomeCategories";
 import { getHomeProducts } from "@/features/produtos/services/getHomeProducts";
-import { getHomeKits, searchPublishedKits } from "@/features/kits/services/getHomeKits";
+import { getHomeKits, getKitCategorias, searchPublishedKits } from "@/features/kits/services/getHomeKits";
 import { parseHomeVehicleParams, parseProductSearchQ } from "@/features/produtos/utils/catalogSearchParams";
 import { storeShellContent, storeShellInset } from "@/config/storeShell";
 import type { CategoryListItem } from "@/types/category";
@@ -28,11 +28,12 @@ export default async function Home({
   const searchQ = parseProductSearchQ(sp);
   const { modeloId, anoVeiculo } = parseHomeVehicleParams(sp);
 
-  const [cats, prods, vehicleFilterData, kitsData] = await Promise.all([
+  const [cats, prods, vehicleFilterData, kitsData, kitCategorias] = await Promise.all([
     getHomeCategories(),
     getHomeProducts({ q: searchQ, modeloId, anoVeiculo }),
     getVehicleFilterCatalogData({ modeloIdForAnos: modeloId }),
     searchQ ? searchPublishedKits(searchQ) : getHomeKits(),
+    searchQ ? Promise.resolve([]) : getKitCategorias(),
   ]);
   categorias = cats;
   produtosDestaque = prods.destaque;
@@ -65,6 +66,7 @@ export default async function Home({
         kits={kits}
         title={searchQ ? "Kits encontrados" : "Kits"}
         emptyMessage={searchQ ? "Nenhum kit corresponde à busca." : undefined}
+        categorias={kitCategorias}
       />
     ) : null;
 

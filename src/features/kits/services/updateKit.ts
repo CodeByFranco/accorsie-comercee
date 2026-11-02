@@ -7,6 +7,7 @@ import { validateKitForPublish } from "@/features/kits/utils/validateKitForPubli
 import { slugify } from "@/utils/slugify";
 import { createClient } from "@/services/supabase/server";
 import { revalidatePath } from "next/cache";
+import type { KitChoiceInput } from "@/types/kit";
 
 export type UpdateKitState =
   | { ok: true; message: string }
@@ -33,6 +34,39 @@ function parseItemsJson(raw: string): { ok: true; items: Array<{ product_id: str
     return { ok: true, items };
   } catch {
     return { ok: false, message: "Não foi possível ler os itens do kit." };
+  }
+}
+
+function parseChoicesJson(raw: string): { ok: true; choices: KitChoiceInput[] } | { ok: false; message: string } {
+  try {
+    const parsed = JSON.parse(raw || "[]") as unknown;
+    if (!Array.isArray(parsed)) return { ok: false, message: "Itens de escolha inválidos." };
+    const choices: KitChoiceInput[] = [];
+    for (const row of parsed) {
+      if (!row || typeof row !== "object") continue;
+      const r = row as Record<string, unknown>;
+      const nome = String(r.nome ?? "").trim();
+      const qtd_min = Number.parseInt(String(r.qtd_min ?? ""), 10);
+      const qtd_max = Number.parseInt(String(r.qtd_max ?? ""), 10);
+      const qtd_padrao = Number.parseInt(String(r.qtd_padrao ?? ""), 10);
+      if (!nome) return { ok: false, message: "Dê um nome para cada item de escolha (ex.: Óleo do motor)." };
+      if (
+        !Number.isFinite(qtd_min) || !Number.isFinite(qtd_max) || !Number.isFinite(qtd_padrao) ||
+        qtd_min < 1 || qtd_max < qtd_min || qtd_padrao < qtd_min || qtd_padrao > qtd_max
+      ) {
+        return {
+          ok: false,
+          message: `"${nome}": a quantidade precisa ter mínimo ≥ 1, máximo ≥ mínimo e sugerida entre os dois.`,
+        };
+      }
+      const ids = Array.isArray(r.product_ids) ? r.product_ids : [];
+      const product_ids = [...new Set(ids.map((x) => String(x ?? "").trim()).filter(Boolean))];
+      const idRaw = String(r.id ?? "").trim();
+      choices.push({ ...(idRaw ? { id: idRaw } : {}), nome, qtd_min, qtd_max, qtd_padrao, product_ids });
+    }
+    return { ok: true, choices };
+  } catch {
+    return { ok: false, message: "Não foi possível ler os itens de escolha." };
   }
 }
 
@@ -84,8 +118,13 @@ export async function updateKit(
     return { ok: false, message: "Preço fixo inválido." };
   }
 
+  const categoria_id = String(formData.get("categoria_id") ?? "").trim() || null;
+
   const itemsParsed = parseItemsJson(String(formData.get("kit_items_json") ?? "[]"));
   if (!itemsParsed.ok) return { ok: false, message: itemsParsed.message };
+  const choicesParsed = parseChoicesJson(String(formData.get("kit_choices_json") ?? "[]"));
+  if (!choicesParsed.ok) return { ok: false, message: choicesParsed.message };
+  const choices = choicesParsed.choices;
 
   const supabase = await createClient();
   const { data: existing, error: exErr } = await supabase
@@ -110,7 +149,8 @@ export async function updateKit(
       tipo_desconto,
       valor_desconto,
       preco_final,
-      itemCount: itemsParsed.items.length,
+      itemCount: itemsParsed.items.length + choices.length,
+      escolhas: choices.map((c) => ({ nome: c.nome, opcoesCount: c.product_ids.length })),
     });
     if (!validation.ok) {
       return {
@@ -132,6 +172,7 @@ export async function updateKit(
       preco_final: tipo_desconto === "preco_fixo" ? preco_final : null,
       seo_title,
       seo_description,
+      categoria_id,
     })
     .eq("id", id);
 
@@ -142,7 +183,20 @@ export async function updateKit(
     return { ok: false, message: updErr.message };
   }
 
-  const { error: delErr } = await supabase.from("kit_items").delete().eq("kit_id", id);
+  // Itens de escolha mantêm o id (carrinhos em andamento referenciam kit_item_id).
+  const { data: existingChoices } = await supabase
+    .from("kit_items")
+    .select("id")
+    .eq("kit_id", id)
+    .eq("tipo", "escolha");
+  const existingChoiceIds = new Set((existingChoices ?? []).map((r) => r.id as string));
+  const keptChoiceIds = choices.map((c) => c.id).filter((cid): cid is string => !!cid && existingChoiceIds.has(cid));
+
+  let delQuery = supabase.from("kit_items").delete().eq("kit_id", id);
+  if (keptChoiceIds.length > 0) {
+    delQuery = delQuery.not("id", "in", `(${keptChoiceIds.join(",")})`);
+  }
+  const { error: delErr } = await delQuery;
   if (delErr) {
     return { ok: false, message: `Dados salvos, mas itens falharam: ${delErr.message}` };
   }
@@ -160,7 +214,43 @@ export async function updateKit(
     }
   }
 
+  for (const choice of choices) {
+    const fields = {
+      nome: choice.nome,
+      qtd_min: choice.qtd_min,
+      qtd_max: choice.qtd_max,
+      quantidade: choice.qtd_padrao,
+    };
+    let choiceId: string;
+    if (choice.id && existingChoiceIds.has(choice.id)) {
+      const { error: chErr } = await supabase.from("kit_items").update(fields).eq("id", choice.id);
+      if (chErr) return { ok: false, message: `Kit salvo, mas "${choice.nome}" falhou: ${chErr.message}` };
+      const { error: clrErr } = await supabase.from("kit_item_opcoes").delete().eq("kit_item_id", choice.id);
+      if (clrErr) return { ok: false, message: `Kit salvo, mas opções de "${choice.nome}" falharam: ${clrErr.message}` };
+      choiceId = choice.id;
+    } else {
+      const { data: created, error: chErr } = await supabase
+        .from("kit_items")
+        .insert({ kit_id: id, tipo: "escolha", product_id: null, ...fields })
+        .select("id")
+        .single();
+      if (chErr || !created) {
+        return { ok: false, message: `Kit salvo, mas "${choice.nome}" falhou: ${chErr?.message ?? "erro"}` };
+      }
+      choiceId = created.id as string;
+    }
+    if (choice.product_ids.length > 0) {
+      const { error: opErr } = await supabase
+        .from("kit_item_opcoes")
+        .insert(choice.product_ids.map((product_id) => ({ kit_item_id: choiceId, product_id })));
+      if (opErr) {
+        return { ok: false, message: `Kit salvo, mas opções de "${choice.nome}" falharam: ${opErr.message}` };
+      }
+    }
+  }
+
   revalidatePath("/");
+  revalidatePath("/kits");
   revalidatePath("/admin/kits");
   revalidatePath(`/admin/kits/${id}/edit`);
   if (slug) revalidatePath(`/kit/${slug}`);

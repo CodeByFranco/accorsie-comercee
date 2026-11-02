@@ -228,7 +228,20 @@ export async function criarPedidoECheckout(
     !retirada && (docOpt.length === 11 || docOpt.length === 14) ? docOpt : null;
 
   const cupomRaw = (payload.cupom_codigo ?? "").trim();
-  const kitIds = [...new Set((payload.kit_ids ?? []).map((id) => id.trim()).filter(Boolean))];
+  const kitsSeen = new Set<string>();
+  const p_kits = (payload.kits ?? []).flatMap((k) => {
+    const kit_id = String(k?.kit_id ?? "").trim();
+    if (!kit_id || kitsSeen.has(kit_id)) return [];
+    kitsSeen.add(kit_id);
+    const escolhas = (Array.isArray(k.escolhas) ? k.escolhas : [])
+      .map((e) => ({
+        kit_item_id: String(e?.kit_item_id ?? "").trim(),
+        product_id: String(e?.product_id ?? "").trim(),
+        quantidade: Math.floor(Number(e?.quantidade)),
+      }))
+      .filter((e) => e.kit_item_id && e.product_id && Number.isFinite(e.quantidade) && e.quantidade > 0);
+    return [{ kit_id, escolhas }];
+  });
   const { data: pedidoIdRaw, error: rpcError } = await supabase.rpc("criar_pedido_checkout", {
     p_itens,
     p_frete: retirada ? 0 : payload.frete,
@@ -245,7 +258,7 @@ export async function criarPedidoECheckout(
     p_destinatario_documento,
     p_retirada_loja: retirada,
     p_cupom_codigo: cupomRaw || null,
-    p_kit_ids: kitIds.length > 0 ? kitIds : [],
+    p_kits,
   });
 
   if (rpcError) {

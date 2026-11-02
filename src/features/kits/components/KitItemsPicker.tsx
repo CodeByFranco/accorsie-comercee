@@ -9,12 +9,18 @@ export type KitPickerProduct = {
   titulo: string;
   cod_produto: string;
   valor: number;
+  categoria_ids?: string[];
 };
 
 export type KitPickerItem = {
   product_id: string;
   quantidade: number;
 };
+
+/** Busca sem acento e sem diferenciar maiúsculas ("oleo" encontra "Óleo"). */
+function fold(s: string): string {
+  return s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
 
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -28,6 +34,7 @@ export function KitItemsPicker({
   valorDesconto,
   precoFinal,
   onItemsChange,
+  hideSummary = false,
 }: {
   products: KitPickerProduct[];
   initialItems: KitPickerItem[];
@@ -35,6 +42,8 @@ export function KitItemsPicker({
   valorDesconto: number;
   precoFinal: number | null;
   onItemsChange?: (items: KitPickerItem[]) => void;
+  /** Esconde o resumo quando o preço depende de escolhas do cliente (mostrado no editor de escolhas). */
+  hideSummary?: boolean;
 }) {
   const [items, setItemsState] = useState<KitPickerItem[]>(initialItems);
 
@@ -60,15 +69,15 @@ export function KitItemsPicker({
   }, [items, byId, tipoDesconto, valorDesconto, precoFinal]);
 
   const filtered = useMemo(() => {
-    const term = q.trim().toLowerCase();
+    const term = fold(q.trim());
     const selected = new Set(items.map((i) => i.product_id));
     return products
       .filter((p) => !selected.has(p.id))
       .filter((p) => {
         if (!term) return true;
         return (
-          p.titulo.toLowerCase().includes(term) ||
-          p.cod_produto.toLowerCase().includes(term)
+          fold(p.titulo).includes(term) ||
+          fold(p.cod_produto).includes(term)
         );
       })
       .slice(0, 20);
@@ -91,7 +100,7 @@ export function KitItemsPicker({
     <div className="space-y-4">
       <input type="hidden" name="kit_items_json" value={JSON.stringify(items)} />
 
-      <div className="rounded-xl border border-gray-100 bg-gray-50/80 p-4">
+      <div className={`rounded-xl border border-gray-100 bg-gray-50/80 p-4 ${hideSummary ? "hidden" : ""}`}>
         <p className="text-sm font-semibold text-gray-900">Resumo de preços</p>
         <dl className="mt-2 grid gap-1 text-sm text-gray-700 sm:grid-cols-3">
           <div>
@@ -110,7 +119,7 @@ export function KitItemsPicker({
       </div>
 
       <div className="space-y-2">
-        <p className="text-sm font-semibold text-gray-900">Itens do kit</p>
+        <p className="text-sm font-semibold text-gray-900">Itens fixos do kit</p>
         {items.length === 0 ? (
           <p className="text-sm text-gray-500">Nenhum produto adicionado ainda.</p>
         ) : (
