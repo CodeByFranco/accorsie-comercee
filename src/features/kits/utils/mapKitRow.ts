@@ -10,7 +10,7 @@ import type {
 } from "@/types/kit";
 import { parseKitStatus } from "@/features/kits/utils/kitStatus";
 
-type ProdutoEmbed = {
+export type ProdutoEmbed = {
   id: string;
   titulo: string | null;
   cod_produto: string | null;
@@ -63,7 +63,7 @@ function one<T>(raw: T | T[] | null | undefined): T | null {
   return Array.isArray(raw) ? raw[0] ?? null : raw;
 }
 
-function mapProduto(raw: ProdutoEmbed | ProdutoEmbed[] | null | undefined): KitProductInfo | null {
+export function mapProduto(raw: ProdutoEmbed | ProdutoEmbed[] | null | undefined): KitProductInfo | null {
   const p = one(raw);
   if (!p?.id) return null;
   if (p.status && p.status !== "published") return null;
@@ -180,10 +180,11 @@ export function mapKitDetail(row: KitRowWithItems): KitDetail | null {
     status: parseKitStatus(row.status),
     items: mapKitItems(row.kit_items),
     escolhas: mapKitChoices(row.kit_items),
+    combo: null,
   };
 }
 
-const PRODUTO_FIELDS =
+export const PRODUTO_FIELDS =
   "id, titulo, cod_produto, valor, foto, quantidade_estoque, desconto_pix_percent, desconto_cartao_percent, somente_retirada_loja, status";
 
 const KIT_ITEMS_EMBED = `

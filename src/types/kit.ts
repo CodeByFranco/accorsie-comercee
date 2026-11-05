@@ -73,4 +73,30 @@ export type KitDetail = KitSummary & {
   status: KitStatus;
   items: KitDetailItem[];
   escolhas: KitChoiceItem[];
+  /** Combo global (ex.: óleo à escolha com desconto), quando ativo para este kit. */
+  combo: KitCombo | null;
+};
+
+/** kit_item_id usado nas escolhas do carrinho/checkout para o combo global. */
+export const KIT_COMBO_ITEM_ID = "combo";
+
+export type KitCombo = {
+  nome: string;
+  qtd_min: number;
+  qtd_padrao: number;
+  qtd_max: number;
+  desconto_percent: number;
+  opcoes: KitProductInfo[];
+};
+
+/** Configuração do combo no admin. */
+export type KitComboConfig = {
+  ativo: boolean;
+  nome: string;
+  qtd_min: number;
+  qtd_padrao: number;
+  qtd_max: number;
+  desconto_percent: number;
+  categoria_id: string;
+  product_ids: string[];
 };

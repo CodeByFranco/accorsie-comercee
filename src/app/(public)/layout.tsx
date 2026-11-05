@@ -5,6 +5,7 @@ import { WhatsAppAssistantButton } from "@/components/layout/WhatsAppAssistantBu
 import { CartProvider } from "@/features/carrinho/CartContext";
 import { getHomeCategories } from "@/features/categorias/services/getHomeCategories";
 import { getStoreSiteLayout } from "@/features/site-layout/services/getSiteLayout";
+import { getKitCategorias } from "@/features/kits/services/getHomeKits";
 import { getCatalogSliderMax } from "@/features/produtos/services/getCatalogProducts";
 
 const FALLBACK_HOME_BANNER = "/home/Banner%20inicial.png";
@@ -14,10 +15,11 @@ const FALLBACK_HOME_BANNER = "/home/Banner%20inicial.png";
  * são lidos no navegador pela navbar (`useStoreAccount`).
  */
 export default async function PublicLayout({ children }: { children: ReactNode }) {
-  const [categorias, catalogSliderMax, siteLayout] = await Promise.all([
+  const [categorias, catalogSliderMax, siteLayout, kitCategorias] = await Promise.all([
     getHomeCategories(),
     getCatalogSliderMax(),
     getStoreSiteLayout(),
+    getKitCategorias(),
   ]);
 
   const fromDb = [siteLayout.banner_1_url, siteLayout.banner_2_url]
@@ -29,6 +31,7 @@ export default async function PublicLayout({ children }: { children: ReactNode }
     <CartProvider>
       <StoreNavbar
         categorias={categorias}
+        kitCategorias={kitCategorias}
         catalogSliderMax={catalogSliderMax}
         homeBannerSrcs={homeBannerSrcs}
       />

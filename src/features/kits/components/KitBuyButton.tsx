@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { useCart } from "@/features/carrinho/CartContext";
 import { computeKitPricing } from "@/features/kits/utils/kitPricing";
 import { kitPricingLines } from "@/features/kits/utils/mapKitRow";
-import type { KitChoiceSelection, KitDetail, KitProductInfo } from "@/types/kit";
+import { KIT_COMBO_ITEM_ID, type KitChoiceSelection, type KitDetail, type KitProductInfo } from "@/types/kit";
 
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -32,7 +32,16 @@ export function KitBuyButton({ kit }: { kit: KitDetail }) {
     });
   }
 
-  const pricing = useMemo(
+  const combo = kit.combo;
+  const [comboOn, setComboOn] = useState(false);
+  const [comboSel, setComboSel] = useState(() => ({
+    product_id:
+      (combo?.opcoes.find((o) => o.quantidade_estoque >= combo.qtd_padrao) ?? combo?.opcoes[0])?.product_id ?? "",
+    quantidade: combo?.qtd_padrao ?? 1,
+  }));
+  const comboOpt = combo && comboOn ? combo.opcoes.find((o) => o.product_id === comboSel.product_id) ?? null : null;
+
+  const kitPricing = useMemo(
     () =>
       computeKitPricing({
         tipo_desconto: kit.tipo_desconto,
@@ -42,6 +51,17 @@ export function KitBuyButton({ kit }: { kit: KitDetail }) {
       }),
     [kit, selecao],
   );
+
+  const pricing = useMemo(() => {
+    if (!combo || !comboOpt) return kitPricing;
+    const bruto = comboOpt.valor * comboSel.quantidade;
+    const eco = Math.round(bruto * combo.desconto_percent) / 100;
+    return {
+      precoNormal: kitPricing.precoNormal + bruto,
+      precoKit: kitPricing.precoKit + bruto - eco,
+      economia: Math.round((kitPricing.economia + eco) * 100) / 100,
+    };
+  }, [kitPricing, combo, comboOpt, comboSel.quantidade]);
 
   const linhas = useMemo(() => {
     const out: Array<KitProductInfo & { quantity: number }> = kit.items.map((it) => ({
@@ -56,15 +76,20 @@ export function KitBuyButton({ kit }: { kit: KitDetail }) {
       if (existing) existing.quantity += sel.quantidade;
       else out.push({ ...opt, quantity: sel.quantidade });
     }
+    if (comboOpt) {
+      const existing = out.find((l) => l.product_id === comboOpt.product_id);
+      if (existing) existing.quantity += comboSel.quantidade;
+      else out.push({ ...comboOpt, quantity: comboSel.quantidade });
+    }
     return out;
-  }, [kit, selecao]);
+  }, [kit, selecao, comboOpt, comboSel.quantidade]);
 
   const escolhasCompletas = kit.escolhas.every((ch) => {
     const sel = selecao.get(ch.kit_item_id);
     return !!sel && ch.opcoes.some((o) => o.product_id === sel.product_id);
   });
   const semEstoque = linhas.some((l) => l.quantidade_estoque < l.quantity);
-  const disabled = !escolhasCompletas || semEstoque;
+  const disabled = !escolhasCompletas || semEstoque || (comboOn && !comboOpt);
 
   return (
     <div className="flex flex-col gap-5">
@@ -157,6 +182,101 @@ export function KitBuyButton({ kit }: { kit: KitDetail }) {
         );
       })}
 
+      {combo ? (
+        <div
+          className={`space-y-3 rounded-sm border-2 p-4 transition ${
+            comboOn ? "border-store-accent bg-store-accent/5" : "border-dashed border-store-navy/25 bg-white"
+          }`}
+        >
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              checked={comboOn}
+              onChange={(e) => setComboOn(e.target.checked)}
+              className="mt-1 h-5 w-5 accent-store-navy"
+            />
+            <span>
+              <span className="block font-bold">
+                Leve junto: {combo.nome}
+                {combo.desconto_percent > 0 ? ` com ${combo.desconto_percent.toLocaleString("pt-BR")}% de desconto` : ""}
+              </span>
+              <span className="block text-sm text-store-navy/70">Você escolhe o produto e a quantidade.</span>
+            </span>
+          </label>
+          {comboOn ? (
+            <>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {combo.opcoes.map((o) => {
+                  const ativo = o.product_id === comboSel.product_id;
+                  return (
+                    <button
+                      key={o.product_id}
+                      type="button"
+                      disabled={o.quantidade_estoque < combo.qtd_min}
+                      onClick={() => setComboSel((c) => ({ ...c, product_id: o.product_id }))}
+                      aria-pressed={ativo}
+                      className={`flex items-center gap-2 rounded-sm border px-3 py-2 text-left text-sm transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                        ativo ? "border-store-navy bg-store-cream font-semibold" : "border-store-navy/15 hover:border-store-navy/40"
+                      }`}
+                    >
+                      {o.imageUrl ? (
+                        <span className="relative h-9 w-9 shrink-0 overflow-hidden rounded-sm bg-store-cream">
+                          <Image src={o.imageUrl} alt="" fill className="object-cover" sizes="36px" />
+                        </span>
+                      ) : null}
+                      <span className="min-w-0 flex-1">
+                        <span className="block leading-snug">{o.titulo}</span>
+                        <span className="block text-xs font-normal text-store-navy/60">
+                          {combo.desconto_percent > 0 ? (
+                            <>
+                              <s>{money.format(o.valor)}</s>{" "}
+                              {money.format(o.valor * (1 - combo.desconto_percent / 100))} / un.
+                            </>
+                          ) : (
+                            <>{money.format(o.valor)} / un.</>
+                          )}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {combo.qtd_max > combo.qtd_min ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-store-navy/80">Quantidade</span>
+                  <div className="inline-flex items-center rounded-sm border border-store-navy/20">
+                    <button
+                      type="button"
+                      aria-label="Diminuir"
+                      disabled={comboSel.quantidade <= combo.qtd_min}
+                      onClick={() => setComboSel((c) => ({ ...c, quantidade: c.quantidade - 1 }))}
+                      className="px-3 py-1.5 text-lg leading-none disabled:opacity-30"
+                    >
+                      −
+                    </button>
+                    <span className="min-w-8 text-center font-semibold tabular-nums">{comboSel.quantidade}</span>
+                    <button
+                      type="button"
+                      aria-label="Aumentar"
+                      disabled={comboSel.quantidade >= combo.qtd_max}
+                      onClick={() => setComboSel((c) => ({ ...c, quantidade: c.quantidade + 1 }))}
+                      className="px-3 py-1.5 text-lg leading-none disabled:opacity-30"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <span className="text-xs text-store-navy/60">
+                    de {combo.qtd_min} a {combo.qtd_max}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-sm text-store-navy/70">Quantidade: {combo.qtd_min}</p>
+              )}
+            </>
+          ) : null}
+        </div>
+      ) : null}
+
       <button
         type="button"
         disabled={disabled}
@@ -165,6 +285,13 @@ export function KitBuyButton({ kit }: { kit: KitDetail }) {
             const sel = selecao.get(ch.kit_item_id);
             return sel ? [{ kit_item_id: ch.kit_item_id, product_id: sel.product_id, quantidade: sel.quantidade }] : [];
           });
+          if (comboOpt) {
+            escolhas.push({
+              kit_item_id: KIT_COMBO_ITEM_ID,
+              product_id: comboOpt.product_id,
+              quantidade: comboSel.quantidade,
+            });
+          }
           addKit(
             {
               kitId: kit.id,

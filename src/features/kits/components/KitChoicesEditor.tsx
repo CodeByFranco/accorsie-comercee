@@ -15,7 +15,7 @@ const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL
 const fieldClass =
   "rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none transition focus:border-admin-accent focus:ring-2 focus:ring-[#1d63ed]/20";
 
-type ChoiceDraft = KitChoiceInput & { key: string };
+export type ChoiceDraft = KitChoiceInput & { key: string };
 
 function toInput(draft: ChoiceDraft): KitChoiceInput {
   const { key, ...choice } = draft;
@@ -126,7 +126,7 @@ export function KitChoicesEditor({
   );
 }
 
-function ChoiceCard({
+export function ChoiceCard({
   choice,
   products,
   byId,

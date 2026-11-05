@@ -2,6 +2,7 @@ import { createPublicClient } from "@/services/supabase/public";
 import { createClient } from "@/services/supabase/server";
 import { KIT_STATUS_PUBLISHED } from "@/features/kits/utils/kitStatus";
 import { KIT_DETAIL_SELECT, mapKitDetail, type KitRowWithItems } from "@/features/kits/utils/mapKitRow";
+import { withKitCombo } from "@/features/kits/services/kitCombo";
 import type { KitDetail } from "@/types/kit";
 
 export async function getKitBySlug(slug: string): Promise<KitDetail | null> {
@@ -18,7 +19,7 @@ export async function getKitBySlug(slug: string): Promise<KitDetail | null> {
     if (error || !data) return null;
     const detail = mapKitDetail(data as KitRowWithItems);
     if (!detail || detail.items.length === 0) return null;
-    return detail;
+    return await withKitCombo(supabase, detail);
   } catch {
     return null;
   }
@@ -31,5 +32,6 @@ export async function getKitByIdForAdmin(id: string): Promise<KitDetail | null> 
   const supabase = await createClient();
   const { data, error } = await supabase.from("kits").select(KIT_DETAIL_SELECT).eq("id", kitId).maybeSingle();
   if (error || !data) return null;
-  return mapKitDetail({ ...(data as KitRowWithItems), slug: (data as KitRowWithItems).slug || kitId, nome: (data as KitRowWithItems).nome || "Kit sem nome" });
+  const detail = mapKitDetail({ ...(data as KitRowWithItems), slug: (data as KitRowWithItems).slug || kitId, nome: (data as KitRowWithItems).nome || "Kit sem nome" });
+  return detail ? withKitCombo(supabase, detail) : null;
 }

@@ -55,6 +55,8 @@ function IconSearch({ className }: { className?: string }) {
 
 type StoreNavbarProps = {
   categorias: CategoryListItem[];
+  /** Categorias com kits publicados (atalhos "Kits de Suspensão" etc.). */
+  kitCategorias?: Array<{ id: string; nome: string; slug: string }>;
   catalogSliderMax: number;
   /** URLs dos banners da home (rotação). Pelo menos uma (fallback no layout se vazio no banco). */
   homeBannerSrcs: string[];
@@ -78,6 +80,7 @@ function mobileNavRowClass(active: boolean) {
 
 export function StoreNavbar({
   categorias,
+  kitCategorias = [],
   catalogSliderMax,
   homeBannerSrcs,
 }: StoreNavbarProps) {
@@ -273,6 +276,20 @@ export function StoreNavbar({
                         <p className="px-3 py-2 text-xs text-store-navy-muted">Nenhuma categoria cadastrada.</p>
                       ) : (
                         <ul className="max-h-[min(70vh,20rem)] overflow-y-auto py-0.5">
+                          {kitCategorias.map((k) => (
+                            <li key={`kit-${k.id}`} role="presentation">
+                              <Link
+                                href={`/kits?categoria=${k.slug}`}
+                                onClick={closeCategorias}
+                                className="flex w-full items-center px-3 py-2 text-left text-sm font-bold text-store-navy transition hover:bg-store-subtle/90"
+                              >
+                                Kits de {k.nome}
+                              </Link>
+                            </li>
+                          ))}
+                          {kitCategorias.length > 0 ? (
+                            <li role="presentation" className="my-1 border-t border-store-line/60" />
+                          ) : null}
                           {categorias.map((c) => (
                             <li key={c.id} role="presentation">
                               <button
@@ -423,6 +440,17 @@ export function StoreNavbar({
                     <p className="px-2 py-2 text-xs text-store-navy-muted">Nenhuma categoria cadastrada.</p>
                   ) : (
                     <ul className="max-h-[min(50vh,16rem)] space-y-0.5 overflow-y-auto">
+                      {kitCategorias.map((k) => (
+                        <li key={`kit-${k.id}`}>
+                          <Link
+                            href={`/kits?categoria=${k.slug}`}
+                            onClick={closeMobileNav}
+                            className="flex w-full rounded-md px-2 py-2 text-left text-sm font-bold text-store-navy transition hover:bg-store-subtle/90"
+                          >
+                            Kits de {k.nome}
+                          </Link>
+                        </li>
+                      ))}
                       {categorias.map((c) => (
                         <li key={c.id}>
                           <button

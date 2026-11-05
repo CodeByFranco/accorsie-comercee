@@ -105,7 +105,15 @@ export default async function AdminKitsPage({
 
   return (
     <div className="space-y-6">
-      <AdminCatalogTabs active="kits" />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <AdminCatalogTabs active="kits" />
+        <Link
+          href="/admin/kits/combo"
+          className="rounded-lg border border-admin-accent px-4 py-2 text-sm font-semibold text-admin-accent hover:bg-blue-50"
+        >
+          Combo com óleo (todos os kits)
+        </Link>
+      </div>
 
       {rawErro && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-950" role="alert">
