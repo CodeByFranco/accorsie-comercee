@@ -104,10 +104,10 @@ export async function updateKit(
   const imagem = String(formData.get("imagem") ?? "").trim() || null;
   const seo_title = String(formData.get("seo_title") ?? "").trim() || null;
   const seo_description = String(formData.get("seo_description") ?? "").trim() || null;
-  const tipo_desconto = parseKitDiscountType(formData.get("tipo_desconto"));
-  const valor_desconto = Number.parseFloat(String(formData.get("valor_desconto") ?? "0").replace(",", "."));
+  let tipo_desconto = parseKitDiscountType(formData.get("tipo_desconto"));
+  let valor_desconto = Number.parseFloat(String(formData.get("valor_desconto") ?? "0").replace(",", "."));
   const precoFinalRaw = String(formData.get("preco_final") ?? "").replace(",", ".").trim();
-  const preco_final = precoFinalRaw
+  let preco_final = precoFinalRaw
     ? Number.parseFloat(precoFinalRaw)
     : null;
 
@@ -119,6 +119,7 @@ export async function updateKit(
   }
 
   const categoria_id = String(formData.get("categoria_id") ?? "").trim() || null;
+  const usa_desconto_padrao = formData.get("usa_desconto_padrao") === "on";
 
   const itemsParsed = parseItemsJson(String(formData.get("kit_items_json") ?? "[]"));
   if (!itemsParsed.ok) return { ok: false, message: itemsParsed.message };
@@ -134,6 +135,14 @@ export async function updateKit(
     .maybeSingle();
   if (exErr) return { ok: false, message: exErr.message };
   if (!existing) return { ok: false, message: "Kit não encontrado." };
+
+  if (usa_desconto_padrao) {
+    // Guarda o % PIX padrão no kit para listagens/cards; o checkout usa a config global.
+    const { data: cfg } = await supabase.from("kit_combo").select("kit_desconto_pix").eq("id", 1).maybeSingle();
+    tipo_desconto = "percentual";
+    valor_desconto = Number(cfg?.kit_desconto_pix ?? 12);
+    preco_final = null;
+  }
 
   const status = parseKitStatus(existing.status);
   const nome = nomeRaw || null;
@@ -173,6 +182,7 @@ export async function updateKit(
       seo_title,
       seo_description,
       categoria_id,
+      usa_desconto_padrao,
     })
     .eq("id", id);
 

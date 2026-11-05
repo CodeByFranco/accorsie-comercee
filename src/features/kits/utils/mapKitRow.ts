@@ -181,6 +181,7 @@ export function mapKitDetail(row: KitRowWithItems): KitDetail | null {
     items: mapKitItems(row.kit_items),
     escolhas: mapKitChoices(row.kit_items),
     combo: null,
+    descontoPadrao: null,
   };
 }
 

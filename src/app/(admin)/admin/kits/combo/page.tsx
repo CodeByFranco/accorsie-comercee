@@ -4,6 +4,7 @@ import { KitComboForm } from "@/features/kits/components/KitComboForm";
 import type { KitPickerProduct } from "@/features/kits/components/KitItemsPicker";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { createClient } from "@/services/supabase/server";
+import { KIT_COMBO_SELECT, mapDescontoPadrao } from "@/features/kits/services/kitCombo";
 import type { KitComboConfig } from "@/types/kit";
 
 export const metadata = { title: "Combo dos kits | Admin" };
@@ -14,7 +15,7 @@ export default async function KitComboPage() {
   const [cfgRes, opcoesRes, productsRes, categoriasRes, prodCatRes] = await Promise.all([
     supabase
       .from("kit_combo")
-      .select("ativo, nome, qtd_min, qtd_padrao, qtd_max, desconto_percent, categoria_id")
+      .select(KIT_COMBO_SELECT)
       .eq("id", 1)
       .maybeSingle(),
     supabase.from("kit_combo_opcoes").select("product_id"),
@@ -26,7 +27,7 @@ export default async function KitComboPage() {
   if (cfgRes.error) {
     return (
       <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-950">
-        {cfgRes.error.message} — aplique a migration 20261105120000_kit_combo_global.sql.
+        {cfgRes.error.message} — aplique as migrations 20261105120000 e 20261105160000.
       </div>
     );
   }
@@ -38,8 +39,7 @@ export default async function KitComboPage() {
     qtd_min: Number(c?.qtd_min) || 1,
     qtd_padrao: Number(c?.qtd_padrao) || 1,
     qtd_max: Number(c?.qtd_max) || 1,
-    desconto_percent: Number(c?.desconto_percent) || 0,
-    categoria_id: c?.categoria_id ?? "",
+    ...mapDescontoPadrao(c),
     product_ids: (opcoesRes.data ?? []).map((r) => r.product_id as string),
   };
 

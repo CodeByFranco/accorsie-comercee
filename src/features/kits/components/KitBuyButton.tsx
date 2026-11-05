@@ -8,6 +8,8 @@ import { kitPricingLines } from "@/features/kits/utils/mapKitRow";
 import { KIT_COMBO_ITEM_ID, type KitChoiceSelection, type KitDetail, type KitProductInfo } from "@/types/kit";
 
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+const fmtPct = (n: number) => `${n.toLocaleString("pt-BR")}%`;
 
 /** Preço, escolhas do cliente (ex.: viscosidade e litros) e botão de compra do kit. */
 export function KitBuyButton({ kit }: { kit: KitDetail }) {
@@ -52,17 +54,6 @@ export function KitBuyButton({ kit }: { kit: KitDetail }) {
     [kit, selecao],
   );
 
-  const pricing = useMemo(() => {
-    if (!combo || !comboOpt) return kitPricing;
-    const bruto = comboOpt.valor * comboSel.quantidade;
-    const eco = Math.round(bruto * combo.desconto_percent) / 100;
-    return {
-      precoNormal: kitPricing.precoNormal + bruto,
-      precoKit: kitPricing.precoKit + bruto - eco,
-      economia: Math.round((kitPricing.economia + eco) * 100) / 100,
-    };
-  }, [kitPricing, combo, comboOpt, comboSel.quantidade]);
-
   const linhas = useMemo(() => {
     const out: Array<KitProductInfo & { quantity: number }> = kit.items.map((it) => ({
       ...it,
@@ -84,6 +75,17 @@ export function KitBuyButton({ kit }: { kit: KitDetail }) {
     return out;
   }, [kit, selecao, comboOpt, comboSel.quantidade]);
 
+  const padrao = kit.descontoPadrao;
+  const pctPix = padrao ? (comboOpt ? padrao.combo_pix : padrao.kit_pix) : 0;
+  const pctCartao = padrao ? (comboOpt ? padrao.combo_cartao : padrao.kit_cartao) : 0;
+  const pricing = useMemo(() => {
+    if (!padrao) return kitPricing;
+    const normal = r2(linhas.reduce((s, l) => s + l.valor * l.quantity, 0));
+    const precoKit = r2(normal * (1 - pctPix / 100));
+    return { precoNormal: normal, precoKit, economia: r2(normal - precoKit) };
+  }, [padrao, kitPricing, linhas, pctPix]);
+  const precoCartao = padrao ? r2(pricing.precoNormal * (1 - pctCartao / 100)) : null;
+
   const escolhasCompletas = kit.escolhas.every((ch) => {
     const sel = selecao.get(ch.kit_item_id);
     return !!sel && ch.opcoes.some((o) => o.product_id === sel.product_id);
@@ -97,7 +99,16 @@ export function KitBuyButton({ kit }: { kit: KitDetail }) {
         {pricing.economia > 0 ? (
           <p className="text-base text-store-navy/50 line-through tabular-nums">{money.format(pricing.precoNormal)}</p>
         ) : null}
-        <p className="text-3xl font-bold tabular-nums">{money.format(pricing.precoKit)}</p>
+        <p className="text-3xl font-bold tabular-nums">
+          {money.format(pricing.precoKit)}
+          {padrao ? <span className="ml-2 text-base font-semibold text-store-navy/70">no PIX ({fmtPct(pctPix)} off)</span> : null}
+        </p>
+        {padrao && precoCartao != null ? (
+          <p className="text-sm text-store-navy/80">
+            ou <strong className="tabular-nums">{money.format(precoCartao)}</strong> no cartão ({fmtPct(pctCartao)} off) em até
+            3x sem juros
+          </p>
+        ) : null}
         {pricing.economia > 0 ? (
           <p className="!mt-2 inline-block rounded-full border-2 border-store-accent bg-store-accent/10 px-3 py-1.5 text-sm font-bold text-emerald-800">
             Você economiza {money.format(pricing.economia)}</p>
@@ -198,9 +209,12 @@ export function KitBuyButton({ kit }: { kit: KitDetail }) {
             <span>
               <span className="block font-bold">
                 Leve junto: {combo.nome}
-                {combo.desconto_percent > 0 ? ` com ${combo.desconto_percent.toLocaleString("pt-BR")}% de desconto` : ""}
               </span>
-              <span className="block text-sm text-store-navy/70">Você escolhe o produto e a quantidade.</span>
+              <span className="block text-sm text-store-navy/70">
+                {padrao
+                  ? `O kit inteiro passa para ${fmtPct(padrao.combo_pix)} off no PIX e ${fmtPct(padrao.combo_cartao)} no cartão. Você escolhe o produto e a quantidade.`
+                  : "Você escolhe o produto e a quantidade."}
+              </span>
             </span>
           </label>
           {comboOn ? (
@@ -227,14 +241,7 @@ export function KitBuyButton({ kit }: { kit: KitDetail }) {
                       <span className="min-w-0 flex-1">
                         <span className="block leading-snug">{o.titulo}</span>
                         <span className="block text-xs font-normal text-store-navy/60">
-                          {combo.desconto_percent > 0 ? (
-                            <>
-                              <s>{money.format(o.valor)}</s>{" "}
-                              {money.format(o.valor * (1 - combo.desconto_percent / 100))} / un.
-                            </>
-                          ) : (
-                            <>{money.format(o.valor)} / un.</>
-                          )}
+                          {money.format(o.valor)} / un.
                         </span>
                       </span>
                     </button>
@@ -298,6 +305,7 @@ export function KitBuyButton({ kit }: { kit: KitDetail }) {
               nome: kit.nome,
               items: Object.fromEntries(linhas.map((l) => [l.product_id, l.quantity])),
               economia: pricing.economia,
+              ...(padrao ? { padrao: { pix: pctPix, cartao: pctCartao } } : {}),
               ...(escolhas.length > 0 ? { escolhas } : {}),
             },
             linhas.map((l) => ({

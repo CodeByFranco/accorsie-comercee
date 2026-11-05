@@ -36,10 +36,10 @@ export function KitComboForm({
     <form action={action} className="space-y-5">
       <input type="hidden" name="combo_json" value={JSON.stringify(cfg)} />
       <div>
-        <h1 className="text-xl font-semibold text-gray-900">Combo para todos os kits</h1>
+        <h1 className="text-xl font-semibold text-gray-900">Descontos e combo dos kits</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Cadastre os produtos uma vez só (ex.: todos os óleos). Em cada kit, o cliente marca &quot;Leve junto&quot;,
-          escolhe o produto e a quantidade, e ganha o desconto do combo nesse produto. Não precisa repetir nos kits.
+          Cadastre os produtos do combo uma vez só (ex.: todos os óleos). Em cada kit, o cliente marca &quot;Leve
+          junto&quot;, escolhe o produto e a quantidade, e o kit inteiro passa para o desconto do combo.
         </p>
       </div>
 
@@ -54,34 +54,32 @@ export function KitComboForm({
       </label>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="flex flex-col gap-1.5 text-sm font-medium text-gray-700">
-          Desconto do combo (%)
-          <input
-            type="number"
-            min={0}
-            max={100}
-            step={0.5}
-            value={cfg.desconto_percent}
-            onChange={(e) => setCfg((c) => ({ ...c, desconto_percent: Number(e.target.value) || 0 }))}
-            className={fieldClass}
-          />
-        </label>
-        <label className="flex flex-col gap-1.5 text-sm font-medium text-gray-700">
-          Mostrar em quais kits
-          <select
-            value={cfg.categoria_id}
-            onChange={(e) => setCfg((c) => ({ ...c, categoria_id: e.target.value }))}
-            className={fieldClass}
-          >
-            <option value="">Todos os kits</option>
-            {categorias.map((c) => (
-              <option key={c.id} value={c.id}>
-                Só kits de {c.nome}
-              </option>
-            ))}
-          </select>
-        </label>
+        {(
+          [
+            ["kit_pix", "Só o kit: % no PIX"],
+            ["kit_cartao", "Só o kit: % no cartão"],
+            ["combo_pix", "Kit + combo: % no PIX"],
+            ["combo_cartao", "Kit + combo: % no cartão"],
+          ] as const
+        ).map(([field, label]) => (
+          <label key={field} className="flex flex-col gap-1.5 text-sm font-medium text-gray-700">
+            {label}
+            <input
+              type="number"
+              min={0}
+              max={100}
+              step={0.5}
+              value={cfg[field]}
+              onChange={(e) => setCfg((c) => ({ ...c, [field]: Number(e.target.value) || 0 }))}
+              className={fieldClass}
+            />
+          </label>
+        ))}
       </div>
+      <p className="text-xs text-gray-500">
+        Vale para todos os kits marcados com &quot;Usar desconto padrão&quot;. O desconto do combo é sobre o kit inteiro
+        mais o produto escolhido. Kits sem essa opção (ex.: suspensão) usam o desconto próprio e não mostram o combo.
+      </p>
 
       <ChoiceCard
         choice={draft}

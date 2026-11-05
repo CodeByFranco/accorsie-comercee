@@ -32,7 +32,7 @@ export default async function EditKitPage({ params }: PageProps) {
     supabase
       .from("kits")
       .select(
-        "id, nome, slug, descricao, imagem, tipo_desconto, valor_desconto, preco_final, seo_title, seo_description, status, categoria_id",
+        "id, nome, slug, descricao, imagem, tipo_desconto, valor_desconto, preco_final, seo_title, seo_description, status, categoria_id, usa_desconto_padrao",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -72,6 +72,7 @@ export default async function EditKitPage({ params }: PageProps) {
     seo_description: k.seo_description ?? "",
     status: parseKitStatus(k.status),
     categoria_id: k.categoria_id ?? "",
+    usa_desconto_padrao: k.usa_desconto_padrao !== false,
     items: (itemsRes.data ?? [])
       .filter((row) => (row.tipo ?? "fixo") === "fixo" && row.product_id)
       .map((row) => ({

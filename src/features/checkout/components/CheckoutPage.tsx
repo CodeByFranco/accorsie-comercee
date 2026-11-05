@@ -6,7 +6,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { storeShellContent, storeShellInset } from "@/config/storeShell";
 import type { StorePickupAddress } from "@/config/storePickupAddress";
 import { formatStorePickupAddress } from "@/config/storePickupAddress";
-import { useCart } from "@/features/carrinho/CartContext";
+import { kitClaimDesconto, useCart } from "@/features/carrinho/CartContext";
 import { lookupCep } from "@/features/endereco/services/lookupCep";
 import { useFreteQuote } from "@/features/frete/hooks/useFreteQuote";
 import type { CheckoutPayload } from "@/features/checkout/types";
@@ -41,8 +41,12 @@ export function CheckoutPage({
   lojaRetirada = null,
 }: CheckoutPageProps) {
   const baseId = useId();
-  const { lines, itemCount, isReady, kitClaims, kitDesconto } = useCart();
+  const { lines, itemCount, isReady, kitClaims } = useCart();
   const [formaPagamento, setFormaPagamento] = useState<FormaPagamentoCheckout>("cartao");
+  const kitDesconto = useMemo(
+    () => kitClaims.reduce((s, c) => s + kitClaimDesconto(c, lines, formaPagamento), 0),
+    [kitClaims, lines, formaPagamento],
+  );
   const hasItems = lines.length > 0;
   const subtotal = useMemo(
     () =>

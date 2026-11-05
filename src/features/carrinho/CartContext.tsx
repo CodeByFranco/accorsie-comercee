@@ -15,6 +15,7 @@ import {
 import { clampPercent } from "@/features/produtos/utils/paymentDiscount";
 import type { ProductSummary } from "@/types/product";
 import type { KitChoiceSelection } from "@/types/kit";
+import { unitPriceAfterPaymentDiscount, type FormaPagamentoCheckout } from "@/features/produtos/utils/paymentDiscount";
 
 const STORAGE_KEY = "accorsi-store-cart-v2";
 
@@ -31,7 +32,29 @@ export type CartKitClaim = {
   economia: number;
   /** Escolhas do cliente (ex.: óleo e litros); validadas na RPC. */
   escolhas?: KitChoiceSelection[];
+  /** % padrão do kit por forma de pagamento (sobre o preço de catálogo das linhas do kit). */
+  padrao?: { pix: number; cartao: number };
 };
+
+/**
+ * Desconto do kit para a forma de pagamento escolhida (espelha a RPC):
+ * kits com % padrão custam catálogo × (1 − %); a economia é contra o subtotal
+ * que já tem o desconto PIX/cartão do produto. Demais kits usam a economia salva.
+ */
+export function kitClaimDesconto(claim: CartKitClaim, lines: CartLine[], forma: FormaPagamentoCheckout): number {
+  if (!claim.padrao) return claim.economia || 0;
+  let normal = 0;
+  let sub = 0;
+  for (const [pid, qty] of Object.entries(claim.items)) {
+    const l = lines.find((x) => x.id === pid);
+    if (!l) continue;
+    normal += l.valor * qty;
+    sub += unitPriceAfterPaymentDiscount(l.valor, forma, l.desconto_pix_percent, l.desconto_cartao_percent) * qty;
+  }
+  const pct = Math.min(100, Math.max(0, forma === "pix" ? claim.padrao.pix : claim.padrao.cartao));
+  const preco = Math.round(normal * (1 - pct / 100) * 100) / 100;
+  return Math.max(0, Math.round((sub - preco) * 100) / 100);
+}
 
 type CartContextValue = {
   lines: CartLine[];
@@ -102,6 +125,11 @@ function parseStoredClaim(o: unknown): CartKitClaim | null {
   }
   if (Object.keys(items).length === 0) return null;
   const economia = Number(r.economia);
+  const pr = r.padrao as Record<string, unknown> | undefined;
+  const padrao =
+    pr && typeof pr === "object" && Number.isFinite(Number(pr.pix)) && Number.isFinite(Number(pr.cartao))
+      ? { pix: Number(pr.pix), cartao: Number(pr.cartao) }
+      : null;
   const escolhas: KitChoiceSelection[] = [];
   if (Array.isArray(r.escolhas)) {
     for (const e of r.escolhas as unknown[]) {
@@ -119,6 +147,7 @@ function parseStoredClaim(o: unknown): CartKitClaim | null {
     items,
     economia: Number.isFinite(economia) && economia > 0 ? economia : 0,
     ...(escolhas.length > 0 ? { escolhas } : {}),
+    ...(padrao ? { padrao } : {}),
   };
 }
 

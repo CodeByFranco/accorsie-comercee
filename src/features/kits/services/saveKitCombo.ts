@@ -7,6 +7,8 @@ import type { KitComboConfig } from "@/types/kit";
 
 export type SaveKitComboState = { ok: boolean; message: string } | null;
 
+const pct = (v: unknown) => Math.min(100, Math.max(0, Number(v) || 0));
+
 export async function saveKitCombo(_prev: SaveKitComboState, formData: FormData): Promise<SaveKitComboState> {
   await requireAdmin();
   let cfg: KitComboConfig;
@@ -20,9 +22,9 @@ export async function saveKitCombo(_prev: SaveKitComboState, formData: FormData)
   const qtd_min = Math.max(1, Math.floor(Number(cfg.qtd_min)) || 1);
   const qtd_max = Math.max(qtd_min, Math.floor(Number(cfg.qtd_max)) || qtd_min);
   const qtd_padrao = Math.min(qtd_max, Math.max(qtd_min, Math.floor(Number(cfg.qtd_padrao)) || qtd_min));
-  const desconto_percent = Math.min(100, Math.max(0, Number(cfg.desconto_percent) || 0));
   const product_ids = [...new Set((cfg.product_ids ?? []).map((id) => String(id).trim()).filter(Boolean))];
   const ativo = cfg.ativo === true;
+  const kit_desconto_pix = pct(cfg.kit_pix);
 
   if (ativo && product_ids.length === 0) {
     return { ok: false, message: "Selecione ao menos um produto para ativar o combo." };
@@ -37,12 +39,21 @@ export async function saveKitCombo(_prev: SaveKitComboState, formData: FormData)
       qtd_min,
       qtd_max,
       qtd_padrao,
-      desconto_percent,
-      categoria_id: cfg.categoria_id || null,
+      kit_desconto_pix,
+      kit_desconto_cartao: pct(cfg.kit_cartao),
+      combo_desconto_pix: pct(cfg.combo_pix),
+      combo_desconto_cartao: pct(cfg.combo_cartao),
       updated_at: new Date().toISOString(),
     })
     .eq("id", 1);
   if (upErr) return { ok: false, message: upErr.message };
+
+  // Listagens/cards mostram o preço no PIX dos kits que usam o desconto padrão.
+  const { error: kitsErr } = await supabase
+    .from("kits")
+    .update({ tipo_desconto: "percentual", valor_desconto: kit_desconto_pix, preco_final: null })
+    .eq("usa_desconto_padrao", true);
+  if (kitsErr) return { ok: false, message: kitsErr.message };
 
   const { data: atuais, error: listErr } = await supabase.from("kit_combo_opcoes").select("product_id");
   if (listErr) return { ok: false, message: listErr.message };
@@ -60,7 +71,6 @@ export async function saveKitCombo(_prev: SaveKitComboState, formData: FormData)
     if (error) return { ok: false, message: error.message };
   }
 
-  revalidatePath("/kit", "layout");
-  revalidatePath("/admin/kits/combo");
-  return { ok: true, message: ativo ? "Combo salvo e ativo nos kits." : "Combo salvo (desativado)." };
+  revalidatePath("/", "layout");
+  return { ok: true, message: ativo ? "Descontos e combo salvos." : "Descontos salvos (combo desativado)." };
 }

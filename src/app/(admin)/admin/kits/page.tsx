@@ -111,7 +111,7 @@ export default async function AdminKitsPage({
           href="/admin/kits/combo"
           className="rounded-lg border border-admin-accent px-4 py-2 text-sm font-semibold text-admin-accent hover:bg-blue-50"
         >
-          Combo com óleo (todos os kits)
+          Descontos e combo com óleo
         </Link>
       </div>
 

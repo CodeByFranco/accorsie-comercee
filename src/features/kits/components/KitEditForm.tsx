@@ -28,6 +28,8 @@ export type KitEditValues = {
   seo_description: string;
   status: KitStatus;
   categoria_id: string;
+  /** Usa os % padrão PIX/cartão (e oferece o combo). Desmarcar p/ kits como suspensão. */
+  usa_desconto_padrao: boolean;
   items: KitPickerItem[];
   choices: KitChoiceInput[];
 };
@@ -51,6 +53,7 @@ export function KitEditForm({
   const [state, formAction, pending] = useActionState(updateKit, initialState);
   const fieldsRequired = kit.status === "published";
   const [tipo, setTipo] = useState<KitDiscountType>(kit.tipo_desconto);
+  const [usaPadrao, setUsaPadrao] = useState(kit.usa_desconto_padrao);
   const [valorDesconto, setValorDesconto] = useState(kit.valor_desconto);
   const [precoFinal, setPrecoFinal] = useState(kit.preco_final);
   const [nome, setNome] = useState(kit.nome);
@@ -93,7 +96,7 @@ export function KitEditForm({
             <input
               id="nome"
               name="nome"
-              required={fieldsRequired}
+              required={fieldsRequired && !usaPadrao}
               value={nome}
               onChange={(e) => {
                 const v = e.target.value;
@@ -109,7 +112,7 @@ export function KitEditForm({
             <input
               id="slug"
               name="slug"
-              required={fieldsRequired}
+              required={fieldsRequired && !usaPadrao}
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
               className={fieldClass}
@@ -138,7 +141,29 @@ export function KitEditForm({
 
           <KitImageField initialImagem={kit.imagem} productIds={itemProductIds} />
 
-          <fieldset className="space-y-3 rounded-xl border border-gray-100 bg-gray-50/50 p-4">
+          <label className="flex items-start gap-3 rounded-xl border border-gray-200 bg-white p-4 text-sm">
+            <input
+              type="checkbox"
+              name="usa_desconto_padrao"
+              checked={usaPadrao}
+              onChange={(e) => setUsaPadrao(e.target.checked)}
+              className="mt-0.5 h-5 w-5"
+            />
+            <span>
+              <span className="block font-semibold text-gray-900">Usar desconto padrão dos kits</span>
+              <span className="block text-xs text-gray-500">
+                % no PIX/cartão e combo com óleo definidos em{" "}
+                <a href="/admin/kits/combo" className="font-semibold text-admin-accent hover:underline">
+                  Descontos e combo
+                </a>
+                . Desmarque para kits com desconto próprio (ex.: suspensão).
+              </span>
+            </span>
+          </label>
+
+          <fieldset
+            className={`space-y-3 rounded-xl border border-gray-100 bg-gray-50/50 p-4 ${usaPadrao ? "hidden" : ""}`}
+          >
             <legend className="text-sm font-semibold text-gray-900">Desconto do kit</legend>
             <div className="flex flex-col gap-2">
               {(
@@ -178,7 +203,7 @@ export function KitEditForm({
                   type="number"
                   min={0}
                   step="0.01"
-                  required={fieldsRequired}
+                  required={fieldsRequired && !usaPadrao}
                   value={precoFinal ?? ""}
                   onChange={(e) => setPrecoFinal(e.target.value === "" ? null : Number(e.target.value))}
                   className={fieldClass}
@@ -197,7 +222,7 @@ export function KitEditForm({
                   min={0}
                   max={tipoEfetivo === "percentual" ? 100 : undefined}
                   step="0.01"
-                  required={fieldsRequired}
+                  required={fieldsRequired && !usaPadrao}
                   value={valorDesconto}
                   onChange={(e) => setValorDesconto(Number(e.target.value) || 0)}
                   className={fieldClass}

@@ -75,6 +75,15 @@ export type KitDetail = KitSummary & {
   escolhas: KitChoiceItem[];
   /** Combo global (ex.: óleo à escolha com desconto), quando ativo para este kit. */
   combo: KitCombo | null;
+  /** % padrão por forma de pagamento (null = kit usa o desconto próprio, ex.: suspensão). */
+  descontoPadrao: KitDescontoPadrao | null;
+};
+
+export type KitDescontoPadrao = {
+  kit_pix: number;
+  kit_cartao: number;
+  combo_pix: number;
+  combo_cartao: number;
 };
 
 /** kit_item_id usado nas escolhas do carrinho/checkout para o combo global. */
@@ -85,7 +94,6 @@ export type KitCombo = {
   qtd_min: number;
   qtd_padrao: number;
   qtd_max: number;
-  desconto_percent: number;
   opcoes: KitProductInfo[];
 };
 
@@ -96,7 +104,5 @@ export type KitComboConfig = {
   qtd_min: number;
   qtd_padrao: number;
   qtd_max: number;
-  desconto_percent: number;
-  categoria_id: string;
   product_ids: string[];
-};
+} & KitDescontoPadrao;
