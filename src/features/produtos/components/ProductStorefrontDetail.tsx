@@ -1,6 +1,7 @@
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { storeShellContent, storeShellInset } from "@/config/storeShell";
 import { KitsSection } from "@/features/kits/components/KitsSection";
+import { ProductOleoCombo } from "@/features/kits/components/ProductOleoCombo";
 import { ProductDescriptionDisplay } from "@/features/produtos/components/ProductDescriptionDisplay";
 import { ProductDetailAddToCart } from "@/features/produtos/components/ProductDetailAddToCart";
 import { ProductFreteCepConsult } from "@/features/produtos/components/ProductFreteCepConsult";
@@ -8,7 +9,7 @@ import { ProductMercadoPagoInstallments } from "@/features/produtos/components/P
 import { ProductPhotoCarousel } from "@/features/produtos/components/ProductPhotoCarousel";
 import { ProductsGrid } from "@/features/produtos/components/ProductsGrid";
 import { unitPriceAfterPaymentDiscount } from "@/features/produtos/utils/paymentDiscount";
-import type { KitSummary } from "@/types/kit";
+import type { KitCombo, KitDescontoPadrao, KitSummary } from "@/types/kit";
 import type { ProductSummary } from "@/types/product";
 
 type StorefrontProduct = ProductSummary & {
@@ -27,11 +28,14 @@ export function ProductStorefrontDetail({
   relacionados,
   kits,
   preview = false,
+  comboOleo = null,
 }: {
   produto: StorefrontProduct;
   relacionados: ProductSummary[];
   kits: KitSummary[];
   preview?: boolean;
+  /** Produto "Kit filtros": oferta "Leve junto: óleo" com o % do combo. */
+  comboOleo?: { combo: KitCombo; descontoPadrao: KitDescontoPadrao } | null;
 }) {
   const outOfStock = produto.quantidade_estoque <= 0;
   const stockText = outOfStock ? "Indisponível no momento" : "Em estoque";
@@ -121,6 +125,13 @@ export function ProductStorefrontDetail({
 
               <div className="space-y-3">
                 <ProductDetailAddToCart product={produto} />
+                {comboOleo ? (
+                  <ProductOleoCombo
+                    produto={produto}
+                    combo={comboOleo.combo}
+                    descontoPadrao={comboOleo.descontoPadrao}
+                  />
+                ) : null}
                 <div className="space-y-2 border-t border-store-line pt-3">
                   <h2 className="text-sm font-semibold text-store-navy">Descrição</h2>
                   <ProductDescriptionDisplay descricao={produto.descricao} />

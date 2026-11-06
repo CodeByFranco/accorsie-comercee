@@ -2,6 +2,9 @@ import { CategoriesSection } from "@/features/categorias/components/CategoriesSe
 import { DestaquesSection } from "@/features/produtos/components/DestaquesSection";
 import { ProductsSection } from "@/features/produtos/components/ProductsSection";
 import { KitsSection } from "@/features/kits/components/KitsSection";
+import { KitsDestaqueCards } from "@/features/kits/components/KitsDestaqueCards";
+import { getDescontosPadrao } from "@/features/kits/services/kitCombo";
+import { createPublicClient } from "@/services/supabase/public";
 import { VehicleFilter } from "@/features/compatibilidade/components/VehicleFilter";
 import { getVehicleFilterCatalogData } from "@/features/compatibilidade/services/getVehicleFilterCatalogData";
 import { SiteFooter } from "@/components/layout/SiteFooter";
@@ -28,13 +31,15 @@ export default async function Home({
   const searchQ = parseProductSearchQ(sp);
   const { modeloId, anoVeiculo } = parseHomeVehicleParams(sp);
 
-  const [cats, prods, vehicleFilterData, kitsData, kitCategorias] = await Promise.all([
+  const [cats, prods, vehicleFilterData, kitsData, kitCategorias, descontosPadrao] = await Promise.all([
     getHomeCategories(),
     getHomeProducts({ q: searchQ, modeloId, anoVeiculo }),
     getVehicleFilterCatalogData({ modeloIdForAnos: modeloId }),
     searchQ ? searchPublishedKits(searchQ) : getHomeKits(),
     searchQ ? Promise.resolve([]) : getKitCategorias(),
+    getDescontosPadrao(createPublicClient()),
   ]);
+  const suspensao = kitCategorias.find((c) => c.slug === "suspensao");
   categorias = cats;
   produtosDestaque = prods.destaque;
   produtosVitrine = prods.vitrine;
@@ -103,6 +108,14 @@ export default async function Home({
         </>
       ) : (
         <>
+          <section className={`bg-store-cream pt-8 sm:pt-10 ${storeShellInset}`}>
+            <div className={storeShellContent}>
+              <KitsDestaqueCards
+                suspensaoHref={suspensao ? `/kits?categoria=${suspensao.slug}` : null}
+                descontos={descontosPadrao}
+              />
+            </div>
+          </section>
           <section className={`border-b border-store-line/50 bg-store-cream py-10 sm:py-12 ${storeShellInset}`}>
             <div className={storeShellContent}>
               <CategoriesSection categorias={categorias} />

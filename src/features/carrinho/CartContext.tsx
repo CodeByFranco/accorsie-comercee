@@ -25,6 +25,8 @@ export type CartLine = ProductSummary & { quantity: number };
 
 export type CartKitClaim = {
   kitId: string;
+  /** Combo de produto "Kit filtros" + óleo: id do produto (kitId = "produto:<id>"). */
+  produtoId?: string;
   nome: string;
   /** product_id -> qty required by the kit */
   items: Record<string, number>;
@@ -143,6 +145,7 @@ function parseStoredClaim(o: unknown): CartKitClaim | null {
   }
   return {
     kitId: r.kitId,
+    ...(typeof r.produtoId === "string" && r.produtoId ? { produtoId: r.produtoId } : {}),
     nome: r.nome,
     items,
     economia: Number.isFinite(economia) && economia > 0 ? economia : 0,

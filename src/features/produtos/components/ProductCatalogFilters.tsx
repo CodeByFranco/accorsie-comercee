@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
@@ -13,9 +14,12 @@ import {
 } from "@/features/produtos/utils/catalogSearchParams";
 import type { CatalogFilters } from "@/features/produtos/utils/catalogSearchParams";
 import type { CategoryListItem } from "@/types/category";
+import { COMBO_OLEO_FILTROS_HREF, COMBO_OLEO_FILTROS_NOME } from "@/features/kits/utils/comboOleo";
 
 type ProductCatalogFiltersProps = {
   categorias: CategoryListItem[];
+  /** Categorias com kits publicados: atalhos "Kits de Suspensão" etc. */
+  kitCategorias?: Array<{ id: string; nome: string; slug: string }>;
   marcas: StoreMarcaOption[];
   sliderMax: number;
   modelosVeiculo: VehicleFilterModelo[];
@@ -45,6 +49,7 @@ function IconChevronDown({ className }: { className?: string }) {
 
 export function ProductCatalogFilters({
   categorias,
+  kitCategorias = [],
   marcas,
   sliderMax,
   modelosVeiculo,
@@ -288,6 +293,26 @@ export function ProductCatalogFilters({
           </legend>
           {categoriaOpen ? (
             <div id={categoriasPanelId}>
+              <ul className="mb-3 space-y-1.5 border-b border-store-line/60 pb-3">
+                <li>
+                  <Link
+                    href={COMBO_OLEO_FILTROS_HREF}
+                    className="flex gap-1.5 rounded-sm bg-store-accent px-2 py-2 text-sm font-bold text-black transition hover:brightness-95"
+                  >
+                    <span aria-hidden>★</span> {COMBO_OLEO_FILTROS_NOME}
+                  </Link>
+                </li>
+                {kitCategorias.map((k) => (
+                  <li key={`kit-${k.id}`}>
+                    <Link
+                      href={`/kits?categoria=${k.slug}`}
+                      className="flex gap-1.5 rounded-sm bg-store-navy px-2 py-2 text-sm font-bold text-white transition hover:brightness-110"
+                    >
+                      <span aria-hidden>★</span> Kits de {k.nome}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
               {categorias.length === 0 ? (
                 <p className="text-sm text-store-navy-muted">Nenhuma categoria cadastrada.</p>
               ) : (

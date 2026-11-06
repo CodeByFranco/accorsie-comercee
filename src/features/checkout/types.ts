@@ -35,7 +35,9 @@ export type CheckoutPayload = CheckoutEntregaInput & {
   kits?: CheckoutKitInput[];
 };
 
+/** Kit (kit_id) ou combo de produto "Kit filtros" + óleo (produto_id). */
 export type CheckoutKitInput = {
-  kit_id: string;
+  kit_id?: string;
+  produto_id?: string;
   escolhas?: KitChoiceSelection[];
 };

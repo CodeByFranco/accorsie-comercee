@@ -12,7 +12,10 @@ import {
   getCatalogProducts,
   getCatalogSliderMax,
 } from "@/features/produtos/services/getCatalogProducts";
-import { searchPublishedKits } from "@/features/kits/services/getHomeKits";
+import { getDescontosPadrao } from "@/features/kits/services/kitCombo";
+import { COMBO_OLEO_FILTROS_NOME, isKitFiltrosProduto } from "@/features/kits/utils/comboOleo";
+import { createPublicClient } from "@/services/supabase/public";
+import { getKitCategorias, searchPublishedKits } from "@/features/kits/services/getHomeKits";
 import { KitsSection } from "@/features/kits/components/KitsSection";
 import { getVehicleFilterCatalogData } from "@/features/compatibilidade/services/getVehicleFilterCatalogData";
 import {
@@ -33,18 +36,21 @@ export default async function ProdutosPage({
   const sp = await searchParams;
   const requestedPage = parseCatalogPage(sp);
 
-  const [sliderMax, categorias, marcas] = await Promise.all([
+  const [sliderMax, categorias, marcas, kitCategorias] = await Promise.all([
     getCatalogSliderMax(),
     getHomeCategories(),
     getStoreMarcas(),
+    getKitCategorias(),
   ]);
 
   const filters = normalizeCatalogFilters(parseCatalogSearchParams(sp), sliderMax);
 
-  const [catalogPage, vehicleFilterData, kitsBusca] = await Promise.all([
+  const paginaCombos = isKitFiltrosProduto(filters.q ?? "");
+  const [catalogPage, vehicleFilterData, kitsBusca, descontosPadrao] = await Promise.all([
     getCatalogProducts(filters, sliderMax, requestedPage, CATALOG_PAGE_SIZE),
     getVehicleFilterCatalogData({ modeloIdForAnos: filters.modeloId }),
     filters.q?.trim() ? searchPublishedKits(filters.q.trim()) : Promise.resolve([]),
+    paginaCombos ? getDescontosPadrao(createPublicClient()) : Promise.resolve(null),
   ]);
 
   const page =
@@ -91,6 +97,7 @@ export default async function ProdutosPage({
               >
                 <ProductCatalogFilters
                   categorias={categorias}
+                  kitCategorias={kitCategorias}
                   marcas={marcas}
                   sliderMax={sliderMax}
                   modelosVeiculo={vehicleFilterData.modelos}
@@ -100,6 +107,27 @@ export default async function ProdutosPage({
             </aside>
 
             <div className="flex min-w-0 flex-1 flex-col gap-6">
+              {paginaCombos && descontosPadrao ? (
+                <section className="rounded-sm bg-store-navy p-5 text-white md:p-6">
+                  <h1 className="text-2xl font-bold md:text-3xl">{COMBO_OLEO_FILTROS_NOME}</h1>
+                  <ul className="mt-3 space-y-1 text-sm text-white/90">
+                    <li>
+                      <strong className="text-store-accent">Só o kit de filtros:</strong>{" "}
+                      {descontosPadrao.kit_pix.toLocaleString("pt-BR")}% no PIX ou{" "}
+                      {descontosPadrao.kit_cartao.toLocaleString("pt-BR")}% no cartão.
+                    </li>
+                    <li>
+                      <strong className="text-store-accent">Kit + óleo (combo):</strong>{" "}
+                      {descontosPadrao.combo_pix.toLocaleString("pt-BR")}% no PIX ou{" "}
+                      {descontosPadrao.combo_cartao.toLocaleString("pt-BR")}% no cartão, em até 3x sem juros.
+                    </li>
+                  </ul>
+                  <p className="mt-3 text-xs text-white/70">
+                    Escolha o modelo do seu carro no filtro, abra o kit e, em &quot;Leve junto: óleo&quot;, escolha o óleo
+                    e a quantidade.
+                  </p>
+                </section>
+              ) : null}
               <Suspense
                 fallback={
                   <div className="h-12 w-full max-w-xl animate-pulse rounded-full bg-[#3a3a3a]/50" aria-hidden />

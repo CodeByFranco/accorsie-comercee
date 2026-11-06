@@ -216,7 +216,10 @@ export function CheckoutPage({
       ...payloadBase,
       ...(codigoCupom ? { cupom_codigo: codigoCupom } : {}),
       ...(kitClaims.length > 0
-        ? { kits: kitClaims.map((c) => ({ kit_id: c.kitId, ...(c.escolhas ? { escolhas: c.escolhas } : {}) })) }
+        ? { kits: kitClaims.map((c) => ({
+              ...(c.produtoId ? { produto_id: c.produtoId } : { kit_id: c.kitId }),
+              ...(c.escolhas ? { escolhas: c.escolhas } : {}),
+            })), }
         : {}),
     };
 

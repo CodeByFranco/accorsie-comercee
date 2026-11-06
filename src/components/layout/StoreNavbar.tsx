@@ -16,6 +16,7 @@ import {
   parseCatalogSearchParamsFromUrlSearchParams,
 } from "@/features/produtos/utils/catalogSearchParams";
 import type { CategoryListItem } from "@/types/category";
+import { COMBO_OLEO_FILTROS_HREF, COMBO_OLEO_FILTROS_NOME } from "@/features/kits/utils/comboOleo";
 
 const LINK_NAV_AFTER_CATEGORIAS = [
   { href: "/produtos", label: "PRODUTOS" },
@@ -276,20 +277,27 @@ export function StoreNavbar({
                         <p className="px-3 py-2 text-xs text-store-navy-muted">Nenhuma categoria cadastrada.</p>
                       ) : (
                         <ul className="max-h-[min(70vh,20rem)] overflow-y-auto py-0.5">
+                          <li role="presentation" className="px-2 pb-1 pt-1">
+                            <Link
+                              href={COMBO_OLEO_FILTROS_HREF}
+                              onClick={closeCategorias}
+                              className="flex w-full items-center gap-2 rounded-sm bg-store-accent px-2 py-2 text-left text-sm font-bold text-black transition hover:brightness-95"
+                            >
+                              <span aria-hidden>★</span> {COMBO_OLEO_FILTROS_NOME}
+                            </Link>
+                          </li>
                           {kitCategorias.map((k) => (
-                            <li key={`kit-${k.id}`} role="presentation">
+                            <li key={`kit-${k.id}`} role="presentation" className="px-2 pb-1">
                               <Link
                                 href={`/kits?categoria=${k.slug}`}
                                 onClick={closeCategorias}
-                                className="flex w-full items-center px-3 py-2 text-left text-sm font-bold text-store-navy transition hover:bg-store-subtle/90"
+                                className="flex w-full items-center gap-2 rounded-sm bg-store-navy px-2 py-2 text-left text-sm font-bold text-white transition hover:brightness-110"
                               >
-                                Kits de {k.nome}
+                                <span aria-hidden>★</span> Kits de {k.nome}
                               </Link>
                             </li>
                           ))}
-                          {kitCategorias.length > 0 ? (
-                            <li role="presentation" className="my-1 border-t border-store-line/60" />
-                          ) : null}
+                          <li role="presentation" className="my-1 border-t border-store-line/60" />
                           {categorias.map((c) => (
                             <li key={c.id} role="presentation">
                               <button
@@ -440,17 +448,27 @@ export function StoreNavbar({
                     <p className="px-2 py-2 text-xs text-store-navy-muted">Nenhuma categoria cadastrada.</p>
                   ) : (
                     <ul className="max-h-[min(50vh,16rem)] space-y-0.5 overflow-y-auto">
+                      <li>
+                        <Link
+                          href={COMBO_OLEO_FILTROS_HREF}
+                          onClick={closeMobileNav}
+                          className="flex w-full gap-2 rounded-md bg-store-accent px-2 py-2 text-left text-sm font-bold text-black"
+                        >
+                          <span aria-hidden>★</span> {COMBO_OLEO_FILTROS_NOME}
+                        </Link>
+                      </li>
                       {kitCategorias.map((k) => (
                         <li key={`kit-${k.id}`}>
                           <Link
                             href={`/kits?categoria=${k.slug}`}
                             onClick={closeMobileNav}
-                            className="flex w-full rounded-md px-2 py-2 text-left text-sm font-bold text-store-navy transition hover:bg-store-subtle/90"
+                            className="flex w-full gap-2 rounded-md bg-store-navy px-2 py-2 text-left text-sm font-bold text-white"
                           >
-                            Kits de {k.nome}
+                            <span aria-hidden>★</span> Kits de {k.nome}
                           </Link>
                         </li>
                       ))}
+                      <li aria-hidden className="border-t border-store-line/60" />
                       {categorias.map((c) => (
                         <li key={c.id}>
                           <button

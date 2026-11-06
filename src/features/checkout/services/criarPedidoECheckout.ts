@@ -231,8 +231,10 @@ export async function criarPedidoECheckout(
   const kitsSeen = new Set<string>();
   const p_kits = (payload.kits ?? []).flatMap((k) => {
     const kit_id = String(k?.kit_id ?? "").trim();
-    if (!kit_id || kitsSeen.has(kit_id)) return [];
-    kitsSeen.add(kit_id);
+    const produto_id = String(k?.produto_id ?? "").trim();
+    const key = produto_id ? `p:${produto_id}` : kit_id;
+    if (!key || kitsSeen.has(key)) return [];
+    kitsSeen.add(key);
     const escolhas = (Array.isArray(k.escolhas) ? k.escolhas : [])
       .map((e) => ({
         kit_item_id: String(e?.kit_item_id ?? "").trim(),
@@ -240,7 +242,7 @@ export async function criarPedidoECheckout(
         quantidade: Math.floor(Number(e?.quantidade)),
       }))
       .filter((e) => e.kit_item_id && e.product_id && Number.isFinite(e.quantidade) && e.quantidade > 0);
-    return [{ kit_id, escolhas }];
+    return [produto_id ? { produto_id, escolhas } : { kit_id, escolhas }];
   });
   const { data: pedidoIdRaw, error: rpcError } = await supabase.rpc("criar_pedido_checkout", {
     p_itens,

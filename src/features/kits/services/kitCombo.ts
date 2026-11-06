@@ -28,20 +28,18 @@ export function mapDescontoPadrao(row: Partial<ComboRow> | null | undefined): Ki
   };
 }
 
-/** Adiciona o desconto padrão PIX/cartão e o combo (se o kit usa o padrão). */
-export async function withKitCombo(supabase: SupabaseClient, kit: KitDetail): Promise<KitDetail> {
+/** Config do combo com óleo + % padrão (combo null se inativo ou sem opções). */
+export async function getComboOleo(
+  supabase: SupabaseClient,
+): Promise<{ combo: KitCombo | null; descontoPadrao: KitDescontoPadrao } | null> {
   try {
-    const [kitRes, cfgRes, opcoesRes] = await Promise.all([
-      supabase.from("kits").select("usa_desconto_padrao").eq("id", kit.id).maybeSingle(),
+    const [cfgRes, opcoesRes] = await Promise.all([
       supabase.from("kit_combo").select(KIT_COMBO_SELECT).eq("id", 1).maybeSingle(),
       supabase.from("kit_combo_opcoes").select(`product_id, produtos ( ${PRODUTO_FIELDS} )`),
     ]);
-    if (kitRes.error || cfgRes.error) return kit;
-    if (kitRes.data?.usa_desconto_padrao === false) return kit;
-
+    if (cfgRes.error) return null;
     const cfg = cfgRes.data as ComboRow | null;
     const descontoPadrao = mapDescontoPadrao(cfg);
-
     let combo: KitCombo | null = null;
     if (cfg?.ativo) {
       const opcoes = ((opcoesRes.data ?? []) as Array<{ produtos: ProdutoEmbed | ProdutoEmbed[] | null }>)
@@ -60,8 +58,33 @@ export async function withKitCombo(supabase: SupabaseClient, kit: KitDetail): Pr
         };
       }
     }
-    return { ...kit, combo, descontoPadrao };
+    return { combo, descontoPadrao };
+  } catch {
+    return null;
+  }
+}
+
+/** Adiciona o desconto padrão PIX/cartão e o combo (se o kit usa o padrão). */
+export async function withKitCombo(supabase: SupabaseClient, kit: KitDetail): Promise<KitDetail> {
+  try {
+    const [kitRes, cfg] = await Promise.all([
+      supabase.from("kits").select("usa_desconto_padrao").eq("id", kit.id).maybeSingle(),
+      getComboOleo(supabase),
+    ]);
+    if (kitRes.error || !cfg) return kit;
+    if (kitRes.data?.usa_desconto_padrao === false) return kit;
+    return { ...kit, combo: cfg.combo, descontoPadrao: cfg.descontoPadrao };
   } catch {
     return kit;
+  }
+}
+
+/** Só os % padrão (para banners/destaques). */
+export async function getDescontosPadrao(supabase: SupabaseClient): Promise<KitDescontoPadrao> {
+  try {
+    const { data } = await supabase.from("kit_combo").select(KIT_COMBO_SELECT).eq("id", 1).maybeSingle();
+    return mapDescontoPadrao(data as ComboRow | null);
+  } catch {
+    return mapDescontoPadrao(null);
   }
 }
