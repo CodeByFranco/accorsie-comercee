@@ -325,7 +325,7 @@ export function PlateVehicleFinder({
             {quotaSrLabel}
           </p>
           <div className="my-0.5 mx-1 flex w-full min-w-0 flex-1 items-center justify-center text-center sm:mx-2 sm:my-0 sm:mr-3 sm:w-auto sm:justify-end sm:text-right md:mx-2.5">
-            <p className="m-0 w-full text-[11px] font-bold leading-snug text-white sm:text-xs sm:leading-snug md:text-sm">
+            <p className="m-0 w-full text-xs font-bold leading-snug text-white sm:text-sm sm:leading-snug md:text-base">
               Digite a sua placa aqui e encontre peças compatíveis
             </p>
           </div>
@@ -333,7 +333,7 @@ export function PlateVehicleFinder({
             className="mx-auto hidden h-9 w-px shrink-0 self-center bg-store-accent sm:mx-0 sm:block"
             aria-hidden
           />
-          <div className="flex w-full shrink-0 flex-row items-center justify-center gap-1.5 sm:w-auto sm:max-w-[10rem] sm:justify-start">
+          <div className="flex w-full shrink-0 flex-row items-center justify-center gap-1.5 sm:w-auto sm:max-w-[11rem] sm:justify-start">
             <input
               type="text"
               inputMode="text"
@@ -345,13 +345,13 @@ export function PlateVehicleFinder({
               onChange={(e) => setPlaca(normalizePlateInput(e.target.value))}
               placeholder="ABC1D23"
               aria-describedby={placaQuotaDescId}
-              className="h-9 w-[7.25rem] shrink-0 rounded-full border border-white/25 bg-white px-2.5 text-[11px] font-semibold tracking-[0.06em] text-store-navy outline-none transition placeholder:text-store-navy/45 focus:border-store-accent/90 focus:ring-1 focus:ring-store-accent/30 sm:w-[7.5rem] sm:text-xs"
+              className="h-10 w-[7.75rem] shrink-0 rounded-full border border-white/25 bg-white px-3 text-xs font-semibold tracking-[0.06em] text-store-navy outline-none transition placeholder:text-store-navy/45 focus:border-store-accent/90 focus:ring-1 focus:ring-store-accent/30 sm:w-[8.5rem] sm:text-sm"
             />
             <button
               type="button"
               disabled={loading}
               onClick={applyFromApi}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-store-accent text-store-navy shadow-sm transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-store-accent text-store-navy shadow-sm transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
               aria-label={loading ? "Consultando placa" : "Buscar placa"}
               title={loading ? "Consultando…" : "Buscar placa"}
             >
