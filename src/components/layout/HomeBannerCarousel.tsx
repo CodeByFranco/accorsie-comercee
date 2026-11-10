@@ -6,6 +6,8 @@ import { useEffect, useId, useState } from "react";
 const INTERVAL_MS = 6500;
 /** Fallback caso o `onLoad` do 1º banner não dispare (ex.: já estava em cache antes da hidratação). */
 const REST_SLIDES_FALLBACK_MS = 2500;
+/** Altura exibida em relação à arte: corta 1/8 em cima e 1/8 embaixo (mantenha o conteúdo da arte nessa faixa central). */
+const DISPLAY_HEIGHT_RATIO = 0.75;
 
 type HomeBannerCarouselProps = {
   srcs: string[];
@@ -62,7 +64,7 @@ export function HomeBannerCarousel({
     >
       <div
         className="relative w-full"
-        style={{ aspectRatio: `${width} / ${height}` }}
+        style={{ aspectRatio: `${width} / ${height * DISPLAY_HEIGHT_RATIO}` }}
       >
         {slides.map((src, i) => (
           <div
@@ -78,7 +80,7 @@ export function HomeBannerCarousel({
                 src={src}
                 alt={i === 0 ? "Accorsi Auto Peças — banner" : `Accorsi Auto Peças — banner ${i + 1}`}
                 fill
-                className="object-contain"
+                className="object-cover"
                 sizes="(max-width: 1920px) 100vw, 1920px"
                 priority={i === 0}
                 onLoad={i === 0 ? () => setRestReady(true) : undefined}

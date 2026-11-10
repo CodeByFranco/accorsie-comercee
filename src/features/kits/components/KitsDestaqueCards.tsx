@@ -29,7 +29,7 @@ export function KitsDestaqueCards({
           junto, o combo vai para {fmt(descontos.combo_pix)} no PIX ou {fmt(descontos.combo_cartao)} no cartão, em até
           3x.
         </p>
-        <span className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-store-accent group-hover:underline">
+        <span className="mt-5 inline-flex items-center gap-2 rounded-full border-2 border-store-accent px-5 py-2 text-sm font-bold text-store-accent transition group-hover:bg-store-accent group-hover:text-black">
           Ver kits para o meu carro →
         </span>
       </Link>
@@ -46,7 +46,7 @@ export function KitsDestaqueCards({
           <p className="mt-2 max-w-md text-sm text-store-navy/80">
             Amortecedores, coifas e batentes prontos para o seu carro: dianteira, traseira ou completa.
           </p>
-          <span className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-[#1d63ed] group-hover:underline">
+          <span className="mt-5 inline-flex items-center gap-2 rounded-full border-2 border-[#1d63ed] px-5 py-2 text-sm font-bold text-[#1d63ed] transition group-hover:bg-[#1d63ed] group-hover:text-white">
             Ver kits de suspensão →
           </span>
         </Link>
