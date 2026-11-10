@@ -1,5 +1,6 @@
 "use server";
 
+import { maxParcelasCheckout } from "@/features/produtos/utils/parcelamento";
 import { redirect } from "next/navigation";
 
 import type { CheckoutPayload } from "@/features/checkout/types";
@@ -29,6 +30,7 @@ type PedidoCheckoutRow = {
   total: string | number;
   desconto_cupom: string | number | null;
   desconto_kit?: string | number | null;
+  desconto_cashback?: string | number | null;
 };
 
 function resolveAppBaseUrl(): string {
@@ -89,7 +91,8 @@ function validatePayload(payload: CheckoutPayload): string | null {
       return "Informe um telefone para contato.";
     }
   } else {
-    if (!Number.isFinite(frete) || frete <= 0) {
+    // Frete 0 = frete grátis; o mínimo do pedido é validado em criar_pedido_checkout.
+    if (!Number.isFinite(frete) || frete < 0) {
       return "Selecione uma opção de frete válida antes de finalizar.";
     }
     const required = [
@@ -281,6 +284,19 @@ export async function criarPedidoECheckout(
     return { ok: false, message: "Resposta inesperada ao criar o pedido. Tente novamente." };
   }
 
+  if (payload.usar_cashback === true) {
+    const { error: cashbackError } = await supabase.rpc("aplicar_cashback_pedido", {
+      p_pedido_id: pedidoId,
+      p_valor: 999999,
+    });
+    if (cashbackError) {
+      return {
+        ok: false,
+        message: `Pedido criado, mas não foi possível aplicar o cashback: ${cashbackError.message}`,
+      };
+    }
+  }
+
   const { data: itensRows, error: itensError } = await supabase
     .from("pedido_itens")
     .select("titulo_snapshot, cod_produto_snapshot, quantidade, preco_unitario")
@@ -297,7 +313,7 @@ export async function criarPedidoECheckout(
 
   const { data: pedidoRow, error: pedidoError } = await supabase
     .from("pedidos")
-    .select("frete, subtotal, total, desconto_cupom, desconto_kit")
+    .select("frete, subtotal, total, desconto_cupom, desconto_kit, desconto_cashback")
     .eq("id", pedidoId)
     .single();
 
@@ -312,6 +328,7 @@ export async function criarPedidoECheckout(
   const freteValor = normalizeMoney(pedidoVals.frete);
   const descontoCupomVal = normalizeMoney(pedidoVals.desconto_cupom ?? 0);
   const descontoKitVal = normalizeMoney(pedidoVals.desconto_kit ?? 0);
+  const descontoCashbackVal = normalizeMoney(pedidoVals.desconto_cashback ?? 0);
 
   const preferenceItems = buildMercadoPagoPreferenceItems(
     itens,
@@ -319,7 +336,7 @@ export async function criarPedidoECheckout(
     normalizeMoney(pedidoVals.subtotal),
     normalizeMoney(pedidoVals.frete),
     normalizeMoney(pedidoVals.total),
-    descontoCupomVal + descontoKitVal,
+    descontoCupomVal + descontoKitVal + descontoCashbackVal,
   );
 
   const preferenceBody: Record<string, unknown> = {
@@ -327,7 +344,7 @@ export async function criarPedidoECheckout(
     external_reference: pedidoId,
     metadata: { pedido_id: pedidoId },
     /** Limite de parcelas no checkout (alinha com texto na página do produto). */
-    payment_methods: { installments: 3 },
+    payment_methods: { installments: maxParcelasCheckout(normalizeMoney(pedidoVals.total)) },
     back_urls: {
       success: `${baseUrl}/checkout/retorno?status=success`,
       failure: `${baseUrl}/checkout/retorno?status=failure`,

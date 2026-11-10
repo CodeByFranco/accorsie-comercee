@@ -35,6 +35,9 @@ function pickOpcaoPorFrete(
   freteCentavos: number,
 ): MelhorEnvioQuoteOption | null {
   if (freteCentavos < 0 || opcoes.length === 0) return null;
+  if (freteCentavos === 0) {
+    return [...opcoes].sort((a, b) => a.precoCentavos - b.precoCentavos)[0]!;
+  }
   const tolerance = 3;
   const exact = opcoes.filter((o) => Math.abs(o.precoCentavos - freteCentavos) <= tolerance);
   if (exact.length === 1) return exact[0]!;

@@ -33,6 +33,8 @@ export type CheckoutPayload = CheckoutEntregaInput & {
   cupom_codigo?: string;
   /** Kits aplicados com as escolhas do cliente (desconto oficial validado na RPC). */
   kits?: CheckoutKitInput[];
+  /** Usa o saldo de cashback do cliente para abater o total (validado na RPC `aplicar_cashback_pedido`). */
+  usar_cashback?: boolean;
 };
 
 /** Kit (kit_id) ou combo de produto "Kit filtros" + óleo (produto_id). */

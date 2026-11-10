@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { AccountAreaContent } from "@/features/auth/components/AccountAreaContent";
 import { AuthPageShell } from "@/features/auth/components/AuthPageShell";
+import { CashbackResumo } from "@/features/cashback/components/CashbackResumo";
 import { profileRowToEndereco } from "@/types/profileDelivery";
 import { createClient } from "@/services/supabase/server";
 
@@ -37,6 +38,13 @@ export default async function ContaPage({ searchParams }: ContaPageProps) {
     .select("id, placa, marca, modelo, ano, modelo_id")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
+  const { data: saldoCashbackRaw } = await supabase.rpc("meu_saldo_cashback");
+  const { data: cashbackTransacoes } = await supabase
+    .from("cashback_transacoes")
+    .select("id, tipo, valor, descricao, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(10);
   const initialSection = params?.aba === "garagem" ? "garagem" : "conta";
 
   return (
@@ -45,6 +53,10 @@ export default async function ContaPage({ searchParams }: ContaPageProps) {
       description="Dados pessoais, pedidos e canais de atendimento."
       cardMaxWidthClassName="w-full max-w-store"
     >
+      <CashbackResumo
+        saldo={Math.max(0, Number(saldoCashbackRaw) || 0)}
+        transacoes={cashbackTransacoes ?? []}
+      />
       <AccountAreaContent
         initialNomeCompleto={nomeCompleto}
         email={email}

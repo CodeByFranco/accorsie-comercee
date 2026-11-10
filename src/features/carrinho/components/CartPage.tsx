@@ -4,11 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 
+import { BrindeSelo } from "@/components/store/BrindeSelo";
 import { storeShellContent, storeShellInset } from "@/config/storeShell";
 import { CART_ICON_SRC } from "@/features/carrinho/constants";
-import { useCart } from "@/features/carrinho/CartContext";
+import { kitClaimDesconto, useCart } from "@/features/carrinho/CartContext";
+import { FreteGratisBarra } from "@/features/frete/components/FreteGratisBarra";
+import { FreteGratisSugestoes } from "@/features/frete/components/FreteGratisSugestoes";
+import { atingeFreteGratis, opcaoFreteGratisId } from "@/features/frete/freteGratis";
 import { useFreteQuote } from "@/features/frete/hooks/useFreteQuote";
 import { cartRequiresSomenteRetirada } from "@/features/produtos/utils/mapProductSummaryRow";
+import { unitPriceAfterPaymentDiscount } from "@/features/produtos/utils/paymentDiscount";
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -34,8 +39,21 @@ type CartPageProps = {
 };
 
 export function CartPage({ initialProfileCep = "" }: CartPageProps) {
-  const { lines, itemCount, subtotal, increment, decrement, removeProduct } = useCart();
+  const { lines, kitClaims, itemCount, subtotal, increment, decrement, removeProduct } = useCart();
   const hasItems = lines.length > 0;
+  /** Estimativa no cartão (forma padrão do checkout); o checkout recalcula conforme a forma escolhida. */
+  const valorProdutosFreteGratis = useMemo(() => {
+    const sub = lines.reduce(
+      (s, l) =>
+        s +
+        unitPriceAfterPaymentDiscount(l.valor, "cartao", l.desconto_pix_percent, l.desconto_cartao_percent) *
+          l.quantity,
+      0,
+    );
+    const kit = kitClaims.reduce((s, c) => s + kitClaimDesconto(c, lines, "cartao"), 0);
+    return Math.max(0, Math.round((sub - kit) * 100) / 100);
+  }, [lines, kitClaims]);
+  const idsNoCarrinho = useMemo(() => lines.map((l) => l.id), [lines]);
   const itensPayload = useMemo(
     () => lines.map((l) => ({ produto_id: l.id, quantidade: l.quantity })),
     [lines],
@@ -45,8 +63,12 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
   const missingProfileCep =
     hasItems && !exigeRetiradaLoja && profileCep.replace(/\D/g, "").length !== 8;
   const frete = useFreteQuote(itensPayload, profileCep, hasItems && !exigeRetiradaLoja);
+  const freteGratisId = opcaoFreteGratisId(frete.opcoes);
+  const atingiuFreteGratis = atingeFreteGratis(valorProdutosFreteGratis);
+  const freteGratisAplicado =
+    atingiuFreteGratis && freteGratisId !== null && frete.selectedId === freteGratisId;
   const shipping =
-    hasItems && !exigeRetiradaLoja && !missingProfileCep ? frete.freteValue : 0;
+    hasItems && !exigeRetiradaLoja && !missingProfileCep && !freteGratisAplicado ? frete.freteValue : 0;
   const total = subtotal + shipping;
   const canGoCheckout =
     hasItems &&
@@ -67,6 +89,7 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
         </h1>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_min(100%,20rem)] lg:items-start lg:gap-8">
+          <div className="flex min-w-0 flex-col gap-6">
           <section
             className="rounded-sm border border-store-line/80 bg-white p-5 shadow-sm sm:p-6"
             aria-labelledby="cart-items-heading"
@@ -190,6 +213,10 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
               </ul>
             )}
           </section>
+          {hasItems && !exigeRetiradaLoja ? (
+            <FreteGratisSugestoes valorProdutos={valorProdutosFreteGratis} idsNoCarrinho={idsNoCarrinho} />
+          ) : null}
+          </div>
 
           <aside
             className="rounded-sm border border-store-line/80 bg-white p-5 shadow-sm sm:p-6 lg:sticky lg:top-6"
@@ -206,9 +233,14 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-store-navy">Frete</dt>
-                <dd className="font-semibold tabular-nums text-black">{money.format(shipping)}</dd>
+                <dd className="font-semibold tabular-nums text-black">
+                  {freteGratisAplicado ? <span className="text-emerald-700">Grátis</span> : money.format(shipping)}
+                </dd>
               </div>
             </dl>
+            {hasItems && !exigeRetiradaLoja ? (
+              <FreteGratisBarra valorProdutos={valorProdutosFreteGratis} className="mt-4" />
+            ) : null}
             {hasItems ? (
               <div className="mt-4 rounded-sm border border-store-line/70 bg-store-subtle/30 p-3 text-xs text-store-navy">
                 {exigeRetiradaLoja ? (
@@ -242,7 +274,16 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
                             {typeof opcao.prazoDiasUteis === "number" ? ` (${opcao.prazoDiasUteis} dias uteis)` : ""}
                           </span>
                         </span>
-                        <strong>{money.format(opcao.precoCentavos / 100)}</strong>
+                        {atingiuFreteGratis && opcao.id === freteGratisId ? (
+                          <span className="text-right leading-tight">
+                            <span className="block text-[11px] text-store-navy-muted line-through">
+                              {money.format(opcao.precoCentavos / 100)}
+                            </span>
+                            <strong className="text-emerald-700">Grátis</strong>
+                          </span>
+                        ) : (
+                          <strong>{money.format(opcao.precoCentavos / 100)}</strong>
+                        )}
                       </label>
                     ))}
                   </fieldset>
@@ -258,6 +299,12 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
                 {money.format(total)}
               </span>
             </div>
+
+            {hasItems ? (
+              <BrindeSelo className="mt-5">
+                Seu pedido também vai com um <span className="font-semibold">presente especial</span> da Accorsi!
+              </BrindeSelo>
+            ) : null}
 
             {canGoCheckout ? (
               <Link

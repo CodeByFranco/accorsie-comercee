@@ -28,6 +28,8 @@ export default async function CheckoutRoutePage() {
     typeof profile?.nome_completo === "string" ? profile.nome_completo : "";
   const initialEndereco = profileRowToEndereco(profile ?? null);
   const lojaRetirada = getStorePickupAddress();
+  const { data: saldoRaw } = await supabase.rpc("meu_saldo_cashback");
+  const saldoCashback = Math.max(0, Number(saldoRaw) || 0);
 
   return (
     <div className="flex min-h-dvh flex-col bg-store-cream font-sans text-store-navy">
@@ -36,6 +38,7 @@ export default async function CheckoutRoutePage() {
           defaultDestinatarioNome={defaultDestinatarioNome}
           initialEndereco={initialEndereco}
           lojaRetirada={lojaRetirada}
+          saldoCashback={saldoCashback}
         />
       </main>
       <SiteFooter />

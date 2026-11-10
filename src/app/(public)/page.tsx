@@ -8,6 +8,7 @@ import { createPublicClient } from "@/services/supabase/public";
 import { VehicleFilter } from "@/features/compatibilidade/components/VehicleFilter";
 import { getVehicleFilterCatalogData } from "@/features/compatibilidade/services/getVehicleFilterCatalogData";
 import { SiteFooter } from "@/components/layout/SiteFooter";
+import { HomeBeneficiosFaixa } from "@/components/store/HomeBeneficiosFaixa";
 import { getHomeCategories } from "@/features/categorias/services/getHomeCategories";
 import { getHomeProducts } from "@/features/produtos/services/getHomeProducts";
 import { getHomeKits, getKitCategorias, searchPublishedKits } from "@/features/kits/services/getHomeKits";
@@ -88,6 +89,7 @@ export default async function Home({
 
   return (
     <div className="flex min-h-dvh flex-col bg-store-cream font-sans text-store-navy">
+      <HomeBeneficiosFaixa />
       <VehicleFilter
         marcas={vehicleFilterData.marcas}
         modelos={vehicleFilterData.modelos}

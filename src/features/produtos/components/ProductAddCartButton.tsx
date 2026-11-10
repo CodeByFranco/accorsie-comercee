@@ -29,7 +29,7 @@ export function ProductAddCartButton({ product }: ProductAddCartButtonProps) {
       <button
         type="button"
         disabled={disabled}
-        className="inline-flex w-full items-center justify-center gap-0 rounded-sm bg-store-accent px-3 py-2.5 text-sm font-bold text-black shadow-sm transition enabled:hover:brightness-95 enabled:active:brightness-90 disabled:cursor-not-allowed disabled:bg-store-line disabled:text-store-navy-muted sm:gap-2"
+        className="relative inline-flex w-full items-center justify-center gap-0 rounded-full bg-store-accent px-3 py-2.5 text-sm font-bold text-black shadow-sm transition enabled:hover:brightness-95 enabled:active:brightness-90 disabled:cursor-not-allowed disabled:bg-store-line disabled:text-store-navy-muted sm:gap-2"
         aria-label={
           outOfStock
             ? `${product.titulo} indisponível`
@@ -44,10 +44,10 @@ export function ProductAddCartButton({ product }: ProductAddCartButtonProps) {
           alt=""
           width={32}
           height={32}
-          className="h-5 w-5 shrink-0 object-contain sm:h-4 sm:w-4"
+          className="h-5 w-5 shrink-0 object-contain sm:absolute sm:left-3 sm:top-1/2 sm:h-4 sm:w-4 sm:-translate-y-1/2"
           unoptimized
         />
-        <span className="hidden sm:inline">
+        <span className="hidden text-center sm:block sm:px-5">
           {outOfStock ? "Indisponível" : atCartLimit ? "Quantidade máxima no carrinho" : "Adicionar ao carrinho"}
         </span>
       </button>

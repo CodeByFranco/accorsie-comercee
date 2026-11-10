@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { BrindeSelo } from "@/components/store/BrindeSelo";
 import { KitBuyButton } from "@/features/kits/components/KitBuyButton";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { storeShellContent, storeShellInset } from "@/config/storeShell";
@@ -40,6 +41,7 @@ export function KitStorefrontDetail({ kit, preview = false }: { kit: KitDetail; 
             ) : null}
 
             <KitBuyButton kit={kit} />
+            <BrindeSelo />
 
             <div>
               <h2 className="text-lg font-bold">Itens inclusos</h2>

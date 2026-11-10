@@ -1,7 +1,9 @@
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { storeShellContent, storeShellInset } from "@/config/storeShell";
 import { KitsSection } from "@/features/kits/components/KitsSection";
+import { BrindeSelo } from "@/components/store/BrindeSelo";
 import { ProductOleoCombo } from "@/features/kits/components/ProductOleoCombo";
+import { ProductCompatibilidadeList } from "@/features/produtos/components/ProductCompatibilidadeList";
 import { ProductDescriptionDisplay } from "@/features/produtos/components/ProductDescriptionDisplay";
 import { ProductDetailAddToCart } from "@/features/produtos/components/ProductDetailAddToCart";
 import { ProductFreteCepConsult } from "@/features/produtos/components/ProductFreteCepConsult";
@@ -53,6 +55,8 @@ export function ProductStorefrontDetail({
     produto.desconto_cartao_percent,
   );
   const pixDestaque = produto.desconto_pix_percent > 0;
+  /** Comparado ao preço no cartão, que é o valor mostrado logo abaixo. */
+  const economiaPix = pixDestaque ? Math.max(0, Math.round((precoCartao - precoPix) * 100) / 100) : 0;
 
   return (
     <div className="flex min-h-dvh flex-col bg-store-cream font-sans text-store-navy">
@@ -74,16 +78,7 @@ export function ProductStorefrontDetail({
             <div className="space-y-2 border-t border-store-line pt-4 lg:col-span-5 lg:row-start-2 lg:border-t lg:border-store-line lg:pt-6">
               <h2 className="text-sm font-semibold text-store-navy">Compatibilidade</h2>
               {produto.compatibilidades.length > 0 ? (
-                <ul className="flex flex-wrap gap-2">
-                  {produto.compatibilidades.map((item) => (
-                    <li
-                      key={item}
-                      className="rounded-full border border-store-line bg-store-accent/80 px-3 py-1 text-xs font-semibold text-black"
-                    >
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+                <ProductCompatibilidadeList items={produto.compatibilidades} />
               ) : (
                 <p className="text-sm text-store-navy-muted">Compatibilidade ainda não informada.</p>
               )}
@@ -95,7 +90,7 @@ export function ProductStorefrontDetail({
               <div className="space-y-2">
                 <div className="flex flex-row flex-wrap items-end gap-x-3 gap-y-1">
                   <p
-                    className="shrink-0 text-3xl font-bold leading-none text-[#1d63ed] sm:text-4xl"
+                    className="shrink-0 text-3xl font-bold leading-none text-orange-500 sm:text-4xl"
                     aria-label={
                       pixDestaque
                         ? `Preço no PIX ${money.format(precoPix)}, desconto de ${produto.desconto_pix_percent}%`
@@ -104,13 +99,13 @@ export function ProductStorefrontDetail({
                   >
                     {money.format(precoPix)}
                   </p>
-                  <p className="mb-0.5 text-sm font-semibold text-orange-500 sm:text-base">
-                    {pixDestaque ? `PIX (${produto.desconto_pix_percent}% OFF)` : "PIX"}
-                  </p>
-                  <p className="mb-0.5 text-sm font-semibold tabular-nums text-black sm:text-base">
-                    {money.format(produto.valor)}
-                  </p>
+                  <p className="mb-0.5 text-sm font-semibold text-orange-500 sm:text-base">no PIX</p>
                 </div>
+                {economiaPix > 0 ? (
+                  <p className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
+                    Você economiza <span className="font-bold">{money.format(economiaPix)}</span> pagando no PIX
+                  </p>
+                ) : null}
                 <p className={`text-sm font-semibold ${outOfStock ? "text-red-700" : "text-emerald-700"}`}>
                   {stockText}
                 </p>
@@ -125,6 +120,7 @@ export function ProductStorefrontDetail({
 
               <div className="space-y-3">
                 <ProductDetailAddToCart product={produto} />
+                <BrindeSelo />
                 {comboOleo ? (
                   <ProductOleoCombo
                     produto={produto}
@@ -156,7 +152,6 @@ export function ProductStorefrontDetail({
             </header>
             <ProductsGrid
               variant="catalog"
-              pixStyle="home"
               produtos={relacionados}
               emptyMessage="Ainda não encontramos produtos relacionados para este item."
             />

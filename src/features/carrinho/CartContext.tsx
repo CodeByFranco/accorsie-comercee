@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { GiftIcon } from "@/components/store/BrindeSelo";
 import { clampPercent } from "@/features/produtos/utils/paymentDiscount";
 import type { ProductSummary } from "@/types/product";
 import type { KitChoiceSelection } from "@/types/kit";
@@ -322,6 +323,17 @@ function CartToastPanel({ toast }: { toast: CartToastState }) {
       ].join(" ")}
     >
       <p className="px-4 py-3 text-sm font-semibold leading-snug">{toast.text}</p>
+      {toast.tone !== "error" ? (
+        <div className="flex items-center gap-2.5 border-t border-store-accent/30 bg-[#FFF5EE] px-4 py-2 text-store-navy">
+          <GiftIcon className="h-5 w-5 shrink-0 text-store-accent" />
+          <div className="min-w-0 leading-tight">
+            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-store-accent">Mimo Accorsi</p>
+            <p className="mt-0.5 text-xs">
+              Seu pedido também vai com um <span className="font-semibold">presente especial</span>!
+            </p>
+          </div>
+        </div>
+      ) : null}
       <div className="h-1 w-full bg-black/[0.08]" aria-hidden>
         <div ref={barRef} className="h-full w-full origin-left bg-store-accent will-change-transform" />
       </div>

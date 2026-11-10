@@ -8,6 +8,8 @@ import type { StorePickupAddress } from "@/config/storePickupAddress";
 import { formatStorePickupAddress } from "@/config/storePickupAddress";
 import { kitClaimDesconto, useCart } from "@/features/carrinho/CartContext";
 import { lookupCep } from "@/features/endereco/services/lookupCep";
+import { FreteGratisBarra } from "@/features/frete/components/FreteGratisBarra";
+import { atingeFreteGratis, opcaoFreteGratisId } from "@/features/frete/freteGratis";
 import { useFreteQuote } from "@/features/frete/hooks/useFreteQuote";
 import type { CheckoutPayload } from "@/features/checkout/types";
 import { criarPedidoECheckout } from "@/features/checkout/services/criarPedidoECheckout";
@@ -31,6 +33,8 @@ type CheckoutPageProps = {
   initialEndereco?: ProfileEndereco;
   /** Quando configurado no ambiente, exibe opção de retirada na loja (sem frete). */
   lojaRetirada?: StorePickupAddress | null;
+  /** Saldo de cashback disponível do cliente (reais). */
+  saldoCashback?: number;
 };
 
 type ModoEntrega = "envio" | "retirada";
@@ -39,6 +43,7 @@ export function CheckoutPage({
   defaultDestinatarioNome = "",
   initialEndereco = emptyProfileEndereco(),
   lojaRetirada = null,
+  saldoCashback = 0,
 }: CheckoutPageProps) {
   const baseId = useId();
   const { lines, itemCount, isReady, kitClaims } = useCart();
@@ -100,18 +105,32 @@ export function CheckoutPage({
     cep,
     modoEntrega === "envio" && hasItems && !exigeRetiradaLoja,
   );
-  const shipping =
-    !hasItems ? 0 : modoEntrega === "retirada" ? 0 : frete.freteValue;
   const [cupomInput, setCupomInput] = useState("");
   const [cupomDesconto, setCupomDesconto] = useState<number | null>(null);
+  const freteGratisId = opcaoFreteGratisId(frete.opcoes);
+  const valorProdutosFreteGratis = Math.max(0, baseAposKit - (cupomDesconto ?? 0));
+  const atingiuFreteGratis = atingeFreteGratis(valorProdutosFreteGratis);
+  const freteGratisAplicado =
+    modoEntrega === "envio" &&
+    atingiuFreteGratis &&
+    freteGratisId !== null &&
+    frete.selectedId === freteGratisId;
+  const shipping =
+    !hasItems ? 0 : modoEntrega === "retirada" || freteGratisAplicado ? 0 : frete.freteValue;
   const [cupomMensagem, setCupomMensagem] = useState<string | null>(null);
   const [cupomBusy, setCupomBusy] = useState(false);
-  const total = Math.max(0, baseAposKit + shipping - (cupomDesconto ?? 0));
+  const [usarCashback, setUsarCashback] = useState(false);
+  const totalAntesCashback = Math.max(0, baseAposKit + shipping - (cupomDesconto ?? 0));
+  /** Mesma regra da RPC: mantém ao menos R$ 1,00 a pagar. */
+  const cashbackAplicado = usarCashback
+    ? Math.round(Math.max(0, Math.min(saldoCashback, totalAntesCashback - 1)) * 100) / 100
+    : 0;
+  const total = Math.max(0, totalAntesCashback - cashbackAplicado);
 
   useEffect(() => {
     setCupomDesconto(null);
     setCupomMensagem(null);
-  }, [subtotal, kitDesconto, shipping, itemCount, modoEntrega, frete.selectedId]);
+  }, [subtotal, kitDesconto, frete.freteValue, itemCount, modoEntrega, frete.selectedId]);
 
   useEffect(() => {
     const cepDigits = cep.replace(/\D/g, "").slice(0, 8);
@@ -215,6 +234,7 @@ export function CheckoutPage({
     const payload: CheckoutPayload = {
       ...payloadBase,
       ...(codigoCupom ? { cupom_codigo: codigoCupom } : {}),
+      ...(cashbackAplicado > 0 ? { usar_cashback: true } : {}),
       ...(kitClaims.length > 0
         ? { kits: kitClaims.map((c) => ({
               ...(c.produtoId ? { produto_id: c.produtoId } : { kit_id: c.kitId }),
@@ -259,7 +279,10 @@ export function CheckoutPage({
     }
     setCupomBusy(true);
     try {
-      const r = await previewCupomDesconto(c, baseAposKit, shipping);
+      let r = await previewCupomDesconto(c, baseAposKit, shipping);
+      if (r.ok && shipping === 0 && freteGratisAplicado && !atingeFreteGratis(baseAposKit - r.desconto)) {
+        r = await previewCupomDesconto(c, baseAposKit, frete.freteValue);
+      }
       if (r.ok) {
         setCupomDesconto(r.desconto);
         setCupomMensagem(`Desconto de ${money.format(r.desconto)} incorporado ao total.`);
@@ -623,6 +646,28 @@ export function CheckoutPage({
                 ) : null}
               </section>
 
+              {saldoCashback > 0 ? (
+                <section
+                  className="rounded-sm border border-store-line/80 bg-white p-5 shadow-sm sm:p-6"
+                  aria-labelledby={`${baseId}-cashback`}
+                >
+                  <h2 id={`${baseId}-cashback`} className="text-lg font-bold text-black">
+                    Cashback
+                  </h2>
+                  <label className="mt-3 flex cursor-pointer items-start gap-3 text-sm text-store-navy">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 accent-store-accent"
+                      checked={usarCashback}
+                      onChange={(e) => setUsarCashback(e.target.checked)}
+                    />
+                    <span>
+                      Usar meu saldo de <strong>{money.format(saldoCashback)}</strong> nesta compra.
+                    </span>
+                  </label>
+                </section>
+              ) : null}
+
               <section
                 className="rounded-sm border border-store-line/80 bg-white p-5 shadow-sm sm:p-6"
                 aria-labelledby={`${baseId}-itens`}
@@ -691,9 +736,18 @@ export function CheckoutPage({
                                 : ""}
                             </span>
                           </span>
-                          <strong className="text-sm text-black">
-                            {money.format(opcao.precoCentavos / 100)}
-                          </strong>
+                          {atingiuFreteGratis && opcao.id === freteGratisId ? (
+                            <span className="text-right leading-tight">
+                              <span className="block text-[11px] text-store-navy-muted line-through">
+                                {money.format(opcao.precoCentavos / 100)}
+                              </span>
+                              <strong className="text-sm text-emerald-700">Grátis</strong>
+                            </span>
+                          ) : (
+                            <strong className="text-sm text-black">
+                              {money.format(opcao.precoCentavos / 100)}
+                            </strong>
+                          )}
                         </label>
                       ))}
                     </fieldset>
@@ -729,7 +783,13 @@ export function CheckoutPage({
                 <div className="flex justify-between gap-4">
                   <dt className="text-store-navy">Frete</dt>
                   <dd className="font-semibold tabular-nums text-black">
-                    {modoEntrega === "retirada" ? "Retirada na loja" : money.format(shipping)}
+                    {modoEntrega === "retirada" ? (
+                      "Retirada na loja"
+                    ) : freteGratisAplicado ? (
+                      <span className="text-emerald-700">Grátis</span>
+                    ) : (
+                      money.format(shipping)
+                    )}
                   </dd>
                 </div>
                 {cupomDesconto != null && cupomDesconto > 0 ? (
@@ -740,7 +800,18 @@ export function CheckoutPage({
                     </dd>
                   </div>
                 ) : null}
+                {cashbackAplicado > 0 ? (
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-store-navy">Cashback</dt>
+                    <dd className="font-semibold tabular-nums text-emerald-800">
+                      − {money.format(cashbackAplicado)}
+                    </dd>
+                  </div>
+                ) : null}
               </dl>
+              {hasItems && modoEntrega === "envio" && !exigeRetiradaLoja ? (
+                <FreteGratisBarra valorProdutos={valorProdutosFreteGratis} className="mt-4" />
+              ) : null}
               <div className="my-5 h-px bg-store-accent" aria-hidden />
               <div className="flex items-end justify-between gap-4">
                 <span className="text-base font-bold text-black">Total</span>
@@ -762,6 +833,11 @@ export function CheckoutPage({
               <p className="mt-3 text-center text-xs text-store-navy-muted">
                 Você será encaminhado ao Mercado Pago para concluir o pagamento com segurança.
               </p>
+              {total > 0 ? (
+                <p className="mt-2 text-center text-xs font-medium text-emerald-800">
+                  Você ganha {money.format(Math.round(total * 2.5) / 100)} de cashback (2,5%) após o pagamento.
+                </p>
+              ) : null}
             </aside>
           </form>
         )}

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 
 import { StoreNavbar } from "@/components/layout/StoreNavbar";
 import { WhatsAppAssistantButton } from "@/components/layout/WhatsAppAssistantButton";
+import { WelcomeCotacaoModal } from "@/components/layout/WelcomeCotacaoModal";
 import { CartProvider } from "@/features/carrinho/CartContext";
 import { getHomeCategories } from "@/features/categorias/services/getHomeCategories";
 import { getStoreSiteLayout } from "@/features/site-layout/services/getSiteLayout";
@@ -37,6 +38,7 @@ export default async function PublicLayout({ children }: { children: ReactNode }
       />
       {children}
       <WhatsAppAssistantButton />
+      <WelcomeCotacaoModal />
     </CartProvider>
   );
 }
