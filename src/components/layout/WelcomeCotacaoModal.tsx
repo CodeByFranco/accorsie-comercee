@@ -4,6 +4,8 @@ import Image from "next/image";
 import { Poppins } from "next/font/google";
 import { useCallback, useEffect, useState } from "react";
 
+import { ABRIR_COTACAO_EVENT } from "@/components/layout/WhatsAppAssistantButton";
+
 const poppins = Poppins({ subsets: ["latin"], weight: ["400", "600", "700", "800"] });
 
 const STORAGE_KEY = "accorsi-aviso-cotacao";
@@ -23,7 +25,14 @@ const FALA_TOTAL = FALA_TITULO.length + FALA_TEXTO.length;
 export function WelcomeCotacaoModal() {
   const [estado, setEstado] = useState<Estado>("oculto");
   const [chars, setChars] = useState(0);
+  const [geracao, setGeracao] = useState(0);
   const open = estado === "aberto";
+
+  const abrir = useCallback(() => {
+    setChars(0);
+    setEstado("aberto");
+    setGeracao((g) => g + 1);
+  }, []);
 
   const fechar = useCallback(() => {
     setEstado("oculto");
@@ -47,6 +56,11 @@ export function WelcomeCotacaoModal() {
     return () => window.clearTimeout(t);
   }, []);
 
+  useEffect(() => {
+    window.addEventListener(ABRIR_COTACAO_EVENT, abrir);
+    return () => window.removeEventListener(ABRIR_COTACAO_EVENT, abrir);
+  }, [abrir]);
+
   // Efeito de digitação (a assistente "falando"); sem animação se o usuário preferir menos movimento.
   useEffect(() => {
     if (!open) return;
@@ -65,7 +79,7 @@ export function WelcomeCotacaoModal() {
       });
     }, 28);
     return () => window.clearInterval(id);
-  }, [open]);
+  }, [open, geracao]);
 
   useEffect(() => {
     if (!open) return;
