@@ -122,16 +122,23 @@ export function ProductStorefrontDetail({
                 <ProductDetailAddToCart product={produto} />
                 <BrindeSelo />
                 {comboOleo ? (
-                  <ProductOleoCombo
-                    produto={produto}
-                    combo={comboOleo.combo}
-                    descontoPadrao={comboOleo.descontoPadrao}
-                  />
-                ) : null}
-                <div className="space-y-2 border-t border-store-line pt-3">
-                  <h2 className="text-sm font-semibold text-store-navy">Descrição</h2>
-                  <ProductDescriptionDisplay descricao={produto.descricao} />
-                </div>
+                  <>
+                    <div className="space-y-2 border-t border-store-line pt-3">
+                      <h2 className="text-sm font-semibold text-store-navy">Descrição</h2>
+                      <ProductDescriptionDisplay descricao={produto.descricao} />
+                    </div>
+                    <ProductOleoCombo
+                      produto={produto}
+                      combo={comboOleo.combo}
+                      descontoPadrao={comboOleo.descontoPadrao}
+                    />
+                  </>
+                ) : (
+                  <div className="space-y-2 border-t border-store-line pt-3">
+                    <h2 className="text-sm font-semibold text-store-navy">Descrição</h2>
+                    <ProductDescriptionDisplay descricao={produto.descricao} />
+                  </div>
+                )}
               </div>
             </div>
           </section>

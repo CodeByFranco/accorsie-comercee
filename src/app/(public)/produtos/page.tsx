@@ -12,8 +12,9 @@ import {
   getCatalogProducts,
   getCatalogSliderMax,
 } from "@/features/produtos/services/getCatalogProducts";
+import { ComboOleoBanner } from "@/features/kits/components/ComboOleoBanner";
 import { getDescontosPadrao } from "@/features/kits/services/kitCombo";
-import { COMBO_OLEO_FILTROS_NOME, isKitFiltrosProduto } from "@/features/kits/utils/comboOleo";
+import { isKitFiltrosProduto } from "@/features/kits/utils/comboOleo";
 import { createPublicClient } from "@/services/supabase/public";
 import { getKitCategorias, searchPublishedKits } from "@/features/kits/services/getHomeKits";
 import { KitsSection } from "@/features/kits/components/KitsSection";
@@ -72,11 +73,11 @@ export default async function ProdutosPage({
 
   return (
     <div className="flex min-h-dvh flex-col bg-store-cream font-sans text-store-navy">
-      <section className={`flex-1 py-10 sm:py-12 ${storeShellInset}`}>
+      <section className={`flex-1 py-6 sm:py-8 ${storeShellInset}`}>
         <div className={storeShellContent}>
           <div
             className={[
-              "flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-10",
+              "flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8",
               filtering ? "max-lg:flex-col-reverse" : "",
             ].join(" ")}
           >
@@ -102,32 +103,13 @@ export default async function ProdutosPage({
                   sliderMax={sliderMax}
                   modelosVeiculo={vehicleFilterData.modelos}
                   anosByModeloId={vehicleFilterData.anosByModeloId}
+                  destacarVeiculo={paginaCombos}
                 />
               </Suspense>
             </aside>
 
-            <div className="flex min-w-0 flex-1 flex-col gap-6">
-              {paginaCombos && descontosPadrao ? (
-                <section className="rounded-sm bg-store-navy p-5 text-white md:p-6">
-                  <h1 className="text-2xl font-bold md:text-3xl">{COMBO_OLEO_FILTROS_NOME}</h1>
-                  <ul className="mt-3 space-y-1 text-sm text-white/90">
-                    <li>
-                      <strong className="text-store-accent">Só o kit de filtros:</strong>{" "}
-                      {descontosPadrao.kit_pix.toLocaleString("pt-BR")}% no PIX ou{" "}
-                      {descontosPadrao.kit_cartao.toLocaleString("pt-BR")}% no cartão.
-                    </li>
-                    <li>
-                      <strong className="text-store-accent">Kit + óleo (combo):</strong>{" "}
-                      {descontosPadrao.combo_pix.toLocaleString("pt-BR")}% no PIX ou{" "}
-                      {descontosPadrao.combo_cartao.toLocaleString("pt-BR")}% no cartão, em até 3x sem juros.
-                    </li>
-                  </ul>
-                  <p className="mt-3 text-xs text-white/70">
-                    Escolha o modelo do seu carro no filtro, abra o kit e, em &quot;Leve junto: óleo&quot;, escolha o óleo
-                    e a quantidade.
-                  </p>
-                </section>
-              ) : null}
+            <div className="flex min-w-0 flex-1 flex-col gap-4">
+              {paginaCombos && descontosPadrao ? <ComboOleoBanner descontos={descontosPadrao} /> : null}
               <Suspense
                 fallback={
                   <div className="h-12 w-full max-w-xl animate-pulse rounded-full bg-[#3a3a3a]/50" aria-hidden />
@@ -136,20 +118,29 @@ export default async function ProdutosPage({
                 <StoreProductSearchBar className="max-w-xl" />
               </Suspense>
 
-              <header className="mb-0 sm:mb-0" aria-labelledby="catalog-produtos-heading">
+              <header className="mb-0" aria-labelledby="catalog-produtos-heading">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
-                    <h1
-                      id="catalog-produtos-heading"
-                      className="text-2xl font-bold tracking-tight text-black sm:text-3xl"
-                    >
-                      Produtos
-                    </h1>
+                    {paginaCombos ? (
+                      <h2
+                        id="catalog-produtos-heading"
+                        className="text-xl font-bold tracking-tight text-black sm:text-2xl"
+                      >
+                        Produtos
+                      </h2>
+                    ) : (
+                      <h1
+                        id="catalog-produtos-heading"
+                        className="text-2xl font-bold tracking-tight text-black sm:text-3xl"
+                      >
+                        Produtos
+                      </h1>
+                    )}
                     <p className="text-sm font-normal text-store-navy-muted sm:pb-0.5">— {summary}</p>
                   </div>
-                  <div className="mt-2 h-1 w-14 rounded-[1px] bg-store-navy sm:w-16" aria-hidden />
+                  <div className="mt-1.5 h-1 w-14 rounded-[1px] bg-store-navy sm:w-16" aria-hidden />
                   {catalogPage.total > 0 ? (
-                    <p className="mt-2 text-xs text-store-navy-muted tabular-nums">
+                    <p className="mt-1 text-xs text-store-navy-muted tabular-nums">
                       {catalogPage.total} produto{catalogPage.total === 1 ? "" : "s"}
                       {catalogPage.totalPages > 1
                         ? ` · página ${page} de ${catalogPage.totalPages}`
@@ -163,7 +154,12 @@ export default async function ProdutosPage({
                 <KitsSection kits={kitsBusca} title="Kits encontrados" embedded />
               ) : null}
 
-              <ProductsGrid variant="catalog" produtos={produtos} emptyMessage={emptyMessage} />
+              <ProductsGrid
+                variant="catalog"
+                produtos={produtos}
+                emptyMessage={emptyMessage}
+                compact={paginaCombos}
+              />
               <CatalogPagination
                 page={page}
                 totalPages={catalogPage.totalPages}

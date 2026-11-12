@@ -1,11 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { StorefrontPhoto } from "@/features/produtos/components/StorefrontPhoto";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { CategoryListItem } from "@/types/category";
-import { isSupabaseStorageUrl } from "@/utils/isSupabaseStorageUrl";
 
 export type { CategoryListItem };
 
@@ -151,16 +150,9 @@ export function CategoriesSection({ categorias }: CategoriesSectionProps) {
                   href={href}
                   className="flex w-full flex-col items-center gap-2 rounded-2xl border border-store-line/80 bg-white px-3 py-4 text-center shadow-sm transition hover:border-store-navy/25 hover:shadow-md md:gap-1.5 md:rounded-xl md:px-1.5 md:py-3"
                 >
-                  <span className="flex h-14 w-14 items-center justify-center overflow-hidden text-lg font-semibold text-store-navy md:h-10 md:w-10">
+                  <span className="relative flex h-14 w-14 items-center justify-center overflow-hidden text-lg font-semibold text-store-navy md:h-10 md:w-10">
                     {src ? (
-                      <Image
-                        src={src}
-                        alt=""
-                        width={56}
-                        height={56}
-                        className="h-full w-full object-contain"
-                        unoptimized={!isSupabaseStorageUrl(src)}
-                      />
+                      <StorefrontPhoto src={src} alt="" />
                     ) : (
                       <span className="text-store-accent" aria-hidden>
                         {c.nome.slice(0, 1).toUpperCase()}

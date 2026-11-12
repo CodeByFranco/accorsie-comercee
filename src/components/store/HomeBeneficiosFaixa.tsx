@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 
-import { GiftIcon } from "@/components/store/BrindeSelo";
 import { storeShellContent, storeShellInset } from "@/config/storeShell";
 
 const iconProps = {
@@ -15,11 +14,15 @@ const iconProps = {
 
 const iconClass = "h-6 w-6 shrink-0 text-store-accent";
 
-const BENEFICIOS: Array<{ icone: ReactNode; titulo: string; texto: string }> = [
+const BENEFICIOS: Array<{ icone: ReactNode; titulo: string; texto: string; brinde?: boolean }> = [
   {
-    icone: <GiftIcon className={iconClass} />,
-    titulo: "Mimo Accorsi",
+    icone: (
+      // eslint-disable-next-line @next/next/no-img-element -- ícone local estático
+      <img src="/icons/presente.png" alt="" className="h-10 w-10 shrink-0 drop-shadow-sm" />
+    ),
+    titulo: "Brinde Accorsi",
     texto: "Brinde especial em todo pedido",
+    brinde: true,
   },
   {
     icone: (
@@ -56,8 +59,16 @@ export function HomeBeneficiosFaixa() {
           <li key={b.titulo} className="flex items-center gap-3 px-4 py-2.5">
             {b.icone}
             <div className="min-w-0 leading-tight">
-              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-store-accent">{b.titulo}</p>
-              <p className="mt-0.5 text-[13px] text-store-navy">{b.texto}</p>
+              {b.brinde ? (
+                <p className="inline-flex rounded-full bg-store-navy px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.14em] text-store-accent">
+                  {b.titulo}
+                </p>
+              ) : (
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-store-accent">{b.titulo}</p>
+              )}
+              <p className={`text-store-navy ${b.brinde ? "mt-1 text-sm font-semibold" : "mt-0.5 text-[13px]"}`}>
+                {b.texto}
+              </p>
             </div>
           </li>
         ))}

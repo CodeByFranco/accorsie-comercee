@@ -1,27 +1,20 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback } from "react";
-
-const WHATSAPP_URL = "https://wa.me/5554999343052";
 
 /** Largura/altura do quadro (PNG 408×439). Altura menor que 439 = recorte inferior, plano médio tipo “até a cintura”. */
 const ASSISTENTE_FRAME_W = 350;
 const ASSISTENTE_FRAME_H = 340;
 
-export function WhatsAppAssistantButton() {
-  const openWhatsApp = useCallback(() => {
-    if (typeof window !== "undefined") {
-      window.open(WHATSAPP_URL, "_blank", "noopener,noreferrer");
-    }
-  }, []);
+export const ABRIR_COTACAO_EVENT = "accorsi-abrir-cotacao";
 
+export function WhatsAppAssistantButton() {
   return (
     <button
       type="button"
-      onClick={openWhatsApp}
+      onClick={() => window.dispatchEvent(new Event(ABRIR_COTACAO_EVENT))}
       className="fixed bottom-[env(safe-area-inset-bottom,0px)] right-0 z-[160] flex flex-col items-end transition hover:scale-[1.02]"
-      aria-label="Falar com atendimento no WhatsApp"
+      aria-label="Posso te ajudar? Abrir contato dos vendedores"
     >
       <span className="mb-0.5 rounded-full bg-white px-2 py-0.5 text-[9px] font-bold leading-none text-store-navy shadow-[0_4px_18px_rgba(0,0,0,0.18)] sm:hidden">
         Posso te ajudar?

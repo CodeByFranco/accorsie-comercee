@@ -24,6 +24,8 @@ type ProductCatalogFiltersProps = {
   sliderMax: number;
   modelosVeiculo: VehicleFilterModelo[];
   anosByModeloId: VehicleFilterAnosByModelo;
+  /** Na vitrine de kits de filtro, o filtro de veículo ganha destaque. */
+  destacarVeiculo?: boolean;
 };
 
 function IconFunnel({ className }: { className?: string }) {
@@ -54,6 +56,7 @@ export function ProductCatalogFilters({
   sliderMax,
   modelosVeiculo,
   anosByModeloId,
+  destacarVeiculo = false,
 }: ProductCatalogFiltersProps) {
   const router = useRouter();
   const sp = useSearchParams();
@@ -174,16 +177,30 @@ export function ProductCatalogFilters({
       </h2>
 
       <div className="flex flex-col gap-8">
-        <fieldset className="min-w-0">
+        <fieldset
+          className={
+            destacarVeiculo
+              ? "min-w-0 rounded-md border-2 border-store-accent bg-[#fff6ef] p-3"
+              : "min-w-0"
+          }
+        >
           <legend className="w-full p-0">
             <button
               type="button"
-              className="mb-3 flex w-full items-center justify-between gap-2 rounded-md py-1 text-left transition hover:bg-store-subtle/60"
+              className="mb-2 flex w-full items-center justify-between gap-2 rounded-md py-1 text-left transition hover:bg-store-subtle/60"
               aria-expanded={veiculoOpen}
               aria-controls={veiculoPanelId}
               onClick={() => setVeiculoOpen((o) => !o)}
             >
-              <span className="text-xs font-bold uppercase tracking-wide text-store-navy-muted">Veículo</span>
+              <span
+                className={
+                  destacarVeiculo
+                    ? "text-sm font-bold uppercase tracking-wide text-store-navy"
+                    : "text-xs font-bold uppercase tracking-wide text-store-navy-muted"
+                }
+              >
+                {destacarVeiculo ? "Seu veículo" : "Veículo"}
+              </span>
               <IconChevronDown
                 className={[
                   "h-4 w-4 shrink-0 text-store-navy-muted transition-transform duration-200",
@@ -194,6 +211,11 @@ export function ProductCatalogFilters({
           </legend>
           {veiculoOpen ? (
             <div id={veiculoPanelId} className="space-y-2 text-sm text-store-navy">
+              {destacarVeiculo ? (
+                <p className="text-xs font-medium leading-snug text-store-navy">
+                  Encontre as peças compatíveis com o seu carro.
+                </p>
+              ) : null}
               <label className="block text-xs font-semibold text-store-navy-muted">
                 Marca
                 <select

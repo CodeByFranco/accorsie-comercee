@@ -12,7 +12,6 @@ import {
   type ReactNode,
 } from "react";
 
-import { GiftIcon } from "@/components/store/BrindeSelo";
 import { clampPercent } from "@/features/produtos/utils/paymentDiscount";
 import type { ProductSummary } from "@/types/product";
 import type { KitChoiceSelection } from "@/types/kit";
@@ -324,12 +323,15 @@ function CartToastPanel({ toast }: { toast: CartToastState }) {
     >
       <p className="px-4 py-3 text-sm font-semibold leading-snug">{toast.text}</p>
       {toast.tone !== "error" ? (
-        <div className="flex items-center gap-2.5 border-t border-store-accent/30 bg-[#FFF5EE] px-4 py-2 text-store-navy">
-          <GiftIcon className="h-5 w-5 shrink-0 text-store-accent" />
+        <div className="flex items-center gap-2.5 bg-store-navy px-4 py-2.5 text-white">
+          {/* eslint-disable-next-line @next/next/no-img-element -- ícone local estático */}
+          <img src="/icons/presente.png" alt="" className="h-9 w-9 shrink-0" />
           <div className="min-w-0 leading-tight">
-            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-store-accent">Mimo Accorsi</p>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-store-accent">
+              Brinde Accorsi
+            </p>
             <p className="mt-0.5 text-xs">
-              Seu pedido também vai com um <span className="font-semibold">presente especial</span>!
+              Seu pedido também vai com um <span className="font-semibold">brinde especial</span>!
             </p>
           </div>
         </div>

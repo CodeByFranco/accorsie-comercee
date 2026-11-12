@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { faltaParaFreteGratis } from "@/features/frete/freteGratis";
 import { getSugestoesFreteGratis } from "@/features/frete/services/getSugestoesFreteGratis";
 import { ProductAddCartButton } from "@/features/produtos/components/ProductAddCartButton";
+import { StorefrontPhoto } from "@/features/produtos/components/StorefrontPhoto";
 import { unitPriceAfterPaymentDiscount } from "@/features/produtos/utils/paymentDiscount";
 import type { ProductSummary } from "@/types/product";
 
@@ -62,20 +63,9 @@ export function FreteGratisSugestoes({
             <li key={p.id} className="flex flex-col gap-2">
               <Link
                 href={`/produtos/${p.id}`}
-                className="block aspect-square overflow-hidden rounded-sm border border-store-line/60 bg-store-subtle"
+                className="relative block aspect-square overflow-hidden rounded-sm bg-white"
               >
-                {p.imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- URLs externas e Storage
-                  <img
-                    src={p.imageUrl}
-                    alt={p.titulo}
-                    className="h-full w-full object-contain object-center p-2"
-                  />
-                ) : (
-                  <span className="flex h-full w-full items-center justify-center text-xs text-store-navy-muted">
-                    Sem foto
-                  </span>
-                )}
+                <StorefrontPhoto src={p.imageUrl} alt={p.titulo} />
               </Link>
               <Link
                 href={`/produtos/${p.id}`}

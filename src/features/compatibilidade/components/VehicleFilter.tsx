@@ -559,7 +559,7 @@ export function VehicleFilter({
                 "flex h-10 w-full min-h-0 flex-row items-center justify-start gap-2 rounded-full border px-2.5 text-left text-xs font-semibold leading-none shadow-sm transition sm:px-3 sm:text-sm",
                 active
                   ? "border-store-navy bg-store-navy text-store-accent"
-                  : "border-store-line/80 bg-store-subtle text-store-navy hover:brightness-[0.98]",
+                  : "border-store-line/80 bg-white text-store-navy hover:brightness-[0.98]",
               ].join(" ")}
             >
               {tabIconEl(id, active, true)}
