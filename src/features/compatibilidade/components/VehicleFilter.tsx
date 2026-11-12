@@ -61,7 +61,7 @@ function IconSearch({ className }: { className?: string }) {
 
 /** Altura única da faixa de filtro (placa, selects, abas): h-9 + tipografia alinhada. */
 const selectClassBase =
-  "h-9 w-full appearance-none rounded-full border border-store-line/80 bg-store-subtle py-0 pl-3 pr-9 text-[11px] font-semibold leading-none text-store-navy shadow-sm outline-none transition focus:border-store-navy-muted focus:ring-2 focus:ring-store-navy/20 sm:pl-3.5 sm:pr-10 sm:text-xs";
+  "h-10 w-full appearance-none rounded-full border border-store-line/80 bg-store-subtle py-0 pl-3 pr-9 text-xs font-semibold leading-none text-store-navy shadow-sm outline-none transition focus:border-store-navy-muted focus:ring-2 focus:ring-store-navy/20 sm:pl-3.5 sm:pr-10 sm:text-sm";
 
 /** Marca / Modelo: texto centralizado no campo (Ano permanece à esquerda). */
 const selectClassMarcaModelo = `${selectClassBase} text-center`;
@@ -115,7 +115,7 @@ function VehicleFilterFields({
         <div className="min-w-0">
           <label
             htmlFor={mid}
-            className="mb-0.5 block text-center text-[10px] font-medium leading-tight text-white sm:text-[11px]"
+            className="mb-0.5 block text-center text-xs font-semibold leading-tight text-white sm:text-sm"
           >
             Marca
           </label>
@@ -149,7 +149,7 @@ function VehicleFilterFields({
         <div className="min-w-0">
           <label
             htmlFor={modid}
-            className="mb-0.5 block text-center text-[10px] font-medium leading-tight text-white sm:text-[11px]"
+            className="mb-0.5 block text-center text-xs font-semibold leading-tight text-white sm:text-sm"
           >
             Modelo
           </label>
@@ -182,7 +182,7 @@ function VehicleFilterFields({
           </div>
         </div>
         <div className="min-w-0">
-          <label htmlFor={aid} className="mb-0.5 block text-[10px] font-medium leading-tight text-white sm:text-[11px]">
+          <label htmlFor={aid} className="mb-0.5 block text-xs font-semibold leading-tight text-white sm:text-sm">
             Ano
           </label>
           <div className="relative">
@@ -221,7 +221,7 @@ function VehicleFilterFields({
           onClick={onApply}
           disabled={!canSearch}
           className={[
-            "flex h-9 w-9 items-center justify-center rounded-md text-store-navy shadow-sm transition",
+            "flex h-10 w-10 items-center justify-center rounded-md text-store-navy shadow-sm transition",
             canSearch
               ? "bg-store-subtle hover:bg-white"
               : "cursor-not-allowed bg-store-subtle/50 opacity-60",
@@ -495,7 +495,7 @@ export function VehicleFilter({
   const filterHeading = (
     <h2
       id={`${baseId}-heading`}
-      className="vehicle-filter-heading mx-auto w-full text-center text-base font-extrabold text-store-navy sm:text-xl"
+      className="vehicle-filter-heading mx-auto w-full text-center text-lg font-extrabold text-store-navy sm:text-2xl"
     >
       Filtre a sua busca
     </h2>
@@ -524,7 +524,7 @@ export function VehicleFilter({
               aria-label={label}
               onClick={() => onVehicleTypeTab(id)}
               className={[
-                "relative z-10 flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-semibold transition-colors duration-200 sm:gap-2 sm:px-3 sm:text-xs",
+                "relative z-10 flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold transition-colors duration-200 sm:gap-2 sm:px-3 sm:text-sm",
                 active ? "text-store-accent" : "text-store-navy hover:bg-store-subtle/70",
               ].join(" ")}
             >
@@ -556,7 +556,7 @@ export function VehicleFilter({
               aria-label={label}
               onClick={() => onVehicleTypeTab(id)}
               className={[
-                "flex h-9 w-full min-h-0 flex-row items-center justify-start gap-2 rounded-full border px-2.5 text-left text-[11px] font-semibold leading-none shadow-sm transition sm:px-3 sm:text-xs",
+                "flex h-10 w-full min-h-0 flex-row items-center justify-start gap-2 rounded-full border px-2.5 text-left text-xs font-semibold leading-none shadow-sm transition sm:px-3 sm:text-sm",
                 active
                   ? "border-store-navy bg-store-navy text-store-accent"
                   : "border-store-line/80 bg-white text-store-navy hover:brightness-[0.98]",
@@ -667,7 +667,7 @@ export function VehicleFilter({
   const filterSectionDefault = (
     <>
       {filterHeading}
-      <div className="mt-4 flex min-h-0 flex-col gap-3 lg:grid lg:min-h-0 lg:grid-cols-[auto_minmax(0,1fr)_minmax(17rem,min(24rem,34%))] lg:items-stretch lg:gap-3 lg:content-stretch">
+      <div className="mt-3 flex min-h-0 flex-col gap-3 lg:grid lg:min-h-0 lg:grid-cols-[auto_minmax(0,1fr)_minmax(17rem,min(24rem,34%))] lg:items-stretch lg:gap-3 lg:content-stretch">
         <div className="flex min-h-0 w-full shrink-0 flex-col lg:col-start-1 lg:row-start-1 lg:h-full lg:min-h-0 lg:self-stretch">
           <div className="flex h-full min-h-0 w-full flex-1 flex-col">{vehicleTabsVertical}</div>
         </div>
@@ -689,7 +689,7 @@ export function VehicleFilter({
   const filterSectionBetween = (
     <>
       {filterHeading}
-      <div className="mt-4 flex min-h-0 flex-col gap-3 lg:grid lg:min-h-0 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-stretch lg:gap-3 lg:content-stretch">
+      <div className="mt-3 flex min-h-0 flex-col gap-3 lg:grid lg:min-h-0 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-stretch lg:gap-3 lg:content-stretch">
         <div className="flex min-h-0 w-full shrink-0 flex-col lg:col-start-1 lg:row-start-1 lg:h-full lg:min-h-0 lg:self-stretch">
           <div className="flex h-full min-h-0 w-full flex-1 flex-col">{vehicleTabsVertical}</div>
         </div>
@@ -708,7 +708,7 @@ export function VehicleFilter({
         className="flex min-h-0 flex-1 flex-col"
         aria-labelledby={`${baseId}-heading`}
       >
-        <div className={`${storeShellInset} pt-6 sm:pt-8`}>
+        <div className={`${storeShellInset} pt-3 sm:pt-4`}>
           <div className={storeShellContent}>
             <div className="mx-auto max-w-6xl">{plateToolbar}</div>
           </div>
@@ -729,7 +729,7 @@ export function VehicleFilter({
 
   return (
     <section
-      className={`${storeShellInset} pb-2 pt-6 sm:pt-8`}
+      className={`${storeShellInset} pb-2 pt-3 sm:pt-4`}
       aria-labelledby={`${baseId}-heading`}
     >
       <div className={storeShellContent}>

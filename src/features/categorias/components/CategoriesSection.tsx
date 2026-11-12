@@ -127,7 +127,7 @@ export function CategoriesSection({ categorias }: CategoriesSectionProps) {
         <ul
           ref={scrollerRef}
           className={[
-            "flex w-full snap-x snap-mandatory gap-3 overflow-x-auto overflow-y-visible pb-2 pt-0.5",
+            "flex w-full snap-x snap-mandatory gap-3 overflow-x-auto overflow-y-visible pb-2 pt-0.5 md:justify-center md:gap-2",
             "scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
             hasOverflow ? "md:px-12" : "",
           ].join(" ")}
@@ -142,15 +142,15 @@ export function CategoriesSection({ categorias }: CategoriesSectionProps) {
                   "shrink-0 snap-start",
                   /* Mobile: ~3 cards por linha (gap-3 → 2×0,75rem entre 3 itens). */
                   "w-[calc((100%-1.5rem)/3)] min-w-[6.5rem]",
-                  /* md+: 7 cards visíveis antes da rolagem (6×0,75rem de gap). */
-                  "md:w-[calc((100%-4.5rem)/7)] md:min-w-0 md:max-w-[calc((100%-4.5rem)/7)]",
+                  /* md+: todas as categorias dividem a mesma linha, sem rolagem. */
+                  "md:w-auto md:min-w-0 md:max-w-[9rem] md:flex-1 md:shrink",
                 ].join(" ")}
               >
                 <Link
                   href={href}
-                  className="flex w-full flex-col items-center gap-2 rounded-2xl border border-store-line/80 bg-white px-3 py-4 text-center shadow-sm transition hover:border-store-navy/25 hover:shadow-md"
+                  className="flex w-full flex-col items-center gap-2 rounded-2xl border border-store-line/80 bg-white px-3 py-4 text-center shadow-sm transition hover:border-store-navy/25 hover:shadow-md md:gap-1.5 md:rounded-xl md:px-1.5 md:py-3"
                 >
-                  <span className="relative flex h-14 w-14 items-center justify-center overflow-hidden text-lg font-semibold text-store-navy">
+                  <span className="relative flex h-14 w-14 items-center justify-center overflow-hidden text-lg font-semibold text-store-navy md:h-10 md:w-10">
                     {src ? (
                       <StorefrontPhoto src={src} alt="" />
                     ) : (
@@ -159,7 +159,7 @@ export function CategoriesSection({ categorias }: CategoriesSectionProps) {
                       </span>
                     )}
                   </span>
-                  <span className="line-clamp-2 text-xs font-semibold leading-snug text-store-navy sm:text-sm">
+                  <span className="line-clamp-2 break-words text-xs font-semibold leading-snug text-store-navy sm:text-sm md:text-xs">
                     {c.nome}
                   </span>
                 </Link>

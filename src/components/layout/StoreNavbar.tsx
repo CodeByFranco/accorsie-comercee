@@ -242,7 +242,7 @@ export function StoreNavbar({
               </Link>
               {isDesktopNav ? (
                 <nav
-                  className="hidden min-w-0 flex-1 flex-nowrap items-center justify-center gap-x-4 whitespace-nowrap xl:flex xl:gap-x-6"
+                  className="hidden min-w-0 flex-1 flex-nowrap items-center justify-start gap-x-3 whitespace-nowrap xl:ml-2 xl:flex xl:gap-x-4"
                   aria-label="Principal"
                 >
                 <Link href="/" className={navLinkClass(pathname === "/")}>
