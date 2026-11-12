@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 
 import { BrindeSelo } from "@/components/store/BrindeSelo";
+import { StorefrontPhoto } from "@/features/produtos/components/StorefrontPhoto";
 import { storeShellContent, storeShellInset } from "@/config/storeShell";
 import { CART_ICON_SRC } from "@/features/carrinho/constants";
 import { kitClaimDesconto, useCart } from "@/features/carrinho/CartContext";
@@ -134,19 +135,8 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
                   <li key={line.id} className="py-5 first:pt-0">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                       <div className="flex shrink-0 gap-4">
-                        <div className="h-24 w-24 shrink-0 overflow-hidden rounded-sm border border-store-line/60 bg-store-subtle sm:h-28 sm:w-28">
-                          {line.imageUrl ? (
-                            // eslint-disable-next-line @next/next/no-img-element -- URLs externas e Storage
-                            <img
-                              src={line.imageUrl}
-                              alt={line.titulo}
-                              className="h-full w-full object-contain object-center p-1"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-xs text-store-navy-muted">
-                              Sem foto
-                            </div>
-                          )}
+                        <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-sm bg-white">
+                          <StorefrontPhoto src={line.imageUrl} alt={line.titulo} />
                         </div>
                         <div className="min-w-0 flex-1 sm:hidden">
                           <p className="text-right text-base font-bold text-black">
@@ -302,7 +292,7 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
 
             {hasItems ? (
               <BrindeSelo className="mt-5">
-                Seu pedido também vai com um <span className="font-semibold">presente especial</span> da Accorsi!
+                Seu pedido também vai com um <span className="font-semibold">brinde especial</span> da Accorsi!
               </BrindeSelo>
             ) : null}
 

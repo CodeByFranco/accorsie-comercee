@@ -12,7 +12,7 @@ const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
 const fmtPct = (n: number) => `${n.toLocaleString("pt-BR")}%`;
 
 /** Preço, escolhas do cliente (ex.: viscosidade e litros) e botão de compra do kit. */
-export function KitBuyButton({ kit }: { kit: KitDetail }) {
+export function KitBuyButton({ kit, descricao }: { kit: KitDetail; descricao?: string | null }) {
   const { addKit } = useCart();
 
   const [selecao, setSelecao] = useState<Map<string, { product_id: string; quantidade: number }>>(
@@ -114,6 +114,12 @@ export function KitBuyButton({ kit }: { kit: KitDetail }) {
             Você economiza {money.format(pricing.economia)}</p>
         ) : null}
       </div>
+
+      {descricao?.trim() ? (
+        <p className="whitespace-pre-wrap border-t border-store-navy/10 pt-4 text-sm leading-relaxed text-store-navy/80">
+          {descricao.trim()}
+        </p>
+      ) : null}
 
       {kit.escolhas.map((ch) => {
         const sel = selecao.get(ch.kit_item_id);

@@ -1,18 +1,18 @@
-import Image from "next/image";
 import Link from "next/link";
+import { StorefrontPhoto } from "@/features/produtos/components/StorefrontPhoto";
+import { maxParcelasCheckout, PARCELAMENTO_SEM_JUROS } from "@/features/produtos/utils/parcelamento";
 import type { KitSummary } from "@/types/kit";
 
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
 export function KitCard({ kit }: { kit: KitSummary }) {
+  const precoCartao = kit.precoKit;
+  const parcelas = maxParcelasCheckout(precoCartao);
+
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-sm border border-store-navy/10 bg-white shadow-sm">
-      <Link href={`/kit/${kit.slug}`} className="relative block aspect-square bg-store-cream/40">
-        {kit.imagem ? (
-          <Image src={kit.imagem} alt="" fill className="object-cover" sizes="(max-width:768px) 50vw, 25vw" />
-        ) : (
-          <div className="flex h-full items-center justify-center text-sm text-store-navy/40">Sem imagem</div>
-        )}
+      <Link href={`/kit/${kit.slug}`} className="relative block aspect-square overflow-hidden bg-white">
+        <StorefrontPhoto src={kit.imagem} alt="" />
       </Link>
       <div className="flex flex-1 flex-col gap-2 p-4">
         <h3 className="text-base font-bold text-store-navy">
@@ -34,6 +34,14 @@ export function KitCard({ kit }: { kit: KitSummary }) {
               {money.format(kit.economia)}
             </p>
           ) : null}
+          <p className="text-xs text-store-navy/70">
+            ou {money.format(precoCartao)} em até {parcelas}x
+            {PARCELAMENTO_SEM_JUROS ? (
+              <span className="font-semibold text-emerald-700"> sem juros</span>
+            ) : (
+              " no cartão"
+            )}
+          </p>
         </div>
         <Link
           href={`/kit/${kit.slug}`}

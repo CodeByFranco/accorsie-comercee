@@ -1,10 +1,9 @@
-import Image from "next/image";
 import Link from "next/link";
 import type { ProductSummary } from "@/types/product";
 import { ProductAddCartButton } from "@/features/produtos/components/ProductAddCartButton";
+import { StorefrontPhoto } from "@/features/produtos/components/StorefrontPhoto";
 import { maxParcelasCheckout, PARCELAMENTO_SEM_JUROS } from "@/features/produtos/utils/parcelamento";
 import { unitPriceAfterPaymentDiscount } from "@/features/produtos/utils/paymentDiscount";
-import { isSupabaseStorageUrl } from "@/utils/isSupabaseStorageUrl";
 
 export type { ProductSummary };
 
@@ -18,45 +17,15 @@ type ProductsGridProps = {
   emptyMessage: string;
   /** `home`: até 5 colunas no xl; `catalog`: até 4 colunas (layout vitrine + filtros). */
   variant?: "home" | "catalog";
+  /** Foto mais baixa e menos respiro, para a vitrine de kits ficar perto da busca. */
+  compact?: boolean;
 };
-
-function ProductImage({ src, alt }: { src: string | null; alt: string }) {
-  if (!src) {
-    return (
-      <div className="flex h-full w-full items-center justify-center text-xs text-store-navy-muted">
-        Sem foto
-      </div>
-    );
-  }
-
-  if (!isSupabaseStorageUrl(src)) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element -- URL absoluta fora do Storage
-      <img
-        src={src}
-        alt={alt}
-        loading="lazy"
-        decoding="async"
-        className="h-full w-full object-contain object-center"
-      />
-    );
-  }
-
-  return (
-    <Image
-      src={src}
-      alt={alt}
-      fill
-      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-      className="object-contain object-center"
-    />
-  );
-}
 
 export function ProductsGrid({
   produtos,
   emptyMessage,
   variant = "home",
+  compact = false,
 }: ProductsGridProps) {
   if (produtos.length === 0) {
     return (
@@ -91,12 +60,18 @@ export function ProductsGrid({
           );
           return (
             <li key={p.id} className="min-w-0">
-              <article className="relative z-0 flex h-full flex-col gap-3 bg-white p-4 sm:p-5">
+              <article
+                className={
+                  compact
+                    ? "relative z-0 flex h-full flex-col gap-2 bg-white px-3 pb-3 pt-2 sm:px-3.5 sm:pb-3.5"
+                    : "relative z-0 flex h-full flex-col gap-3 bg-white p-4 sm:p-5"
+                }
+              >
                 <Link
                   href={`/produtos/${p.id}`}
-                  className="relative mx-auto block aspect-square w-full max-w-[500px]"
+                  className="relative mx-auto block aspect-square w-full overflow-hidden bg-white"
                 >
-                  <ProductImage src={p.imageUrl} alt={p.titulo} />
+                  <StorefrontPhoto src={p.imageUrl} alt={p.titulo} />
                 </Link>
                 <div className="flex min-h-0 flex-1 flex-col gap-1.5">
                   <h3 className="line-clamp-3 min-h-[3lh] text-left text-sm font-bold leading-snug text-black sm:text-[0.9375rem]">

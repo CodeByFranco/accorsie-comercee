@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { BrindeSelo } from "@/components/store/BrindeSelo";
+import { StorefrontPhoto } from "@/features/produtos/components/StorefrontPhoto";
 import { KitBuyButton } from "@/features/kits/components/KitBuyButton";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { storeShellContent, storeShellInset } from "@/config/storeShell";
@@ -19,11 +19,7 @@ export function KitStorefrontDetail({ kit, preview = false }: { kit: KitDetail; 
       <div className={`${storeShellInset} flex-1 py-8 md:py-12`}>
         <div className={`${storeShellContent} grid gap-8 lg:grid-cols-2 lg:gap-12`}>
           <div className="relative aspect-square overflow-hidden rounded-sm bg-white">
-            {kit.imagem ? (
-              <Image src={kit.imagem} alt="" fill className="object-cover" sizes="(max-width:1024px) 100vw, 50vw" priority />
-            ) : (
-              <div className="flex h-full items-center justify-center text-store-navy/40">Sem imagem</div>
-            )}
+            <StorefrontPhoto src={kit.imagem} alt="" />
           </div>
 
           <div className="flex flex-col gap-5">
@@ -36,12 +32,6 @@ export function KitStorefrontDetail({ kit, preview = false }: { kit: KitDetail; 
               </Link>
             ) : null}
             <h1 className="text-3xl font-bold tracking-tight md:text-4xl">{kit.nome}</h1>
-            {kit.descricao ? (
-              <p className="whitespace-pre-wrap text-sm leading-relaxed text-store-navy/80">{kit.descricao}</p>
-            ) : null}
-
-            <KitBuyButton kit={kit} />
-            <BrindeSelo />
 
             <div>
               <h2 className="text-lg font-bold">Itens inclusos</h2>
@@ -53,10 +43,8 @@ export function KitStorefrontDetail({ kit, preview = false }: { kit: KitDetail; 
               <ul className="mt-3 divide-y divide-store-navy/10 rounded-sm border border-store-navy/10 bg-white">
                 {kit.items.map((it) => (
                   <li key={it.product_id} className="flex items-center gap-3 px-4 py-3">
-                    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-sm bg-store-cream">
-                      {it.imageUrl ? (
-                        <Image src={it.imageUrl} alt="" fill className="object-cover" sizes="56px" />
-                      ) : null}
+                    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-sm bg-white">
+                      <StorefrontPhoto src={it.imageUrl} alt="" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <Link href={`/produtos/${it.product_id}`} className="font-semibold hover:underline">
@@ -70,6 +58,9 @@ export function KitStorefrontDetail({ kit, preview = false }: { kit: KitDetail; 
                 ))}
               </ul>
             </div>
+
+            <KitBuyButton kit={kit} descricao={kit.descricao} />
+            <BrindeSelo />
           </div>
         </div>
       </div>
