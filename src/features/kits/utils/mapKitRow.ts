@@ -180,10 +180,11 @@ export function kitPrecoCartaoInicial(kit: {
   usa_desconto_padrao: boolean;
   descontoPadrao: KitDescontoPadrao | null;
 }): number {
-  const usaPadrao = kit.usa_desconto_padrao && kit.descontoPadrao != null;
-  return usaPadrao
-    ? round2Money(kit.precoNormal * (1 - kit.descontoPadrao.kit_cartao / 100))
-    : kit.precoKit;
+  const descontoPadrao = kit.descontoPadrao;
+  if (!kit.usa_desconto_padrao || descontoPadrao == null) {
+    return kit.precoKit;
+  }
+  return round2Money(kit.precoNormal * (1 - descontoPadrao.kit_cartao / 100));
 }
 
 export function mapKitDetail(row: KitRowWithItems): KitDetail | null {
