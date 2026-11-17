@@ -13,7 +13,8 @@ import {
   getCatalogSliderMax,
 } from "@/features/produtos/services/getCatalogProducts";
 import { ComboOleoBanner } from "@/features/kits/components/ComboOleoBanner";
-import { getDescontosPadrao } from "@/features/kits/services/kitCombo";
+import { getComboOleo, getDescontosPadrao } from "@/features/kits/services/kitCombo";
+import { comboReferenciaValores } from "@/features/kits/utils/descontoReais";
 import { isKitFiltrosProduto } from "@/features/kits/utils/comboOleo";
 import { createPublicClient } from "@/services/supabase/public";
 import { getKitCategorias, searchPublishedKits } from "@/features/kits/services/getHomeKits";
@@ -47,12 +48,18 @@ export default async function ProdutosPage({
   const filters = normalizeCatalogFilters(parseCatalogSearchParams(sp), sliderMax);
 
   const paginaCombos = isKitFiltrosProduto(filters.q ?? "");
-  const [catalogPage, vehicleFilterData, kitsBusca, descontosPadrao] = await Promise.all([
+  const supabasePublic = createPublicClient();
+  const [catalogPage, vehicleFilterData, kitsBusca, descontosPadrao, comboOleoCfg] = await Promise.all([
     getCatalogProducts(filters, sliderMax, requestedPage, CATALOG_PAGE_SIZE),
     getVehicleFilterCatalogData({ modeloIdForAnos: filters.modeloId }),
     filters.q?.trim() ? searchPublishedKits(filters.q.trim()) : Promise.resolve([]),
-    paginaCombos ? getDescontosPadrao(createPublicClient()) : Promise.resolve(null),
+    paginaCombos ? getDescontosPadrao(supabasePublic) : Promise.resolve(null),
+    paginaCombos ? getComboOleo(supabasePublic) : Promise.resolve(null),
   ]);
+  const refsCombo =
+    paginaCombos && comboOleoCfg?.combo
+      ? comboReferenciaValores(catalogPage.produtos, comboOleoCfg.combo)
+      : null;
 
   const page =
     catalogPage.totalPages > 0 && requestedPage > catalogPage.totalPages
@@ -73,11 +80,12 @@ export default async function ProdutosPage({
 
   return (
     <div className="flex min-h-dvh flex-col bg-store-cream font-sans text-store-navy">
-      <section className={`flex-1 py-6 sm:py-8 ${storeShellInset}`}>
+      <section className={`flex-1 ${paginaCombos ? "py-4 sm:py-5" : "py-6 sm:py-8"} ${storeShellInset}`}>
         <div className={storeShellContent}>
           <div
             className={[
-              "flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-8",
+              "flex flex-col lg:flex-row lg:items-start",
+              paginaCombos ? "gap-4 lg:gap-5" : "gap-6 lg:gap-8",
               filtering ? "max-lg:flex-col-reverse" : "",
             ].join(" ")}
           >
@@ -108,8 +116,14 @@ export default async function ProdutosPage({
               </Suspense>
             </aside>
 
-            <div className="flex min-w-0 flex-1 flex-col gap-4">
-              {paginaCombos && descontosPadrao ? <ComboOleoBanner descontos={descontosPadrao} /> : null}
+            <div className={`flex min-w-0 flex-1 flex-col ${paginaCombos ? "gap-2.5" : "gap-4"}`}>
+              {paginaCombos && descontosPadrao ? (
+                <ComboOleoBanner
+                  descontos={descontosPadrao}
+                  valorKitReferencia={refsCombo?.valorKit}
+                  valorComboReferencia={refsCombo?.valorCombo}
+                />
+              ) : null}
               <Suspense
                 fallback={
                   <div className="h-12 w-full max-w-xl animate-pulse rounded-full bg-[#3a3a3a]/50" aria-hidden />
@@ -138,9 +152,9 @@ export default async function ProdutosPage({
                     )}
                     <p className="text-sm font-normal text-store-navy-muted sm:pb-0.5">— {summary}</p>
                   </div>
-                  <div className="mt-1.5 h-1 w-14 rounded-[1px] bg-store-navy sm:w-16" aria-hidden />
+                  <div className="mt-1 h-1 w-14 rounded-[1px] bg-store-navy sm:w-16" aria-hidden />
                   {catalogPage.total > 0 ? (
-                    <p className="mt-1 text-xs text-store-navy-muted tabular-nums">
+                    <p className={`${paginaCombos ? "mt-0.5" : "mt-1"} text-xs text-store-navy-muted tabular-nums`}>
                       {catalogPage.total} produto{catalogPage.total === 1 ? "" : "s"}
                       {catalogPage.totalPages > 1
                         ? ` · página ${page} de ${catalogPage.totalPages}`
@@ -151,7 +165,12 @@ export default async function ProdutosPage({
               </header>
 
               {kitsBusca.length > 0 ? (
-                <KitsSection kits={kitsBusca} title="Kits encontrados" embedded />
+                <KitsSection
+                  kits={kitsBusca}
+                  title="Kits encontrados"
+                  embedded
+                  descontoPadrao={descontosPadrao}
+                />
               ) : null}
 
               <ProductsGrid
