@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { ProductSummary } from "@/types/product";
 import { ProductAddCartButton } from "@/features/produtos/components/ProductAddCartButton";
 import { StorefrontPhoto } from "@/features/produtos/components/StorefrontPhoto";
-import { maxParcelasCheckout, PARCELAMENTO_SEM_JUROS } from "@/features/produtos/utils/parcelamento";
+import { CartaoParcelamentoLinha } from "@/features/produtos/components/CartaoParcelamentoLinha";
 import { unitPriceAfterPaymentDiscount } from "@/features/produtos/utils/paymentDiscount";
 
 export type { ProductSummary };
@@ -86,14 +86,7 @@ export function ProductsGrid({
                       </span>
                       <span className="text-xs font-semibold text-store-accent">no PIX</span>
                     </p>
-                    <p className="mt-0.5 text-xs text-store-navy-muted">
-                      ou {money.format(precoCartaoCard)} em até {maxParcelasCheckout(precoCartaoCard)}x
-                      {PARCELAMENTO_SEM_JUROS ? (
-                        <span className="font-semibold text-emerald-700"> sem juros</span>
-                      ) : (
-                        " no cartão"
-                      )}
-                    </p>
+                    <CartaoParcelamentoLinha amount={precoCartaoCard} />
                   </div>
                   <p className="mt-0.5 w-full truncate rounded-full border border-[#1d63ed]/40 bg-transparent px-2 py-0.5 text-center text-[10px] leading-tight text-[#1d63ed]/90 sm:text-[11px]">
                     Confira a compatibilidade

@@ -176,14 +176,23 @@ export function ProductCatalogFilters({
         Filtros
       </h2>
 
-      <div className="flex flex-col gap-8">
-        <fieldset
+      <div className={destacarVeiculo ? "flex flex-col gap-5" : "flex flex-col gap-8"}>
+        <div
           className={
             destacarVeiculo
-              ? "min-w-0 rounded-md border-2 border-store-accent bg-[#fff6ef] p-3"
-              : "min-w-0"
+              ? "overflow-hidden rounded-md border-2 border-store-accent bg-[#fff6ef] shadow-[0_0_0_4px_rgba(255,145,77,0.18)]"
+              : undefined
           }
         >
+          {destacarVeiculo ? (
+            <div className="bg-store-accent px-3 py-2 text-black">
+              <p className="text-[11px] font-black uppercase tracking-wide">Peças do seu carro</p>
+              <p className="text-xs font-semibold leading-snug">
+                Escolha marca, modelo e ano para ver só o que é compatível.
+              </p>
+            </div>
+          ) : null}
+        <fieldset className={destacarVeiculo ? "min-w-0 px-3 pb-3 pt-2" : "min-w-0"}>
           <legend className="w-full p-0">
             <button
               type="button"
@@ -211,11 +220,6 @@ export function ProductCatalogFilters({
           </legend>
           {veiculoOpen ? (
             <div id={veiculoPanelId} className="space-y-2 text-sm text-store-navy">
-              {destacarVeiculo ? (
-                <p className="text-xs font-medium leading-snug text-store-navy">
-                  Encontre as peças compatíveis com o seu carro.
-                </p>
-              ) : null}
               <label className="block text-xs font-semibold text-store-navy-muted">
                 Marca
                 <select
@@ -294,6 +298,7 @@ export function ProductCatalogFilters({
             </div>
           ) : null}
         </fieldset>
+        </div>
 
         <fieldset className="min-w-0">
           <legend className="w-full p-0">

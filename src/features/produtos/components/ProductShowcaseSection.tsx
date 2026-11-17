@@ -23,11 +23,11 @@ export function ProductShowcaseSection({
 }: ProductShowcaseSectionProps) {
   return (
     <section
-      className={`bg-store-cream py-10 sm:py-12 ${storeShellInset}`}
+      className={`bg-store-cream py-6 sm:py-8 ${storeShellInset}`}
       aria-labelledby={headingId}
     >
       <div className={storeShellContent}>
-        <header className="mb-6 sm:mb-8">
+        <header className="mb-4 sm:mb-5">
           <h2
             id={headingId}
             className="text-2xl font-bold tracking-tight text-black sm:text-3xl"
@@ -38,7 +38,7 @@ export function ProductShowcaseSection({
         </header>
         <ProductsGrid produtos={produtos} emptyMessage={emptyMessage} />
         {seeMoreHref && produtos.length > 0 ? (
-          <div className="mt-8 flex justify-center sm:mt-10">
+          <div className="mt-6 flex justify-center sm:mt-8">
             <Link
               href={seeMoreHref}
               className="inline-flex min-w-[11rem] items-center justify-center rounded-full bg-store-accent px-8 py-3 text-sm font-bold text-black shadow-sm transition-[transform,filter,box-shadow] duration-150 hover:brightness-95 active:scale-[0.98]"

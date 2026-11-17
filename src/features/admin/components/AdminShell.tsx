@@ -17,6 +17,7 @@ function pageTitle(pathname: string): string {
   if (pathname === "/admin/layout") return "Layout do site";
   if (pathname === "/admin/clientes") return "Clientes";
   if (pathname === "/admin/cupons") return "Cupons";
+  if (pathname === "/admin/financeiro") return "Financeiro";
   if (pathname === "/admin/produtos/novo") return "Cadastrar produto";
   if (/^\/admin\/produtos\/[^/]+\/edit$/.test(pathname)) return "Editar produto";
   return "Painel";
@@ -146,6 +147,16 @@ function IconShoppingCart({ className }: { className?: string }) {
   );
 }
 
+function IconFinanceiro({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M3 10h18" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M7 15h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function IconMenu({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -188,6 +199,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const layoutSiteActive = pathname.startsWith("/admin/layout");
   const clientesActive = pathname.startsWith("/admin/clientes");
   const cuponsActive = pathname.startsWith("/admin/cupons");
+  const financeiroActive = pathname.startsWith("/admin/financeiro");
   const consultaFipeActive = pathname.startsWith("/admin/consulta-fipe");
 
   const navLinkClass = (active: boolean) =>
@@ -258,6 +270,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <Link href="/admin/cupons" className={navLinkClass(cuponsActive)}>
             <IconTag className="h-5 w-5 shrink-0 opacity-80" />
             Cupons
+          </Link>
+          <Link href="/admin/financeiro" className={navLinkClass(financeiroActive)}>
+            <IconFinanceiro className="h-5 w-5 shrink-0 opacity-80" />
+            Financeiro
           </Link>
           <Link href="/admin/clientes" className={navLinkClass(clientesActive)}>
             <IconUsers className="h-5 w-5 shrink-0 opacity-80" />

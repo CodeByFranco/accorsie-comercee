@@ -2,6 +2,8 @@ import Link from "next/link";
 import { BrindeSelo } from "@/components/store/BrindeSelo";
 import { StorefrontPhoto } from "@/features/produtos/components/StorefrontPhoto";
 import { KitBuyButton } from "@/features/kits/components/KitBuyButton";
+import { kitPrecoCartaoInicial } from "@/features/kits/utils/mapKitRow";
+import { ProductMercadoPagoInstallments } from "@/features/produtos/components/ProductMercadoPagoInstallments";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { storeShellContent, storeShellInset } from "@/config/storeShell";
 import type { KitDetail } from "@/types/kit";
@@ -59,7 +61,13 @@ export function KitStorefrontDetail({ kit, preview = false }: { kit: KitDetail; 
               </ul>
             </div>
 
-            <KitBuyButton kit={kit} descricao={kit.descricao} />
+            <KitBuyButton
+              kit={kit}
+              descricao={kit.descricao}
+              parcelamentoCartao={
+                <ProductMercadoPagoInstallments amountBrl={kitPrecoCartaoInicial(kit)} />
+              }
+            />
             <BrindeSelo />
           </div>
         </div>

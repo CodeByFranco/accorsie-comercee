@@ -3,12 +3,14 @@
 import Image from "next/image";
 import { useMemo, useState } from "react";
 import { useCart } from "@/features/carrinho/CartContext";
+import { DescontoBreakdownTable } from "@/features/kits/components/DescontoBreakdownTable";
+import { CartaoParcelamentoLinha } from "@/features/produtos/components/CartaoParcelamentoLinha";
+import { roundMoney } from "@/features/kits/utils/descontoReais";
 import { KIT_COMBO_ITEM_ID, type KitCombo, type KitDescontoPadrao } from "@/types/kit";
 import type { ProductSummary } from "@/types/product";
 
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
-const fmtPct = (n: number) => `${n.toLocaleString("pt-BR")}%`;
+const r2 = roundMoney;
 
 /** "Leve junto: óleo" na página de um produto "Kit filtros": produto + óleo com o % do combo. */
 export function ProductOleoCombo({
@@ -30,10 +32,14 @@ export function ProductOleoCombo({
 
   const precos = useMemo(() => {
     const normal = r2(produto.valor + (oleo ? oleo.valor * sel.quantidade : 0));
+    const pix = r2(normal * (1 - descontoPadrao.combo_pix / 100));
+    const cartao = r2(normal * (1 - descontoPadrao.combo_cartao / 100));
     return {
       normal,
-      pix: r2(normal * (1 - descontoPadrao.combo_pix / 100)),
-      cartao: r2(normal * (1 - descontoPadrao.combo_cartao / 100)),
+      pix,
+      cartao,
+      economiaPix: r2(normal - pix),
+      economiaCartao: r2(normal - cartao),
     };
   }, [produto.valor, oleo, sel.quantidade, descontoPadrao]);
 
@@ -89,8 +95,9 @@ export function ProductOleoCombo({
         <p className="text-xs font-bold uppercase tracking-wide text-orange-600">Combo troca de óleo e filtros</p>
         <h2 className="text-lg font-bold text-black">Leve junto: {combo.nome}</h2>
         <p className="text-sm text-store-navy/80">
-          Comprando o kit com o óleo, o combo inteiro sai com <strong>{fmtPct(descontoPadrao.combo_pix)} off no PIX</strong>{" "}
-          ou <strong>{fmtPct(descontoPadrao.combo_cartao)} no cartão</strong>.
+          Com o óleo, você economiza{" "}
+          <strong className="tabular-nums">{money.format(precos.economiaPix)}</strong> no PIX ou{" "}
+          <strong className="tabular-nums">{money.format(precos.economiaCartao)}</strong> no cartão neste combo.
         </p>
       </div>
 
@@ -152,15 +159,25 @@ export function ProductOleoCombo({
         </div>
       ) : null}
 
-      <div className="space-y-0.5 border-t border-store-navy/10 pt-3">
-        <p className="text-sm text-store-navy/50 line-through tabular-nums">{money.format(precos.normal)}</p>
+      <div className="space-y-2 border-t border-store-navy/10 pt-3">
+        <DescontoBreakdownTable
+          caption="Resumo do combo"
+          linhas={[
+            { rotulo: "Combo antes do desconto", valor: precos.normal },
+            { rotulo: "Desconto no PIX", valor: precos.economiaPix, negativo: true },
+            { rotulo: "Total no PIX", valor: precos.pix, destaque: true },
+          ]}
+        />
         <p className="text-2xl font-bold tabular-nums text-[#1d63ed]">
           {money.format(precos.pix)}{" "}
           <span className="text-sm font-semibold text-orange-500">no PIX</span>
         </p>
-        <p className="text-sm text-store-navy/80">
-          ou <strong className="tabular-nums">{money.format(precos.cartao)}</strong> no cartão em até 3x sem juros
-        </p>
+        <CartaoParcelamentoLinha amount={precos.cartao} className="text-sm text-store-navy/80" />
+        {precos.economiaCartao > 0 ? (
+          <p className="text-sm text-store-navy/80">
+            Economia de <strong className="tabular-nums">{money.format(precos.economiaCartao)}</strong> no cartão
+          </p>
+        ) : null}
       </div>
 
       <button

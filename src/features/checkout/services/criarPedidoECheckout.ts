@@ -1,5 +1,6 @@
 "use server";
 
+import { getParcelamentoFaixas } from "@/features/financeiro/services/getParcelamentoFaixas";
 import { maxParcelasCheckout } from "@/features/produtos/utils/parcelamento";
 import { redirect } from "next/navigation";
 
@@ -343,8 +344,10 @@ export async function criarPedidoECheckout(
     items: preferenceItems,
     external_reference: pedidoId,
     metadata: { pedido_id: pedidoId },
-    /** Limite de parcelas no checkout (alinha com texto na página do produto). */
-    payment_methods: { installments: maxParcelasCheckout(normalizeMoney(pedidoVals.total)) },
+    /** Limite de parcelas no checkout (mesma faixa sem juros da vitrine). */
+    payment_methods: {
+      installments: maxParcelasCheckout(normalizeMoney(pedidoVals.total), await getParcelamentoFaixas()),
+    },
     back_urls: {
       success: `${baseUrl}/checkout/retorno?status=success`,
       failure: `${baseUrl}/checkout/retorno?status=failure`,

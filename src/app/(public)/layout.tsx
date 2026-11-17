@@ -5,8 +5,11 @@ import { WhatsAppAssistantButton } from "@/components/layout/WhatsAppAssistantBu
 import { WelcomeCotacaoModal } from "@/components/layout/WelcomeCotacaoModal";
 import { CartProvider } from "@/features/carrinho/CartContext";
 import { getHomeCategories } from "@/features/categorias/services/getHomeCategories";
+import { homeBannerUrlsFromSiteLayout } from "@/features/site-layout/utils/homeBannerUrls";
 import { getStoreSiteLayout } from "@/features/site-layout/services/getSiteLayout";
 import { getKitCategorias } from "@/features/kits/services/getHomeKits";
+import { getParcelamentoFaixas } from "@/features/financeiro/services/getParcelamentoFaixas";
+import { ParcelamentoFaixasProvider } from "@/features/financeiro/components/ParcelamentoFaixasProvider";
 import { getCatalogSliderMax } from "@/features/produtos/services/getCatalogProducts";
 
 const FALLBACK_HOME_BANNER = "/home/Banner%20inicial.png";
@@ -16,29 +19,30 @@ const FALLBACK_HOME_BANNER = "/home/Banner%20inicial.png";
  * são lidos no navegador pela navbar (`useStoreAccount`).
  */
 export default async function PublicLayout({ children }: { children: ReactNode }) {
-  const [categorias, catalogSliderMax, siteLayout, kitCategorias] = await Promise.all([
+  const [categorias, catalogSliderMax, siteLayout, kitCategorias, parcelamentoFaixas] = await Promise.all([
     getHomeCategories(),
     getCatalogSliderMax(),
     getStoreSiteLayout(),
     getKitCategorias(),
+    getParcelamentoFaixas(),
   ]);
 
-  const fromDb = [siteLayout.banner_1_url, siteLayout.banner_2_url]
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const fromDb = homeBannerUrlsFromSiteLayout(siteLayout);
   const homeBannerSrcs = fromDb.length > 0 ? fromDb : [FALLBACK_HOME_BANNER];
 
   return (
     <CartProvider>
-      <StoreNavbar
-        categorias={categorias}
-        kitCategorias={kitCategorias}
-        catalogSliderMax={catalogSliderMax}
-        homeBannerSrcs={homeBannerSrcs}
-      />
-      {children}
-      <WhatsAppAssistantButton />
-      <WelcomeCotacaoModal />
+      <ParcelamentoFaixasProvider faixas={parcelamentoFaixas}>
+        <StoreNavbar
+          categorias={categorias}
+          kitCategorias={kitCategorias}
+          catalogSliderMax={catalogSliderMax}
+          homeBannerSrcs={homeBannerSrcs}
+        />
+        {children}
+        <WhatsAppAssistantButton />
+        <WelcomeCotacaoModal />
+      </ParcelamentoFaixasProvider>
     </CartProvider>
   );
 }

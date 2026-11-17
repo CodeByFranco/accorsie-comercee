@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { KitsSection } from "@/features/kits/components/KitsSection";
 import { getKitCategorias, getPublishedKits } from "@/features/kits/services/getHomeKits";
+import { getDescontosPadrao } from "@/features/kits/services/kitCombo";
+import { createPublicClient } from "@/services/supabase/public";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { storeShellContent, storeShellInset } from "@/config/storeShell";
 
@@ -21,7 +23,11 @@ export async function generateMetadata({ searchParams }: PageProps) {
 
 export default async function KitsPage({ searchParams }: PageProps) {
   const slug = parseCategoria(await searchParams);
-  const [kits, categorias] = await Promise.all([getPublishedKits(slug), getKitCategorias()]);
+  const [kits, categorias, descontoPadrao] = await Promise.all([
+    getPublishedKits(slug),
+    getKitCategorias(),
+    getDescontosPadrao(createPublicClient()),
+  ]);
   const atual = categorias.find((c) => c.slug === slug) ?? null;
 
   const chip = (active: boolean) =>
@@ -52,6 +58,7 @@ export default async function KitsPage({ searchParams }: PageProps) {
             kits={kits}
             title={atual ? `Kits de ${atual.nome}` : "Todos os kits"}
             emptyMessage="Nenhum kit disponível nesta categoria no momento."
+            descontoPadrao={descontoPadrao}
           />
         </div>
       </div>

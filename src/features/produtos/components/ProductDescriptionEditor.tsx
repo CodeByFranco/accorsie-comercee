@@ -37,9 +37,6 @@ export function ProductDescriptionEditor({
     extensions: [
       StarterKit.configure({
         heading: false,
-        bulletList: false,
-        orderedList: false,
-        listItem: false,
         blockquote: false,
         codeBlock: false,
         code: false,
@@ -58,7 +55,7 @@ export function ProductDescriptionEditor({
     editorProps: {
       attributes: {
         class:
-          "prose prose-sm max-w-none min-h-[140px] px-3 py-2 focus:outline-none [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0",
+          "prose prose-sm max-w-none min-h-[140px] px-3 py-2 focus:outline-none [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5",
       },
     },
     onUpdate: ({ editor: ed }) => {
@@ -69,8 +66,8 @@ export function ProductDescriptionEditor({
   return (
     <div className="flex flex-col gap-1.5">
       <p className="text-xs text-gray-500">
-        Use <strong className="font-semibold">Negrito</strong> e o alinhamento por parágrafo. Enter cria novo parágrafo;
-        Shift+Enter quebra linha no mesmo parágrafo.
+        Use <strong className="font-semibold">Negrito</strong>, listas e o alinhamento por parágrafo. Enter cria novo
+        parágrafo; Shift+Enter quebra linha no mesmo parágrafo.
       </p>
       <input type="hidden" name={name} value={htmlForSubmit} readOnly onChange={() => {}} aria-hidden />
       <div className={shellClass}>
@@ -82,6 +79,13 @@ export function ProductDescriptionEditor({
               onClick={() => editor.chain().focus().toggleBold().run()}
             >
               Negrito
+            </button>
+            <button
+              type="button"
+              className={`${toolbarBtn} ${editor.isActive("bulletList") ? toolbarBtnActive : ""}`}
+              onClick={() => editor.chain().focus().toggleBulletList().run()}
+            >
+              Lista
             </button>
             <span className="mx-1 text-gray-300" aria-hidden>
               |

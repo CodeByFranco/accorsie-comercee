@@ -182,11 +182,31 @@ function escapeHtml(s) {
 function descricaoToHtml(lines) {
   const paras = lines.map((l) => l.trim()).filter(Boolean);
   if (!paras.length) return null;
-  return paras
-    .map((p) =>
-      /^(IMPORTANTE\b|GARANTIA$)/i.test(p) ? `<p><strong>${escapeHtml(p)}</strong></p>` : `<p>${escapeHtml(p)}</p>`
-    )
-    .join("");
+
+  const out = [];
+  for (const p of paras) {
+    if (/^(IMPORTANTE\b|GARANTIA$)/i.test(p)) {
+      out.push(`<p><strong>${escapeHtml(p)}</strong></p>`);
+      continue;
+    }
+    if (/\s[*•]\s+\S/.test(p)) {
+      const idx = p.search(/\s[*•]\s+/);
+      const intro = p.slice(0, idx).trim();
+      const items = p
+        .slice(idx)
+        .trim()
+        .split(/\s+[*•]\s+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (intro) out.push(`<p>${escapeHtml(intro)}</p>`);
+      if (items.length) {
+        out.push(`<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`);
+      }
+      continue;
+    }
+    out.push(`<p>${escapeHtml(p)}</p>`);
+  }
+  return out.join("");
 }
 
 function buildProduct(block) {
@@ -259,6 +279,7 @@ const VEICULOS = [
   { titulo: /\bKa\b/i, modelo: /^(new )?ka\b/i, marca: /ford/i },
   { titulo: /\bCourier\b/i, modelo: /^courier\b/i, marca: /ford/i },
   { titulo: /\bFiesta\b/i, modelo: /^(new )?fiesta\b/i, marca: /ford/i },
+  { titulo: /\bFocus\b/i, modelo: /^(new )?focus\b/i, marca: /ford/i },
   { titulo: /\bEco ?sport\b/i, modelo: /^(new )?eco ?sport\b/i, marca: /ford/i },
   { titulo: /\bHB20/i, modelo: /^hb ?20/i, marca: /hyundai/i },
   { titulo: /\bCorolla\b/i, modelo: /^corolla\b(?! cross)/i, marca: /toyota/i },

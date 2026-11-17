@@ -1,7 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-import { MAINTENANCE_MODE, isMaintenanceBypassPath } from "@/lib/siteMaintenance";
+import { isSiteInMaintenanceMode } from "@/lib/siteLojaPublica";
+import { isMaintenanceBypassPath } from "@/lib/siteMaintenance";
 
 const ADMIN_LOGIN = "/admin/login";
 
@@ -54,7 +55,8 @@ export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
   const pathname = request.nextUrl.pathname;
-  if (!MAINTENANCE_MODE && isPublicCatalogRoute(pathname)) {
+  const maintenanceMode = await isSiteInMaintenanceMode();
+  if (!maintenanceMode && isPublicCatalogRoute(pathname)) {
     return response;
   }
 
@@ -112,7 +114,7 @@ export async function proxy(request: NextRequest) {
     return resolved;
   };
 
-  if (MAINTENANCE_MODE && !isMaintenanceBypassPath(pathname)) {
+  if (maintenanceMode && !isMaintenanceBypassPath(pathname)) {
     const isApi = pathname.startsWith("/api/");
     if (!user) {
       if (isApi) {

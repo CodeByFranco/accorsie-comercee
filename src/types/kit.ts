@@ -37,6 +37,8 @@ export type KitSummary = {
   itemCount: number;
   /** Kit tem itens em que o cliente escolhe produto/quantidade (preço "a partir de"). */
   temEscolha: boolean;
+  /** false = desconto próprio (ex.: suspensão), sem % padrão PIX/cartão na listagem. */
+  usa_desconto_padrao: boolean;
   categoria: { id: string; nome: string; slug: string } | null;
 };
 

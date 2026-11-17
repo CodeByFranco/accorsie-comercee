@@ -1,43 +1,54 @@
+import { getParcelamentoFaixas } from "@/features/financeiro/services/getParcelamentoFaixas";
+import { maxParcelasSemJuros, valorParcelaIgual } from "@/features/produtos/utils/parcelamento";
 import { getMercadoPagoInstallments } from "@/services/mercadopago/installments";
-import { maxParcelasCheckout } from "@/features/produtos/utils/parcelamento";
 
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 
-/** Parcelamento no cartão com os valores reais do Mercado Pago. */
+/** Parcelamento no cartão limitado às faixas sem juros do admin. */
 export async function ProductMercadoPagoInstallments({ amountBrl }: { amountBrl: number }) {
   if (amountBrl <= 0) return null;
 
-  const limite = maxParcelasCheckout(amountBrl);
-  const costs = (await getMercadoPagoInstallments(amountBrl))?.filter(
-    (c) => c.installments <= limite,
-  );
+  const faixas = await getParcelamentoFaixas();
+  const limiteSemJuros = maxParcelasSemJuros(amountBrl, faixas);
 
-  const semJuros = costs?.filter((c) => c.installment_rate === 0 && c.installments > 1).at(-1);
-  const maior = costs?.at(-1);
-  const comJuros = maior && maior.installment_rate > 0 ? maior : null;
+  if (limiteSemJuros < 2) {
+    return (
+      <section
+        className="space-y-2 rounded-md border border-store-accent/25 bg-store-accent/10 px-4 py-3.5"
+        aria-labelledby="parcelamento-cartao-titulo"
+      >
+        <p id="parcelamento-cartao-titulo" className="text-sm font-semibold text-store-navy">
+          Parcelamento no cartão
+        </p>
+        <p className="text-sm text-store-navy">
+          <span className="font-semibold text-black">{money.format(amountBrl)}</span> à vista no cartão.
+        </p>
+      </section>
+    );
+  }
+
+  const costs = (await getMercadoPagoInstallments(amountBrl))?.filter((c) => c.installments <= limiteSemJuros);
+  const semJurosApi = costs
+    ?.filter((c) => c.installment_rate === 0 && c.installments > 1 && c.installments <= limiteSemJuros)
+    .at(-1);
+  const parcelas = semJurosApi?.installments ?? limiteSemJuros;
+  const valorParcela = semJurosApi?.installment_amount ?? valorParcelaIgual(amountBrl, parcelas);
 
   return (
-    <div className="space-y-1">
-      <p className="text-sm font-semibold text-store-navy">Parcelamento no cartão</p>
-      <p className="text-base text-store-navy">
-        <span className="font-semibold text-black">{money.format(amountBrl)}</span> no cartão
-        {semJuros ? (
-          <>
-            {" "}em até{" "}
-            <span className="font-semibold text-emerald-700">
-              {semJuros.installments}x de {money.format(semJuros.installment_amount)} sem juros
-            </span>
-          </>
-        ) : null}
+    <section
+      className="space-y-2 rounded-md border border-store-accent/25 bg-store-accent/10 px-4 py-3.5"
+      aria-labelledby="parcelamento-cartao-titulo"
+    >
+      <p id="parcelamento-cartao-titulo" className="text-sm font-semibold text-store-navy">
+        Parcelamento no cartão
       </p>
-      {comJuros ? (
-        <p className="text-sm text-store-navy">
-          {semJuros ? "ou em" : "Em"} até {comJuros.installments}x de{" "}
-          <span className="font-semibold">{money.format(comJuros.installment_amount)}</span> (total{" "}
-          {money.format(comJuros.total_amount)})
-        </p>
-      ) : null}
-      <p className="text-xs text-store-navy-muted">Valores do Mercado Pago (Mastercard). Condições finais no checkout.</p>
-    </div>
+      <p className="text-base leading-snug text-store-navy">
+        <span className="font-semibold text-black">{money.format(amountBrl)}</span> no cartão em até{" "}
+        <span className="font-semibold text-emerald-700">
+          {parcelas}x de {money.format(valorParcela)} sem juros
+        </span>
+      </p>
+      <p className="text-xs text-store-navy-muted">Condições finais no checkout do Mercado Pago.</p>
+    </section>
   );
 }
