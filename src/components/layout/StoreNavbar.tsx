@@ -429,8 +429,6 @@ export function StoreNavbar({
             </div>
           </div>
 
-          <div className="mx-auto h-0.5 w-3/4 bg-store-navy" />
-
           {mobileNavOpen && !isDesktopNav ? (
             <div
               id="store-mobile-nav"
@@ -543,6 +541,7 @@ export function StoreNavbar({
           ) : null}
           </div>
         </div>
+        <div className="h-0.5 w-full bg-store-navy" />
       </div>
 
       {showHomeBanner ? (

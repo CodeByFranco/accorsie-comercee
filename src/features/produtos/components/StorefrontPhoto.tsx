@@ -9,12 +9,57 @@ const cache = new Map<string, string | null>();
 const PROCESS_MAX_SIDE = 1200;
 const OUTPUT_SIDE = 960;
 
-function isBackdrop(r: number, g: number, b: number, a: number) {
+type Rgb = { r: number; g: number; b: number };
+
+/** Só pixels quase iguais ao fundo da borda. Cinza-claro da peça (alumínio, plástico) fica de fora. */
+const FLOOD_DIST = 22;
+/** Halo branco do recorte, na borda já transparente. Mais estreito que o flood para não comer a peça. */
+const FRINGE_DIST = 12;
+
+function colorDist(r: number, g: number, b: number, bg: Rgb) {
+  const dr = r - bg.r;
+  const dg = g - bg.g;
+  const db = b - bg.b;
+  return Math.sqrt(dr * dr + dg * dg + db * db);
+}
+
+function isBackdrop(r: number, g: number, b: number, a: number, bg: Rgb) {
   if (a < 12) return true;
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  const light = (r + g + b) / 3;
-  return light >= 196 && max - min <= 26;
+  return colorDist(r, g, b, bg) <= FLOOD_DIST;
+}
+
+/** Mediana do tom claro encostado na borda. Sem amostra, a foto fica como está. */
+function sampleBorderBackground(d: Uint8ClampedArray, w: number, h: number): Rgb | null {
+  const rs: number[] = [];
+  const gs: number[] = [];
+  const bs: number[] = [];
+  const push = (x: number, y: number) => {
+    const i = (y * w + x) * 4;
+    if (d[i + 3] < 12) return;
+    const r = d[i];
+    const g = d[i + 1];
+    const b = d[i + 2];
+    if ((r + g + b) / 3 < 226) return;
+    rs.push(r);
+    gs.push(g);
+    bs.push(b);
+  };
+  const stepX = Math.max(1, Math.floor(w / 80));
+  const stepY = Math.max(1, Math.floor(h / 80));
+  for (let x = 0; x < w; x += stepX) {
+    push(x, 0);
+    push(x, h - 1);
+  }
+  for (let y = 0; y < h; y += stepY) {
+    push(0, y);
+    push(w - 1, y);
+  }
+  if (rs.length < 8) return null;
+  const mid = (arr: number[]) => {
+    const sorted = [...arr].sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+  };
+  return { r: mid(rs), g: mid(gs), b: mid(bs) };
 }
 
 /** Tira o fundo branco ou cinza-claro colado na borda e encaixa o produto num quadrado. */
@@ -37,57 +82,55 @@ function prepareSquare(img: HTMLImageElement): string | null {
   }
 
   const d = imageData.data;
-  const visited = new Uint8Array(w * h);
-  const stack: number[] = [];
+  const background = sampleBorderBackground(d, w, h);
+  if (background) {
+    const visited = new Uint8Array(w * h);
+    const stack: number[] = [];
 
-  const tryPush = (x: number, y: number) => {
-    if (x < 0 || y < 0 || x >= w || y >= h) return;
-    const p = y * w + x;
-    if (visited[p]) return;
-    const i = p * 4;
-    if (!isBackdrop(d[i], d[i + 1], d[i + 2], d[i + 3])) return;
-    visited[p] = 1;
-    stack.push(p);
-  };
-
-  for (let x = 0; x < w; x++) {
-    tryPush(x, 0);
-    tryPush(x, h - 1);
-  }
-  for (let y = 0; y < h; y++) {
-    tryPush(0, y);
-    tryPush(w - 1, y);
-  }
-
-  while (stack.length) {
-    const p = stack.pop()!;
-    const i = p * 4;
-    d[i + 3] = 0;
-    const x = p % w;
-    const y = (p - x) / w;
-    tryPush(x + 1, y);
-    tryPush(x - 1, y);
-    tryPush(x, y + 1);
-    tryPush(x, y - 1);
-  }
-
-  for (let y = 1; y < h - 1; y++) {
-    for (let x = 1; x < w - 1; x++) {
+    const tryPush = (x: number, y: number) => {
+      if (x < 0 || y < 0 || x >= w || y >= h) return;
       const p = y * w + x;
+      if (visited[p]) return;
       const i = p * 4;
-      if (d[i + 3] < 12) continue;
-      const touchesClear =
-        d[(p - 1) * 4 + 3] < 12 ||
-        d[(p + 1) * 4 + 3] < 12 ||
-        d[(p - w) * 4 + 3] < 12 ||
-        d[(p + w) * 4 + 3] < 12;
-      if (!touchesClear) continue;
-      const r = d[i];
-      const g = d[i + 1];
-      const b = d[i + 2];
-      const light = (r + g + b) / 3;
-      const sat = Math.max(r, g, b) - Math.min(r, g, b);
-      if (light >= 176 && sat <= 32) d[i + 3] = 0;
+      if (!isBackdrop(d[i], d[i + 1], d[i + 2], d[i + 3], background)) return;
+      visited[p] = 1;
+      stack.push(p);
+    };
+
+    for (let x = 0; x < w; x++) {
+      tryPush(x, 0);
+      tryPush(x, h - 1);
+    }
+    for (let y = 0; y < h; y++) {
+      tryPush(0, y);
+      tryPush(w - 1, y);
+    }
+
+    while (stack.length) {
+      const p = stack.pop()!;
+      const i = p * 4;
+      d[i + 3] = 0;
+      const x = p % w;
+      const y = (p - x) / w;
+      tryPush(x + 1, y);
+      tryPush(x - 1, y);
+      tryPush(x, y + 1);
+      tryPush(x, y - 1);
+    }
+
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const p = y * w + x;
+        const i = p * 4;
+        if (d[i + 3] < 12) continue;
+        const touchesClear =
+          d[(p - 1) * 4 + 3] < 12 ||
+          d[(p + 1) * 4 + 3] < 12 ||
+          d[(p - w) * 4 + 3] < 12 ||
+          d[(p + w) * 4 + 3] < 12;
+        if (!touchesClear) continue;
+        if (colorDist(d[i], d[i + 1], d[i + 2], background) <= FRINGE_DIST) d[i + 3] = 0;
+      }
     }
   }
 

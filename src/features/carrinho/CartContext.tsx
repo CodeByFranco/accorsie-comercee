@@ -36,14 +36,27 @@ export type CartKitClaim = {
   escolhas?: KitChoiceSelection[];
   /** % padrão do kit por forma de pagamento (sobre o preço de catálogo das linhas do kit). */
   padrao?: { pix: number; cartao: number };
+  /** % próprio do kit: PIX e cartão sobre o preço de catálogo, sem o desconto do produto. */
+  proprio?: { pix: number; cartao: number };
 };
 
 /**
  * Desconto do kit para a forma de pagamento escolhida (espelha a RPC):
  * kits com % padrão custam catálogo × (1 − %); a economia é contra o subtotal
- * que já tem o desconto PIX/cartão do produto. Demais kits usam a economia salva.
+ * que já tem o desconto PIX/cartão do produto. Desconto próprio percentual usa o % de
+ * cada forma sobre o catálogo. Os demais kits usam a economia salva.
  */
 export function kitClaimDesconto(claim: CartKitClaim, lines: CartLine[], forma: FormaPagamentoCheckout): number {
+  if (claim.proprio) {
+    let normal = 0;
+    for (const [pid, qty] of Object.entries(claim.items)) {
+      const l = lines.find((x) => x.id === pid);
+      if (!l) continue;
+      normal += l.valor * qty;
+    }
+    const pct = Math.min(100, Math.max(0, forma === "pix" ? claim.proprio.pix : claim.proprio.cartao));
+    return Math.max(0, Math.round(normal * (pct / 100) * 100) / 100);
+  }
   if (!claim.padrao) return claim.economia || 0;
   let normal = 0;
   let sub = 0;
@@ -132,6 +145,11 @@ function parseStoredClaim(o: unknown): CartKitClaim | null {
     pr && typeof pr === "object" && Number.isFinite(Number(pr.pix)) && Number.isFinite(Number(pr.cartao))
       ? { pix: Number(pr.pix), cartao: Number(pr.cartao) }
       : null;
+  const pp = r.proprio as Record<string, unknown> | undefined;
+  const proprio =
+    pp && typeof pp === "object" && Number.isFinite(Number(pp.pix)) && Number.isFinite(Number(pp.cartao))
+      ? { pix: Number(pp.pix), cartao: Number(pp.cartao) }
+      : null;
   const escolhas: KitChoiceSelection[] = [];
   if (Array.isArray(r.escolhas)) {
     for (const e of r.escolhas as unknown[]) {
@@ -151,6 +169,7 @@ function parseStoredClaim(o: unknown): CartKitClaim | null {
     economia: Number.isFinite(economia) && economia > 0 ? economia : 0,
     ...(escolhas.length > 0 ? { escolhas } : {}),
     ...(padrao ? { padrao } : {}),
+    ...(proprio ? { proprio } : {}),
   };
 }
 

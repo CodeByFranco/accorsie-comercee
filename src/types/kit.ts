@@ -34,6 +34,8 @@ export type KitSummary = {
   precoNormal: number;
   precoKit: number;
   economia: number;
+  /** Preço no cartão. Em kit com desconto próprio percentual pode ser maior que o preço no PIX. */
+  precoCartao: number;
   itemCount: number;
   /** Kit tem itens em que o cliente escolhe produto/quantidade (preço "a partir de"). */
   temEscolha: boolean;
@@ -70,7 +72,10 @@ export type KitDetail = KitSummary & {
   seo_title: string | null;
   seo_description: string | null;
   tipo_desconto: KitDiscountType;
+  /** Percentual no PIX quando o tipo é percentual. */
   valor_desconto: number;
+  /** Percentual no cartão. Nulo = igual ao percentual no PIX. */
+  valor_desconto_cartao: number | null;
   preco_final: number | null;
   status: KitStatus;
   items: KitDetailItem[];

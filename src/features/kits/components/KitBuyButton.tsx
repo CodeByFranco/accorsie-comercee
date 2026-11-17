@@ -90,14 +90,24 @@ export function KitBuyButton({
   const padrao = kit.descontoPadrao;
   const pctPix = padrao ? (comboOpt ? padrao.combo_pix : padrao.kit_pix) : 0;
   const pctCartao = padrao ? (comboOpt ? padrao.combo_cartao : padrao.kit_cartao) : 0;
+  const pctCartaoProprio =
+    !padrao && kit.tipo_desconto === "percentual"
+      ? Math.min(100, Math.max(0, kit.valor_desconto_cartao ?? kit.valor_desconto))
+      : null;
   const pricing = useMemo(() => {
     if (!padrao) return kitPricing;
     const normal = r2(linhas.reduce((s, l) => s + l.valor * l.quantity, 0));
     const precoKit = r2(normal * (1 - pctPix / 100));
     return { precoNormal: normal, precoKit, economia: r2(normal - precoKit) };
   }, [padrao, kitPricing, linhas, pctPix]);
-  const precoCartao = padrao ? r2(pricing.precoNormal * (1 - pctCartao / 100)) : pricing.precoKit;
-  const economiaCartao = padrao ? r2(pricing.precoNormal - precoCartao) : 0;
+  const precoCartao =
+    padrao
+      ? r2(pricing.precoNormal * (1 - pctCartao / 100))
+      : pctCartaoProprio != null
+        ? r2(pricing.precoNormal * (1 - pctCartaoProprio / 100))
+        : pricing.precoKit;
+  const economiaCartao = r2(Math.max(0, pricing.precoNormal - precoCartao));
+  const pixMaisBarato = pricing.precoKit + 0.009 < precoCartao;
 
   const economiaExtraComboPix = useMemo(() => {
     if (!padrao || !combo) return 0;
@@ -136,12 +146,14 @@ export function KitBuyButton({
         ) : null}
         <p className="text-3xl font-bold tabular-nums">
           {money.format(pricing.precoKit)}
-          {padrao ? <span className="ml-2 text-base font-semibold text-store-navy/70">no PIX</span> : null}
+          {padrao || pixMaisBarato ? (
+            <span className="ml-2 text-base font-semibold text-store-navy/70">no PIX</span>
+          ) : null}
         </p>
         {precoCartao > 0 ? (
           <CartaoParcelamentoLinha amount={precoCartao} className="text-sm text-store-navy/80" />
         ) : null}
-        {padrao && economiaCartao > 0 ? (
+        {(padrao || pixMaisBarato) && economiaCartao > 0 ? (
           <p className="text-sm text-store-navy/80">
             Economia de <strong className="tabular-nums">{money.format(economiaCartao)}</strong> no cartão
           </p>
@@ -387,6 +399,9 @@ export function KitBuyButton({
               items: Object.fromEntries(linhas.map((l) => [l.product_id, l.quantity])),
               economia: pricing.economia,
               ...(padrao ? { padrao: { pix: pctPix, cartao: pctCartao } } : {}),
+              ...(pctCartaoProprio != null
+                ? { proprio: { pix: kit.valor_desconto, cartao: pctCartaoProprio } }
+                : {}),
               ...(escolhas.length > 0 ? { escolhas } : {}),
             },
             linhas.map((l) => ({

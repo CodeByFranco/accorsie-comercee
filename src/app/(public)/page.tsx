@@ -11,7 +11,7 @@ import { SiteFooter } from "@/components/layout/SiteFooter";
 import { HomeBeneficiosFaixa } from "@/components/store/HomeBeneficiosFaixa";
 import { getHomeCategories } from "@/features/categorias/services/getHomeCategories";
 import { getHomeProducts } from "@/features/produtos/services/getHomeProducts";
-import { getHomeKits, getKitCategorias, getPublishedKits, searchPublishedKits } from "@/features/kits/services/getHomeKits";
+import { getKitCategorias, getPublishedKits, searchPublishedKits } from "@/features/kits/services/getHomeKits";
 import { getCatalogProducts, getCatalogSliderMax } from "@/features/produtos/services/getCatalogProducts";
 import { normalizeCatalogFilters } from "@/features/produtos/utils/catalogSearchParams";
 import { parseHomeVehicleParams, parseProductSearchQ } from "@/features/produtos/utils/catalogSearchParams";
@@ -40,7 +40,7 @@ export default async function Home({
     getHomeCategories(),
     getHomeProducts({ q: searchQ, modeloId, anoVeiculo }),
     getVehicleFilterCatalogData({ modeloIdForAnos: modeloId }),
-    searchQ ? searchPublishedKits(searchQ) : getHomeKits(),
+    searchQ ? searchPublishedKits(searchQ) : Promise.resolve([]),
     searchQ ? Promise.resolve([]) : getKitCategorias(),
     getDescontosPadrao(createPublicClient()),
     sliderMaxPromise,
@@ -83,20 +83,19 @@ export default async function Home({
           ? "Nenhum produto compatível com o veículo escolhido. Tente outro modelo ou ano."
           : undefined;
 
-  const kitsBlock =
-    kits.length > 0 || searchQ ? (
-      <KitsSection
-        kits={kits}
-        title={searchQ ? "Kits encontrados" : "Kits"}
-        emptyMessage={searchQ ? "Nenhum kit corresponde à busca." : undefined}
-        categorias={kitCategorias}
-        descontoPadrao={descontosPadrao}
-      />
-    ) : null;
+  const kitsBlock = searchQ ? (
+    <KitsSection
+      kits={kits}
+      title="Kits encontrados"
+      emptyMessage="Nenhum kit corresponde à busca."
+      categorias={kitCategorias}
+      descontoPadrao={descontosPadrao}
+    />
+  ) : null;
 
   const catalogMain = (
     <main className="flex min-h-0 flex-1 flex-col">
-      {searchQ ? kitsBlock : null}
+      {kitsBlock}
       {!searchQ ? (
         <CombosExemploHomeSection
           kitsFiltro={kitsFiltroExemplo}
@@ -105,7 +104,6 @@ export default async function Home({
         />
       ) : null}
       <ProductsSection produtos={produtosVitrine} emptyMessage={emptyVitrine} />
-      {!searchQ ? kitsBlock : null}
     </main>
   );
 
@@ -134,17 +132,17 @@ export default async function Home({
         </>
       ) : (
         <>
+          <section className={`border-b border-store-line/50 bg-store-cream pt-4 pb-6 sm:pt-5 sm:pb-8 ${storeShellInset}`}>
+            <div className={storeShellContent}>
+              <CategoriesSection categorias={categorias} />
+            </div>
+          </section>
           <section className={`bg-store-cream pt-4 sm:pt-5 ${storeShellInset}`}>
             <div className={storeShellContent}>
               <KitsDestaqueCards
                 suspensaoHref={suspensao ? `/kits?categoria=${suspensao.slug}` : null}
                 descontos={descontosPadrao}
               />
-            </div>
-          </section>
-          <section className={`border-b border-store-line/50 bg-store-cream py-6 sm:py-8 ${storeShellInset}`}>
-            <div className={storeShellContent}>
-              <CategoriesSection categorias={categorias} />
             </div>
           </section>
 

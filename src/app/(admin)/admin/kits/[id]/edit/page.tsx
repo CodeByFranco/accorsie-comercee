@@ -7,6 +7,7 @@ import {
 } from "@/features/kits/components/KitEditForm";
 import type { KitPickerProduct } from "@/features/kits/components/KitItemsPicker";
 import { parseKitDiscountType } from "@/features/kits/utils/kitPricing";
+import { selectKits } from "@/features/kits/utils/mapKitRow";
 import { parseKitStatus } from "@/features/kits/utils/kitStatus";
 import { createClient } from "@/services/supabase/server";
 
@@ -28,14 +29,13 @@ export default async function EditKitPage({ params }: PageProps) {
   const { id } = await params;
   const supabase = await createClient();
 
+  const kitColumns =
+    "id, nome, slug, descricao, imagem, tipo_desconto, valor_desconto, valor_desconto_cartao, preco_final, seo_title, seo_description, status, categoria_id, usa_desconto_padrao";
   const [kitRes, itemsRes, productsRes, categoriasRes, prodCatRes] = await Promise.all([
-    supabase
-      .from("kits")
-      .select(
-        "id, nome, slug, descricao, imagem, tipo_desconto, valor_desconto, preco_final, seo_title, seo_description, status, categoria_id, usa_desconto_padrao",
-      )
-      .eq("id", id)
-      .maybeSingle(),
+    selectKits(
+      (columns) => supabase.from("kits").select(columns).eq("id", id).maybeSingle(),
+      kitColumns,
+    ),
     supabase
       .from("kit_items")
       .select("id, tipo, nome, qtd_min, qtd_max, product_id, quantidade, kit_item_opcoes ( product_id )")
@@ -58,7 +58,22 @@ export default async function EditKitPage({ params }: PageProps) {
   }
   if (!kitRes.data) notFound();
 
-  const k = kitRes.data;
+  const k = kitRes.data as {
+    id: string;
+    nome: string | null;
+    slug: string | null;
+    descricao: string | null;
+    imagem: string | null;
+    tipo_desconto: string | null;
+    valor_desconto: number | string | null;
+    valor_desconto_cartao?: number | string | null;
+    preco_final: number | string | null;
+    seo_title: string | null;
+    seo_description: string | null;
+    status: string | null;
+    categoria_id: string | null;
+    usa_desconto_padrao: boolean | null;
+  };
   const kit: KitEditValues = {
     id: k.id,
     nome: k.nome ?? "",
@@ -67,6 +82,7 @@ export default async function EditKitPage({ params }: PageProps) {
     imagem: k.imagem ?? "",
     tipo_desconto: parseKitDiscountType(k.tipo_desconto),
     valor_desconto: Number(k.valor_desconto) || 0,
+    valor_desconto_cartao: k.valor_desconto_cartao == null ? null : Number(k.valor_desconto_cartao),
     preco_final: k.preco_final != null ? Number(k.preco_final) : null,
     seo_title: k.seo_title ?? "",
     seo_description: k.seo_description ?? "",

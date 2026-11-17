@@ -1,7 +1,7 @@
 import { createPublicClient } from "@/services/supabase/public";
 import { createClient } from "@/services/supabase/server";
 import { KIT_STATUS_PUBLISHED } from "@/features/kits/utils/kitStatus";
-import { KIT_DETAIL_SELECT, mapKitDetail, type KitRowWithItems } from "@/features/kits/utils/mapKitRow";
+import { KIT_DETAIL_SELECT, mapKitDetail, selectKits, type KitRowWithItems } from "@/features/kits/utils/mapKitRow";
 import { withKitCombo } from "@/features/kits/services/kitCombo";
 import type { KitDetail } from "@/types/kit";
 
@@ -10,12 +10,11 @@ export async function getKitBySlug(slug: string): Promise<KitDetail | null> {
   if (!s) return null;
   try {
     const supabase = createPublicClient();
-    const { data, error } = await supabase
-      .from("kits")
-      .select(KIT_DETAIL_SELECT)
-      .eq("slug", s)
-      .eq("status", KIT_STATUS_PUBLISHED)
-      .maybeSingle();
+    const { data, error } = await selectKits(
+      (columns) =>
+        supabase.from("kits").select(columns).eq("slug", s).eq("status", KIT_STATUS_PUBLISHED).maybeSingle(),
+      KIT_DETAIL_SELECT,
+    );
     if (error || !data) return null;
     const detail = mapKitDetail(data as KitRowWithItems);
     if (!detail || detail.items.length === 0) return null;
@@ -30,7 +29,10 @@ export async function getKitByIdForAdmin(id: string): Promise<KitDetail | null> 
   const kitId = id.trim();
   if (!kitId) return null;
   const supabase = await createClient();
-  const { data, error } = await supabase.from("kits").select(KIT_DETAIL_SELECT).eq("id", kitId).maybeSingle();
+  const { data, error } = await selectKits(
+    (columns) => supabase.from("kits").select(columns).eq("id", kitId).maybeSingle(),
+    KIT_DETAIL_SELECT,
+  );
   if (error || !data) return null;
   const detail = mapKitDetail({ ...(data as KitRowWithItems), slug: (data as KitRowWithItems).slug || kitId, nome: (data as KitRowWithItems).nome || "Kit sem nome" });
   return detail ? withKitCombo(supabase, detail) : null;
