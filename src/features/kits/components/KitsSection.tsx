@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { KitCard } from "@/features/kits/components/KitCard";
 import { storeShellContent, storeShellInset } from "@/config/storeShell";
-import type { KitSummary } from "@/types/kit";
+import type { KitDescontoPadrao, KitSummary } from "@/types/kit";
 
 export function KitsSection({
   kits,
@@ -9,6 +9,7 @@ export function KitsSection({
   emptyMessage,
   embedded = false,
   categorias = [],
+  descontoPadrao = null,
 }: {
   kits: KitSummary[];
   title?: string;
@@ -17,6 +18,8 @@ export function KitsSection({
   embedded?: boolean;
   /** Atalhos para /kits?categoria=… (ex.: Kits de Suspensão). */
   categorias?: Array<{ id: string; nome: string; slug: string }>;
+  /** % PIX/cartão padrão para kits que usam desconto global (listagem). */
+  descontoPadrao?: KitDescontoPadrao | null;
 }) {
   if (kits.length === 0 && !emptyMessage) return null;
 
@@ -48,7 +51,7 @@ export function KitsSection({
       ) : (
         <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 md:gap-6">
           {kits.map((kit) => (
-            <KitCard key={kit.id} kit={kit} />
+            <KitCard key={kit.id} kit={kit} descontoPadrao={descontoPadrao} />
           ))}
         </div>
       )}

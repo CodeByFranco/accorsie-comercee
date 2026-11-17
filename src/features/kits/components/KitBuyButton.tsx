@@ -1,18 +1,30 @@
 "use client";
 
 import Image from "next/image";
+import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { useCart } from "@/features/carrinho/CartContext";
 import { computeKitPricing } from "@/features/kits/utils/kitPricing";
+import { DescontoBreakdownTable } from "@/features/kits/components/DescontoBreakdownTable";
+import { CartaoParcelamentoLinha } from "@/features/produtos/components/CartaoParcelamentoLinha";
 import { kitPricingLines } from "@/features/kits/utils/mapKitRow";
+import { economiaDescontoPercentual, roundMoney } from "@/features/kits/utils/descontoReais";
 import { KIT_COMBO_ITEM_ID, type KitChoiceSelection, type KitDetail, type KitProductInfo } from "@/types/kit";
 
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const r2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
-const fmtPct = (n: number) => `${n.toLocaleString("pt-BR")}%`;
+const r2 = roundMoney;
 
 /** Preço, escolhas do cliente (ex.: viscosidade e litros) e botão de compra do kit. */
-export function KitBuyButton({ kit, descricao }: { kit: KitDetail; descricao?: string | null }) {
+export function KitBuyButton({
+  kit,
+  descricao,
+  parcelamentoCartao,
+}: {
+  kit: KitDetail;
+  descricao?: string | null;
+  /** Bloco de parcelamento Mercado Pago (server), alinhado à ficha de produto. */
+  parcelamentoCartao?: ReactNode;
+}) {
   const { addKit } = useCart();
 
   const [selecao, setSelecao] = useState<Map<string, { product_id: string; quantidade: number }>>(
@@ -84,7 +96,30 @@ export function KitBuyButton({ kit, descricao }: { kit: KitDetail; descricao?: s
     const precoKit = r2(normal * (1 - pctPix / 100));
     return { precoNormal: normal, precoKit, economia: r2(normal - precoKit) };
   }, [padrao, kitPricing, linhas, pctPix]);
-  const precoCartao = padrao ? r2(pricing.precoNormal * (1 - pctCartao / 100)) : null;
+  const precoCartao = padrao ? r2(pricing.precoNormal * (1 - pctCartao / 100)) : pricing.precoKit;
+  const economiaCartao = padrao ? r2(pricing.precoNormal - precoCartao) : 0;
+
+  const economiaExtraComboPix = useMemo(() => {
+    if (!padrao || !combo) return 0;
+    const baseKit = r2(
+      [...kit.items.map((it) => ({ valor: it.valor, quantity: it.quantidade })),
+        ...kit.escolhas.flatMap((ch) => {
+          const sel = selecao.get(ch.kit_item_id);
+          const opt = ch.opcoes.find((o) => o.product_id === sel?.product_id);
+          return opt && sel ? [{ valor: opt.valor, quantity: sel.quantidade }] : [];
+        }),
+      ].reduce((s, l) => s + l.valor * l.quantity, 0),
+    );
+    const oleo =
+      combo.opcoes.find((o) => o.product_id === comboSel.product_id) ??
+      combo.opcoes.find((o) => o.quantidade_estoque >= combo.qtd_padrao) ??
+      combo.opcoes[0];
+    if (!oleo || baseKit <= 0) return 0;
+    const baseCombo = r2(baseKit + oleo.valor * comboSel.quantidade);
+    const economiaSomenteKit = economiaDescontoPercentual(baseKit, padrao.kit_pix);
+    const economiaCombo = economiaDescontoPercentual(baseCombo, padrao.combo_pix);
+    return Math.max(0, r2(economiaCombo - economiaSomenteKit));
+  }, [padrao, combo, kit, selecao, comboSel]);
 
   const escolhasCompletas = kit.escolhas.every((ch) => {
     const sel = selecao.get(ch.kit_item_id);
@@ -101,17 +136,37 @@ export function KitBuyButton({ kit, descricao }: { kit: KitDetail; descricao?: s
         ) : null}
         <p className="text-3xl font-bold tabular-nums">
           {money.format(pricing.precoKit)}
-          {padrao ? <span className="ml-2 text-base font-semibold text-store-navy/70">no PIX ({fmtPct(pctPix)} off)</span> : null}
+          {padrao ? <span className="ml-2 text-base font-semibold text-store-navy/70">no PIX</span> : null}
         </p>
-        {padrao && precoCartao != null ? (
+        {precoCartao > 0 ? (
+          <CartaoParcelamentoLinha amount={precoCartao} className="text-sm text-store-navy/80" />
+        ) : null}
+        {padrao && economiaCartao > 0 ? (
           <p className="text-sm text-store-navy/80">
-            ou <strong className="tabular-nums">{money.format(precoCartao)}</strong> no cartão ({fmtPct(pctCartao)} off) em até
-            3x sem juros
+            Economia de <strong className="tabular-nums">{money.format(economiaCartao)}</strong> no cartão
           </p>
         ) : null}
+        {parcelamentoCartao ? <div className="pt-1">{parcelamentoCartao}</div> : null}
         {pricing.economia > 0 ? (
           <p className="!mt-2 inline-block rounded-full border-2 border-store-accent bg-store-accent/10 px-3 py-1.5 text-sm font-bold text-emerald-800">
-            Você economiza {money.format(pricing.economia)}</p>
+            Você economiza {money.format(pricing.economia)} no PIX
+          </p>
+        ) : null}
+        {padrao && pricing.precoNormal > 0 ? (
+          <div className="mt-3 rounded-sm border border-store-navy/10 bg-store-cream/80 p-3">
+            <DescontoBreakdownTable
+              caption="Resumo do desconto no PIX"
+              linhas={[
+                { rotulo: comboOpt ? "Combo antes do desconto" : "Kit antes do desconto", valor: pricing.precoNormal },
+                {
+                  rotulo: "Desconto no PIX",
+                  valor: pricing.economia,
+                  negativo: true,
+                },
+                { rotulo: "Total no PIX", valor: pricing.precoKit, destaque: true },
+              ]}
+            />
+          </div>
         ) : null}
       </div>
 
@@ -199,12 +254,32 @@ export function KitBuyButton({ kit, descricao }: { kit: KitDetail; descricao?: s
         );
       })}
 
+      {combo && padrao ? (
+        <div
+          className="flex gap-3 rounded-sm border border-store-accent/40 bg-store-navy px-4 py-3 text-sm text-white"
+          role="note"
+        >
+          <span className="text-xl leading-none" aria-hidden>
+            %
+          </span>
+          <div>
+            <p className="font-bold">Complete seu kit e economize mais!</p>
+            <p className="mt-1 text-white/90">
+              Adicione o óleo abaixo e aproveite até{" "}
+              <strong className="tabular-nums text-store-accent">{money.format(economiaExtraComboPix)}</strong> a mais de
+              desconto no PIX no combo completo (em relação ao kit só com filtros).
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       {combo ? (
         <div
           className={`space-y-3 rounded-sm border-2 p-4 transition ${
             comboOn ? "border-store-accent bg-store-accent/5" : "border-dashed border-store-navy/25 bg-white"
           }`}
         >
+          <p className="text-sm font-bold text-black">Personalize sua troca de óleo</p>
           <label className="flex cursor-pointer items-start gap-3">
             <input
               type="checkbox"
@@ -218,7 +293,7 @@ export function KitBuyButton({ kit, descricao }: { kit: KitDetail; descricao?: s
               </span>
               <span className="block text-sm text-store-navy/70">
                 {padrao
-                  ? `O kit inteiro passa para ${fmtPct(padrao.combo_pix)} off no PIX e ${fmtPct(padrao.combo_cartao)} no cartão. Você escolhe o produto e a quantidade.`
+                  ? `Com o óleo, o desconto no PIX sobe e você vê o total em reais acima. Você escolhe o produto e a quantidade.`
                   : "Você escolhe o produto e a quantidade."}
               </span>
             </span>

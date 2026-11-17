@@ -5,6 +5,7 @@ import type {
   KitChoiceItem,
   KitDetail,
   KitDetailItem,
+  KitDescontoPadrao,
   KitProductInfo,
   KitSummary,
 } from "@/types/kit";
@@ -51,6 +52,7 @@ export type KitRowWithItems = {
   tipo_desconto: string | null;
   valor_desconto: number | string | null;
   preco_final: number | string | null;
+  usa_desconto_padrao?: boolean | null;
   seo_title?: string | null;
   seo_description?: string | null;
   status?: string | null;
@@ -162,8 +164,26 @@ export function mapKitSummary(row: KitRowWithItems): KitSummary | null {
     economia: pricing.economia,
     itemCount: items.length + escolhas.length,
     temEscolha: escolhas.length > 0,
+    usa_desconto_padrao: row.usa_desconto_padrao !== false,
     categoria: mapCategoria(row),
   };
+}
+
+function round2Money(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
+/** Valor no cartão para listagem / parcelamento (mesma regra do `KitCard`). */
+export function kitPrecoCartaoInicial(kit: {
+  precoNormal: number;
+  precoKit: number;
+  usa_desconto_padrao: boolean;
+  descontoPadrao: KitDescontoPadrao | null;
+}): number {
+  const usaPadrao = kit.usa_desconto_padrao && kit.descontoPadrao != null;
+  return usaPadrao
+    ? round2Money(kit.precoNormal * (1 - kit.descontoPadrao.kit_cartao / 100))
+    : kit.precoKit;
 }
 
 export function mapKitDetail(row: KitRowWithItems): KitDetail | null {
@@ -197,13 +217,13 @@ const KIT_ITEMS_EMBED = `
 `;
 
 export const KIT_LIST_SELECT = `
-  id, nome, slug, descricao, imagem, tipo_desconto, valor_desconto, preco_final, status,
+  id, nome, slug, descricao, imagem, tipo_desconto, valor_desconto, preco_final, status, usa_desconto_padrao,
   categorias ( id, nome, slug ),
   ${KIT_ITEMS_EMBED}
 `;
 
 export const KIT_DETAIL_SELECT = `
-  id, nome, slug, descricao, imagem, tipo_desconto, valor_desconto, preco_final,
+  id, nome, slug, descricao, imagem, tipo_desconto, valor_desconto, preco_final, usa_desconto_padrao,
   seo_title, seo_description, status,
   categorias ( id, nome, slug ),
   ${KIT_ITEMS_EMBED}
