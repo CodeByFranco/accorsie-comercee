@@ -10,14 +10,13 @@ export function ProductCompatibilidadeList({ items }: { items: string[] }) {
   const restantes = items.length - LIMITE_INICIAL;
 
   return (
-    <div className="space-y-3">
-      <ul className="flex flex-wrap gap-1.5">
+    <div className="space-y-2">
+      <ul className="flex flex-col items-start gap-2">
         {visiveis.map((item) => (
-          <li
-            key={item}
-            className="rounded-full border border-store-line/70 bg-store-subtle/70 px-3 py-1 text-xs leading-snug text-store-navy"
-          >
-            {item}
+          <li key={item} className="max-w-full">
+            <span className="inline-block max-w-full rounded-full border border-store-line bg-white px-3 py-1.5 text-left text-sm leading-snug text-store-navy">
+              {item}
+            </span>
           </li>
         ))}
       </ul>

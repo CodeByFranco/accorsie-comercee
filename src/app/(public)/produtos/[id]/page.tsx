@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ProductStorefrontDetail } from "@/features/produtos/components/ProductStorefrontDetail";
 import { getProductDetailPageData } from "@/features/produtos/services/getProductDetailPageData";
 import { getKitsForProduct } from "@/features/kits/services/getKitsForProduct";
-import { getComboOleo } from "@/features/kits/services/kitCombo";
+import { getComboOleo, getDescontosPadrao } from "@/features/kits/services/kitCombo";
 import { isKitFiltrosProduto } from "@/features/kits/utils/comboOleo";
 import { createPublicClient } from "@/services/supabase/public";
 
@@ -24,7 +24,11 @@ export default async function ProdutoDetalhePage({ params }: PageProps) {
 
   if (!produto) notFound();
 
-  const comboOleo = isKitFiltrosProduto(produto.titulo) ? await getComboOleo(createPublicClient()) : null;
+  const supabase = createPublicClient();
+  const [comboOleo, kitDescontoPadrao] = await Promise.all([
+    isKitFiltrosProduto(produto.titulo) ? getComboOleo(supabase) : Promise.resolve(null),
+    getDescontosPadrao(supabase),
+  ]);
 
   return (
     <ProductStorefrontDetail
@@ -32,6 +36,7 @@ export default async function ProdutoDetalhePage({ params }: PageProps) {
       relacionados={relacionados}
       kits={kitsDoProduto}
       comboOleo={comboOleo?.combo ? { combo: comboOleo.combo, descontoPadrao: comboOleo.descontoPadrao } : null}
+      kitDescontoPadrao={kitDescontoPadrao}
     />
   );
 }

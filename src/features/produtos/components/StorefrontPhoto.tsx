@@ -5,6 +5,10 @@ import { useEffect, useState } from "react";
 /** `null` = não deu para limpar; mostra o arquivo original. */
 const cache = new Map<string, string | null>();
 
+/** Processamento até o tamanho do arquivo no storage; o layout na tela não muda (só fica mais nítido em telas retina). */
+const PROCESS_MAX_SIDE = 1200;
+const OUTPUT_SIDE = 960;
+
 function isBackdrop(r: number, g: number, b: number, a: number) {
   if (a < 12) return true;
   const max = Math.max(r, g, b);
@@ -15,8 +19,7 @@ function isBackdrop(r: number, g: number, b: number, a: number) {
 
 /** Tira o fundo branco ou cinza-claro colado na borda e encaixa o produto num quadrado. */
 function prepareSquare(img: HTMLImageElement): string | null {
-  const maxSide = 480;
-  const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+  const scale = Math.min(1, PROCESS_MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
   const w = Math.max(1, Math.round(img.naturalWidth * scale));
   const h = Math.max(1, Math.round(img.naturalHeight * scale));
   const canvas = document.createElement("canvas");
@@ -108,7 +111,7 @@ function prepareSquare(img: HTMLImageElement): string | null {
 
   ctx.putImageData(imageData, 0, 0);
 
-  const side = 480;
+  const side = OUTPUT_SIDE;
   const pad = Math.round(side * 0.05);
   const out = document.createElement("canvas");
   out.width = side;

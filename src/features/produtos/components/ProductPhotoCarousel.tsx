@@ -9,8 +9,7 @@ type ProductPhotoCarouselProps = {
 };
 
 const photoShellClassName =
-  "relative flex aspect-square w-full max-w-[min(100%,22rem)] items-center justify-center overflow-hidden bg-white sm:max-w-[26rem] " +
-  "lg:max-h-full lg:max-w-full lg:min-h-0 lg:min-w-0";
+  "relative flex aspect-square w-full max-w-[min(100%,22rem)] items-center justify-center overflow-hidden bg-white sm:max-w-[26rem] lg:max-w-full";
 
 function ProductPhotoFallback() {
   return (
