@@ -5,6 +5,13 @@ export type KitsDestaqueDescontos = { kit_pix: number; kit_cartao: number; combo
 
 const fmt = (n: number) => `${n.toLocaleString("pt-BR")}%`;
 
+const cardClass =
+  "group relative flex h-full flex-col overflow-hidden rounded-sm bg-store-navy px-5 py-4 text-white shadow-sm transition hover:brightness-110 md:px-6 md:py-4";
+const badgeClass =
+  "inline-block w-fit self-start rounded-full bg-store-accent px-3 py-1 text-xs font-bold uppercase tracking-wide text-black";
+const ctaClass =
+  "mt-3 inline-flex w-fit items-center gap-2 rounded-full border-2 border-store-accent px-5 py-2 text-sm font-bold text-store-accent transition group-hover:bg-store-accent group-hover:text-black";
+
 /** Cartões de destaque da home: Kits de Suspensão e Kits de Troca de Óleo e Filtros. */
 export function KitsDestaqueCards({
   suspensaoHref,
@@ -15,40 +22,23 @@ export function KitsDestaqueCards({
   descontos: KitsDestaqueDescontos;
 }) {
   return (
-    <div className={`grid gap-4 ${suspensaoHref ? "md:grid-cols-2" : ""}`}>
-      <Link
-        href={COMBO_OLEO_FILTROS_HREF}
-        className="group relative overflow-hidden rounded-sm bg-store-navy p-6 text-white shadow-sm transition hover:brightness-110 md:p-8"
-      >
-        <span className="inline-block rounded-full bg-store-accent px-3 py-1 text-xs font-bold uppercase tracking-wide text-black">
-          Até {fmt(descontos.combo_pix)} off no PIX
-        </span>
-        <h2 className="mt-3 text-2xl font-bold leading-tight md:text-3xl">{COMBO_OLEO_FILTROS_NOME}</h2>
-        <p className="mt-2 max-w-md text-sm text-white/80">
-          Kit de filtros com {fmt(descontos.kit_pix)} no PIX ou {fmt(descontos.kit_cartao)} no cartão. Levando o óleo
-          junto, o combo vai para {fmt(descontos.combo_pix)} no PIX ou {fmt(descontos.combo_cartao)} no cartão, em até
-          3x.
+    <div className={`grid gap-1.5 ${suspensaoHref ? "md:grid-cols-2" : ""}`}>
+      <Link href={COMBO_OLEO_FILTROS_HREF} className={cardClass}>
+        <span className={badgeClass}>Descontos imperdíveis</span>
+        <h2 className="mt-2 text-2xl font-bold leading-tight md:text-3xl">{COMBO_OLEO_FILTROS_NOME}</h2>
+        <p className="mt-1 text-sm text-white/85">
+          Descontos imperdíveis em nossos combos! Kits de filtros e óleo com até {fmt(descontos.combo_pix)} OFF no
+          PIX.
         </p>
-        <span className="mt-5 inline-flex items-center gap-2 rounded-full border-2 border-store-accent px-5 py-2 text-sm font-bold text-store-accent transition group-hover:bg-store-accent group-hover:text-black">
-          Ver kits para o meu carro →
-        </span>
+        <span className={ctaClass}>Ver kits para o meu carro →</span>
       </Link>
 
       {suspensaoHref ? (
-        <Link
-          href={suspensaoHref}
-          className="group relative overflow-hidden rounded-sm border-2 border-store-navy bg-white p-6 text-store-navy shadow-sm transition hover:bg-store-subtle/60 md:p-8"
-        >
-          <span className="inline-block rounded-full bg-store-navy px-3 py-1 text-xs font-bold uppercase tracking-wide text-white">
-            Kit completo com desconto
-          </span>
-          <h2 className="mt-3 text-2xl font-bold leading-tight text-black md:text-3xl">Kits de Suspensão</h2>
-          <p className="mt-2 max-w-md text-sm text-store-navy/80">
-            Amortecedores, coifas e batentes prontos para o seu carro: dianteira, traseira ou completa.
-          </p>
-          <span className="mt-5 inline-flex items-center gap-2 rounded-full border-2 border-[#1d63ed] px-5 py-2 text-sm font-bold text-[#1d63ed] transition group-hover:bg-[#1d63ed] group-hover:text-white">
-            Ver kits de suspensão →
-          </span>
+        <Link href={suspensaoHref} className={cardClass}>
+          <span className={badgeClass}>Descontos imperdíveis</span>
+          <h2 className="mt-2 text-2xl font-bold leading-tight md:text-3xl">Kits de Suspensão</h2>
+          <p className="mt-1 text-sm text-white/85">Descontos imperdíveis em nossos combos!</p>
+          <span className={ctaClass}>Ver kits de suspensão →</span>
         </Link>
       ) : null}
     </div>

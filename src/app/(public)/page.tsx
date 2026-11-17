@@ -1,5 +1,5 @@
 import { CategoriesSection } from "@/features/categorias/components/CategoriesSection";
-import { DestaquesSection } from "@/features/produtos/components/DestaquesSection";
+import { CombosExemploHomeSection } from "@/features/kits/components/CombosExemploHomeSection";
 import { ProductsSection } from "@/features/produtos/components/ProductsSection";
 import { KitsSection } from "@/features/kits/components/KitsSection";
 import { KitsDestaqueCards } from "@/features/kits/components/KitsDestaqueCards";
@@ -11,7 +11,9 @@ import { SiteFooter } from "@/components/layout/SiteFooter";
 import { HomeBeneficiosFaixa } from "@/components/store/HomeBeneficiosFaixa";
 import { getHomeCategories } from "@/features/categorias/services/getHomeCategories";
 import { getHomeProducts } from "@/features/produtos/services/getHomeProducts";
-import { getHomeKits, getKitCategorias, searchPublishedKits } from "@/features/kits/services/getHomeKits";
+import { getHomeKits, getKitCategorias, getPublishedKits, searchPublishedKits } from "@/features/kits/services/getHomeKits";
+import { getCatalogProducts, getCatalogSliderMax } from "@/features/produtos/services/getCatalogProducts";
+import { normalizeCatalogFilters } from "@/features/produtos/utils/catalogSearchParams";
 import { parseHomeVehicleParams, parseProductSearchQ } from "@/features/produtos/utils/catalogSearchParams";
 import { storeShellContent, storeShellInset } from "@/config/storeShell";
 import type { CategoryListItem } from "@/types/category";
@@ -24,39 +26,54 @@ export default async function Home({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   let categorias: CategoryListItem[] = [];
-  let produtosDestaque: ProductSummary[] = [];
   let produtosVitrine: ProductSummary[] = [];
+  let kitsFiltroExemplo: ProductSummary[] = [];
+  let kitsSuspensaoExemplo: KitSummary[] = [];
   let kits: KitSummary[] = [];
 
   const sp = await searchParams;
   const searchQ = parseProductSearchQ(sp);
   const { modeloId, anoVeiculo } = parseHomeVehicleParams(sp);
 
-  const [cats, prods, vehicleFilterData, kitsData, kitCategorias, descontosPadrao] = await Promise.all([
+  const sliderMaxPromise = getCatalogSliderMax();
+  const [cats, prods, vehicleFilterData, kitsData, kitCategorias, descontosPadrao, sliderMax] = await Promise.all([
     getHomeCategories(),
     getHomeProducts({ q: searchQ, modeloId, anoVeiculo }),
     getVehicleFilterCatalogData({ modeloIdForAnos: modeloId }),
     searchQ ? searchPublishedKits(searchQ) : getHomeKits(),
     searchQ ? Promise.resolve([]) : getKitCategorias(),
     getDescontosPadrao(createPublicClient()),
+    sliderMaxPromise,
   ]);
+
+  if (!searchQ) {
+    const filtrosKit = normalizeCatalogFilters(
+      {
+        q: "kit filtros",
+        categoriaIds: [],
+        marcaIds: [],
+        precoMin: null,
+        precoMax: null,
+        modeloId: null,
+        ano: null,
+      },
+      sliderMax,
+    );
+    const [catalogKitsFiltro, suspensaoKits] = await Promise.all([
+      getCatalogProducts(filtrosKit, sliderMax, 1, 8),
+      getPublishedKits("suspensao"),
+    ]);
+    kitsFiltroExemplo = catalogKitsFiltro.produtos;
+    kitsSuspensaoExemplo = suspensaoKits.slice(0, 8);
+  }
   const suspensao = kitCategorias.find((c) => c.slug === "suspensao");
   categorias = cats;
-  produtosDestaque = prods.destaque;
   produtosVitrine = prods.vitrine;
   kits = kitsData;
 
   const vehicleFiltering = Boolean(modeloId);
   /** Com busca ou veículo, produtos ficam logo abaixo da área de pesquisa/filtros (categorias depois). */
   const catalogActive = Boolean(searchQ) || vehicleFiltering;
-  const emptyDestaque =
-    searchQ && vehicleFiltering
-      ? "Nenhum destaque combina a busca com o veículo escolhido. Ajuste o texto, o modelo ou o ano."
-      : searchQ
-        ? "Nenhum destaque corresponde à busca. Tente outro termo ou limpe o campo de pesquisa."
-        : vehicleFiltering
-          ? "Nenhum destaque compatível com o veículo escolhido. Tente outro modelo ou ano."
-          : undefined;
   const emptyVitrine =
     searchQ && vehicleFiltering
       ? "Nenhum produto combina a busca com o veículo escolhido. Ajuste o texto, o modelo ou o ano."
@@ -73,13 +90,20 @@ export default async function Home({
         title={searchQ ? "Kits encontrados" : "Kits"}
         emptyMessage={searchQ ? "Nenhum kit corresponde à busca." : undefined}
         categorias={kitCategorias}
+        descontoPadrao={descontosPadrao}
       />
     ) : null;
 
   const catalogMain = (
     <main className="flex min-h-0 flex-1 flex-col">
       {searchQ ? kitsBlock : null}
-      <DestaquesSection produtos={produtosDestaque} emptyMessage={emptyDestaque} />
+      {!searchQ ? (
+        <CombosExemploHomeSection
+          kitsFiltro={kitsFiltroExemplo}
+          kitsSuspensao={kitsSuspensaoExemplo}
+          descontoPadrao={descontosPadrao}
+        />
+      ) : null}
       <ProductsSection produtos={produtosVitrine} emptyMessage={emptyVitrine} />
       {!searchQ ? kitsBlock : null}
     </main>
@@ -102,7 +126,7 @@ export default async function Home({
       {catalogActive ? (
         <>
           {!showResultsAboveVehicleFilter ? catalogMain : null}
-          <section className={`border-b border-store-line/50 bg-store-cream py-10 sm:py-12 ${storeShellInset}`}>
+          <section className={`border-b border-store-line/50 bg-store-cream py-6 sm:py-8 ${storeShellInset}`}>
             <div className={storeShellContent}>
               <CategoriesSection categorias={categorias} />
             </div>
@@ -110,7 +134,7 @@ export default async function Home({
         </>
       ) : (
         <>
-          <section className={`bg-store-cream pt-8 sm:pt-10 ${storeShellInset}`}>
+          <section className={`bg-store-cream pt-4 sm:pt-5 ${storeShellInset}`}>
             <div className={storeShellContent}>
               <KitsDestaqueCards
                 suspensaoHref={suspensao ? `/kits?categoria=${suspensao.slug}` : null}
@@ -118,7 +142,7 @@ export default async function Home({
               />
             </div>
           </section>
-          <section className={`border-b border-store-line/50 bg-store-cream py-10 sm:py-12 ${storeShellInset}`}>
+          <section className={`border-b border-store-line/50 bg-store-cream py-6 sm:py-8 ${storeShellInset}`}>
             <div className={storeShellContent}>
               <CategoriesSection categorias={categorias} />
             </div>
