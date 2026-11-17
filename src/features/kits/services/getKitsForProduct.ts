@@ -1,6 +1,6 @@
 import { createPublicClient } from "@/services/supabase/public";
 import { KIT_STATUS_PUBLISHED } from "@/features/kits/utils/kitStatus";
-import { KIT_LIST_SELECT, mapKitSummary, type KitRowWithItems } from "@/features/kits/utils/mapKitRow";
+import { KIT_LIST_SELECT, mapKitSummary, selectKits, type KitRowWithItems } from "@/features/kits/utils/mapKitRow";
 import type { KitSummary } from "@/types/kit";
 
 export async function getKitsForProduct(productId: string): Promise<KitSummary[]> {
@@ -21,12 +21,11 @@ export async function getKitsForProduct(productId: string): Promise<KitSummary[]
     const kitIds = [...new Set([...(links ?? []).map((r) => r.kit_id as string), ...optKitIds].filter(Boolean))];
     if (kitIds.length === 0) return [];
 
-    const { data, error } = await supabase
-      .from("kits")
-      .select(KIT_LIST_SELECT)
-      .in("id", kitIds)
-      .eq("status", KIT_STATUS_PUBLISHED)
-      .order("nome");
+    const { data, error } = await selectKits(
+      (columns) =>
+        supabase.from("kits").select(columns).in("id", kitIds).eq("status", KIT_STATUS_PUBLISHED).order("nome"),
+      KIT_LIST_SELECT,
+    );
     if (error || !data) return [];
     return (data as KitRowWithItems[])
       .map((row) => mapKitSummary(row))

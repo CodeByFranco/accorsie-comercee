@@ -1,17 +1,16 @@
 import { createPublicClient } from "@/services/supabase/public";
 import { KIT_STATUS_PUBLISHED } from "@/features/kits/utils/kitStatus";
-import { KIT_LIST_SELECT, mapKitSummary, type KitRowWithItems } from "@/features/kits/utils/mapKitRow";
+import { KIT_LIST_SELECT, mapKitSummary, selectKits, type KitRowWithItems } from "@/features/kits/utils/mapKitRow";
 import type { KitSummary } from "@/types/kit";
 
 export async function getHomeKits(limit = 8): Promise<KitSummary[]> {
   try {
     const supabase = createPublicClient();
-    const { data, error } = await supabase
-      .from("kits")
-      .select(KIT_LIST_SELECT)
-      .eq("status", KIT_STATUS_PUBLISHED)
-      .order("nome")
-      .limit(limit);
+    const { data, error } = await selectKits(
+      (columns) =>
+        supabase.from("kits").select(columns).eq("status", KIT_STATUS_PUBLISHED).order("nome").limit(limit),
+      KIT_LIST_SELECT,
+    );
     if (error || !data) return [];
     return (data as KitRowWithItems[])
       .map((row) => mapKitSummary(row))
@@ -28,23 +27,35 @@ export async function searchPublishedKits(term: string, limit = 12): Promise<Kit
     const supabase = createPublicClient();
     const pattern = `%${q}%`;
     const [byNome, bySlug] = await Promise.all([
-      supabase
-        .from("kits")
-        .select(KIT_LIST_SELECT)
-        .eq("status", KIT_STATUS_PUBLISHED)
-        .ilike("nome", pattern)
-        .order("nome")
-        .limit(limit),
-      supabase
-        .from("kits")
-        .select(KIT_LIST_SELECT)
-        .eq("status", KIT_STATUS_PUBLISHED)
-        .ilike("slug", pattern)
-        .order("nome")
-        .limit(limit),
+      selectKits(
+        (columns) =>
+          supabase
+            .from("kits")
+            .select(columns)
+            .eq("status", KIT_STATUS_PUBLISHED)
+            .ilike("nome", pattern)
+            .order("nome")
+            .limit(limit),
+        KIT_LIST_SELECT,
+      ),
+      selectKits(
+        (columns) =>
+          supabase
+            .from("kits")
+            .select(columns)
+            .eq("status", KIT_STATUS_PUBLISHED)
+            .ilike("slug", pattern)
+            .order("nome")
+            .limit(limit),
+        KIT_LIST_SELECT,
+      ),
     ]);
     const map = new Map<string, KitSummary>();
-    for (const row of [...(byNome.data ?? []), ...(bySlug.data ?? [])] as KitRowWithItems[]) {
+    const rows = [
+      ...((byNome.data ?? []) as KitRowWithItems[]),
+      ...((bySlug.data ?? []) as KitRowWithItems[]),
+    ];
+    for (const row of rows) {
       const summary = mapKitSummary(row);
       if (summary && summary.itemCount > 0) map.set(summary.id, summary);
     }
@@ -88,9 +99,11 @@ export async function getPublishedKits(categoriaSlug?: string | null): Promise<K
       if (!cat) return [];
       categoriaId = cat.id as string;
     }
-    let query = supabase.from("kits").select(KIT_LIST_SELECT).eq("status", KIT_STATUS_PUBLISHED);
-    if (categoriaId) query = query.eq("categoria_id", categoriaId);
-    const { data, error } = await query.order("nome");
+    const { data, error } = await selectKits((columns) => {
+      let query = supabase.from("kits").select(columns).eq("status", KIT_STATUS_PUBLISHED);
+      if (categoriaId) query = query.eq("categoria_id", categoriaId);
+      return query.order("nome");
+    }, KIT_LIST_SELECT);
     if (error || !data) return [];
     return (data as KitRowWithItems[])
       .map((row) => mapKitSummary(row))

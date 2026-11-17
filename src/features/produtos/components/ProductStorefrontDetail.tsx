@@ -57,8 +57,6 @@ export function ProductStorefrontDetail({
     produto.desconto_cartao_percent,
   );
   const pixDestaque = produto.desconto_pix_percent > 0;
-  /** Comparado ao preço no cartão, que é o valor mostrado logo abaixo. */
-  const economiaPix = pixDestaque ? Math.max(0, Math.round((precoCartao - precoPix) * 100) / 100) : 0;
 
   return (
     <div className="flex min-h-dvh flex-col bg-store-cream font-sans text-store-navy">
@@ -102,11 +100,6 @@ export function ProductStorefrontDetail({
                   </p>
                   <p className="mb-0.5 text-sm font-semibold text-orange-500 sm:text-base">no PIX</p>
                 </div>
-                {economiaPix > 0 ? (
-                  <p className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800 ring-1 ring-emerald-200">
-                    Você economiza <span className="font-bold">{money.format(economiaPix)}</span> pagando no PIX
-                  </p>
-                ) : null}
                 <p className={`text-sm font-semibold ${outOfStock ? "text-red-700" : "text-emerald-700"}`}>
                   {stockText}
                 </p>

@@ -32,6 +32,7 @@ export function KitItemsPicker({
   initialItems,
   tipoDesconto,
   valorDesconto,
+  valorDescontoCartao = null,
   precoFinal,
   onItemsChange,
   hideSummary = false,
@@ -40,6 +41,8 @@ export function KitItemsPicker({
   initialItems: KitPickerItem[];
   tipoDesconto: KitDiscountType;
   valorDesconto: number;
+  /** Percentual no cartão. Nulo = mesmo preço do kit (sem split PIX/cartão). */
+  valorDescontoCartao?: number | null;
   precoFinal: number | null;
   onItemsChange?: (items: KitPickerItem[]) => void;
   /** Esconde o resumo quando o preço depende de escolhas do cliente (mostrado no editor de escolhas). */
@@ -67,6 +70,12 @@ export function KitItemsPicker({
       })),
     });
   }, [items, byId, tipoDesconto, valorDesconto, precoFinal]);
+
+  const precoCartao =
+    tipoDesconto === "percentual" && valorDescontoCartao != null
+      ? Math.round(pricing.precoNormal * (1 - Math.min(100, Math.max(0, valorDescontoCartao)) / 100) * 100) / 100
+      : null;
+  const economiaCartao = precoCartao == null ? null : Math.max(0, Math.round((pricing.precoNormal - precoCartao) * 100) / 100);
 
   const filtered = useMemo(() => {
     const term = fold(q.trim());
@@ -108,13 +117,24 @@ export function KitItemsPicker({
             <dd className="font-medium tabular-nums">{money.format(pricing.precoNormal)}</dd>
           </div>
           <div>
-            <dt className="text-xs text-gray-500">Preço do kit</dt>
+            <dt className="text-xs text-gray-500">{precoCartao == null ? "Preço do kit" : "No PIX"}</dt>
             <dd className="font-semibold tabular-nums text-admin-accent">{money.format(pricing.precoKit)}</dd>
+            {precoCartao != null ? (
+              <dd className="text-xs tabular-nums text-emerald-700">Economia de {money.format(pricing.economia)}</dd>
+            ) : null}
           </div>
-          <div>
-            <dt className="text-xs text-gray-500">Economia</dt>
-            <dd className="font-medium tabular-nums text-emerald-700">{money.format(pricing.economia)}</dd>
-          </div>
+          {precoCartao == null ? (
+            <div>
+              <dt className="text-xs text-gray-500">Economia</dt>
+              <dd className="font-medium tabular-nums text-emerald-700">{money.format(pricing.economia)}</dd>
+            </div>
+          ) : (
+            <div>
+              <dt className="text-xs text-gray-500">No cartão</dt>
+              <dd className="font-semibold tabular-nums text-gray-900">{money.format(precoCartao)}</dd>
+              <dd className="text-xs tabular-nums text-emerald-700">Economia de {money.format(economiaCartao ?? 0)}</dd>
+            </div>
+          )}
         </dl>
       </div>
 

@@ -136,12 +136,29 @@ export async function updateKit(
   if (exErr) return { ok: false, message: exErr.message };
   if (!existing) return { ok: false, message: "Kit não encontrado." };
 
+  let valor_desconto_cartao: number | null = null;
   if (usa_desconto_padrao) {
     // Guarda o % PIX padrão no kit para listagens/cards; o checkout usa a config global.
     const { data: cfg } = await supabase.from("kit_combo").select("kit_desconto_pix").eq("id", 1).maybeSingle();
     tipo_desconto = "percentual";
     valor_desconto = Number(cfg?.kit_desconto_pix ?? 12);
     preco_final = null;
+  } else if (tipo_desconto === "percentual") {
+    if (valor_desconto > 100) {
+      return { ok: false, message: "O percentual no PIX não pode passar de 100%." };
+    }
+    const cartaoRaw = String(formData.get("valor_desconto_cartao") ?? "").replace(",", ".").trim();
+    const cartao = cartaoRaw === "" ? valor_desconto : Number.parseFloat(cartaoRaw);
+    if (Number.isNaN(cartao) || cartao < 0 || cartao > 100) {
+      return { ok: false, message: "Percentual no cartão inválido." };
+    }
+    if (cartao > valor_desconto) {
+      return {
+        ok: false,
+        message: "O desconto no cartão não pode ser maior que o do PIX. No PIX o kit fica mais em conta.",
+      };
+    }
+    valor_desconto_cartao = cartao;
   }
 
   const status = parseKitStatus(existing.status);
@@ -178,6 +195,7 @@ export async function updateKit(
       imagem,
       tipo_desconto,
       valor_desconto: tipo_desconto === "preco_fixo" ? 0 : valor_desconto,
+      valor_desconto_cartao: tipo_desconto === "percentual" && !usa_desconto_padrao ? valor_desconto_cartao : null,
       preco_final: tipo_desconto === "preco_fixo" ? preco_final : null,
       seo_title,
       seo_description,
@@ -189,6 +207,13 @@ export async function updateKit(
   if (updErr) {
     if (updErr.code === "23505") {
       return { ok: false, message: "Já existe um kit com este slug." };
+    }
+    if (updErr.message.includes("valor_desconto_cartao")) {
+      return {
+        ok: false,
+        message:
+          "O banco ainda não tem a coluna do desconto no cartão. Rode a migration supabase/migrations/20261117150000_kits_desconto_cartao_proprio.sql no SQL Editor do Supabase e salve de novo.",
+      };
     }
     return { ok: false, message: updErr.message };
   }

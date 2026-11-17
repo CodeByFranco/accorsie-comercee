@@ -23,6 +23,8 @@ export type KitEditValues = {
   imagem: string;
   tipo_desconto: KitDiscountType;
   valor_desconto: number;
+  /** Percentual no cartão. Nulo = igual ao percentual no PIX. */
+  valor_desconto_cartao: number | null;
   preco_final: number | null;
   seo_title: string;
   seo_description: string;
@@ -55,6 +57,9 @@ export function KitEditForm({
   const [tipo, setTipo] = useState<KitDiscountType>(kit.tipo_desconto);
   const [usaPadrao, setUsaPadrao] = useState(kit.usa_desconto_padrao);
   const [valorDesconto, setValorDesconto] = useState(kit.valor_desconto);
+  const [valorDescontoCartao, setValorDescontoCartao] = useState(
+    kit.valor_desconto_cartao ?? kit.valor_desconto,
+  );
   const [precoFinal, setPrecoFinal] = useState(kit.preco_final);
   const [nome, setNome] = useState(kit.nome);
   const [slug, setSlug] = useState(kit.slug);
@@ -210,17 +215,56 @@ export function KitEditForm({
                 />
                 <input type="hidden" name="valor_desconto" value={0} />
               </div>
+            ) : tipoEfetivo === "percentual" ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="valor_desconto" className="text-sm font-medium text-gray-700">
+                    Percentual no PIX (%)
+                  </label>
+                  <input
+                    id="valor_desconto"
+                    name="valor_desconto"
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.01"
+                    required={fieldsRequired && !usaPadrao}
+                    value={valorDesconto}
+                    onChange={(e) => setValorDesconto(Number(e.target.value) || 0)}
+                    className={fieldClass}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="valor_desconto_cartao" className="text-sm font-medium text-gray-700">
+                    Percentual no cartão (%)
+                  </label>
+                  <input
+                    id="valor_desconto_cartao"
+                    name="valor_desconto_cartao"
+                    type="number"
+                    min={0}
+                    max={100}
+                    step="0.01"
+                    required={fieldsRequired && !usaPadrao}
+                    value={valorDescontoCartao}
+                    onChange={(e) => setValorDescontoCartao(Number(e.target.value) || 0)}
+                    className={fieldClass}
+                  />
+                </div>
+                <p className="text-xs text-gray-500 sm:col-span-2">
+                  O PIX fica mais em conta: o percentual do cartão não pode ser maior que o do PIX.
+                </p>
+              </div>
             ) : (
               <div className="flex flex-col gap-1.5">
                 <label htmlFor="valor_desconto" className="text-sm font-medium text-gray-700">
-                  {tipoEfetivo === "percentual" ? "Percentual (%)" : "Valor do desconto (R$)"}
+                  Valor do desconto (R$)
                 </label>
                 <input
                   id="valor_desconto"
                   name="valor_desconto"
                   type="number"
                   min={0}
-                  max={tipoEfetivo === "percentual" ? 100 : undefined}
                   step="0.01"
                   required={fieldsRequired && !usaPadrao}
                   value={valorDesconto}
@@ -236,6 +280,7 @@ export function KitEditForm({
             initialItems={kit.items}
             tipoDesconto={tipoEfetivo}
             valorDesconto={valorDesconto}
+            valorDescontoCartao={tipoEfetivo === "percentual" ? valorDescontoCartao : null}
             precoFinal={precoFinal}
             onItemsChange={setFixedItems}
             hideSummary={temEscolha}

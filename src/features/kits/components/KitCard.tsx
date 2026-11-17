@@ -19,7 +19,8 @@ export function KitCard({ kit, descontoPadrao }: KitCardProps) {
     : kit.precoKit;
   const precoCartao = usaPadrao
     ? r2(kit.precoNormal * (1 - descontoPadrao.kit_cartao / 100))
-    : kit.precoKit;
+    : kit.precoCartao;
+  const pixMaisBarato = precoPix + 0.009 < precoCartao;
 
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-sm border border-store-navy/10 bg-white shadow-sm">
@@ -54,11 +55,13 @@ export function KitCard({ kit, descontoPadrao }: KitCardProps) {
               <p className="text-lg font-bold tabular-nums text-store-navy sm:text-xl">
                 {kit.temEscolha ? <span className="text-xs font-semibold text-store-navy/60">A partir de </span> : null}
                 {money.format(kit.precoKit)}
+                {pixMaisBarato ? <span className="ml-1.5 text-xs font-semibold text-store-accent">no PIX</span> : null}
               </p>
               {kit.economia > 0 ? (
                 <p className="text-xs font-semibold text-emerald-800">
                   {kit.temEscolha ? "Economize a partir de " : "Economia de "}
                   {money.format(kit.economia)}
+                  {pixMaisBarato ? " no PIX" : ""}
                 </p>
               ) : null}
               <CartaoParcelamentoLinha amount={precoCartao} />

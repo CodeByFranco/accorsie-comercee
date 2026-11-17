@@ -51,6 +51,7 @@ export type KitRowWithItems = {
   imagem: string | null;
   tipo_desconto: string | null;
   valor_desconto: number | string | null;
+  valor_desconto_cartao?: number | string | null;
   preco_final: number | string | null;
   usa_desconto_padrao?: boolean | null;
   seo_title?: string | null;
@@ -148,12 +149,20 @@ export function mapKitSummary(row: KitRowWithItems): KitSummary | null {
   const escolhas = mapKitChoices(row.kit_items);
   // Escolha sem nenhuma opção disponível torna o kit incomprável.
   if (escolhas.some((c) => c.opcoes.length === 0)) return null;
+  const tipo = parseKitDiscountType(row.tipo_desconto);
+  const valorDesconto = Number(row.valor_desconto) || 0;
   const pricing = computeKitPricing({
-    tipo_desconto: parseKitDiscountType(row.tipo_desconto),
-    valor_desconto: Number(row.valor_desconto) || 0,
+    tipo_desconto: tipo,
+    valor_desconto: valorDesconto,
     preco_final: row.preco_final != null ? Number(row.preco_final) : null,
     items: kitPricingLines(items, escolhas),
   });
+  const pctCartao =
+    tipo === "percentual"
+      ? Math.min(100, Math.max(0, row.valor_desconto_cartao == null ? valorDesconto : Number(row.valor_desconto_cartao) || 0))
+      : null;
+  const precoCartao =
+    pctCartao == null ? pricing.precoKit : round2Money(pricing.precoNormal * (1 - pctCartao / 100));
   return {
     id: row.id,
     slug: row.slug.trim(),
@@ -161,6 +170,7 @@ export function mapKitSummary(row: KitRowWithItems): KitSummary | null {
     imagem: row.imagem ? resolveProductImagePublicUrl(row.imagem) : null,
     precoNormal: pricing.precoNormal,
     precoKit: pricing.precoKit,
+    precoCartao,
     economia: pricing.economia,
     itemCount: items.length + escolhas.length,
     temEscolha: escolhas.length > 0,
@@ -177,12 +187,13 @@ function round2Money(n: number): number {
 export function kitPrecoCartaoInicial(kit: {
   precoNormal: number;
   precoKit: number;
+  precoCartao: number;
   usa_desconto_padrao: boolean;
   descontoPadrao: KitDescontoPadrao | null;
 }): number {
   const descontoPadrao = kit.descontoPadrao;
   if (!kit.usa_desconto_padrao || descontoPadrao == null) {
-    return kit.precoKit;
+    return kit.precoCartao;
   }
   return round2Money(kit.precoNormal * (1 - descontoPadrao.kit_cartao / 100));
 }
@@ -197,6 +208,10 @@ export function mapKitDetail(row: KitRowWithItems): KitDetail | null {
     seo_description: row.seo_description ?? null,
     tipo_desconto: parseKitDiscountType(row.tipo_desconto),
     valor_desconto: Number(row.valor_desconto) || 0,
+    valor_desconto_cartao:
+      row.valor_desconto_cartao == null || row.valor_desconto_cartao === ""
+        ? null
+        : Number(row.valor_desconto_cartao),
     preco_final: row.preco_final != null ? Number(row.preco_final) : null,
     status: parseKitStatus(row.status),
     items: mapKitItems(row.kit_items),
@@ -218,13 +233,31 @@ const KIT_ITEMS_EMBED = `
 `;
 
 export const KIT_LIST_SELECT = `
-  id, nome, slug, descricao, imagem, tipo_desconto, valor_desconto, preco_final, status, usa_desconto_padrao,
+  id, nome, slug, descricao, imagem, tipo_desconto, valor_desconto, valor_desconto_cartao, preco_final, status, usa_desconto_padrao,
   categorias ( id, nome, slug ),
   ${KIT_ITEMS_EMBED}
 `;
 
+/** Enquanto a coluna nova não existe no banco, a listagem segue com o mesmo % no PIX e no cartão. */
+export function withoutCartaoColumn(columns: string) {
+  return columns.replace(/valor_desconto_cartao,\s*/g, "");
+}
+
+export function missingCartaoColumn(error: { message?: string } | null | undefined) {
+  return !!error?.message?.includes("valor_desconto_cartao");
+}
+
+export async function selectKits(
+  run: (columns: string) => PromiseLike<{ data: unknown; error: { message: string } | null }>,
+  columns: string,
+): Promise<{ data: unknown; error: { message: string } | null }> {
+  const first = await run(columns);
+  if (missingCartaoColumn(first.error)) return run(withoutCartaoColumn(columns));
+  return first;
+}
+
 export const KIT_DETAIL_SELECT = `
-  id, nome, slug, descricao, imagem, tipo_desconto, valor_desconto, preco_final, usa_desconto_padrao,
+  id, nome, slug, descricao, imagem, tipo_desconto, valor_desconto, valor_desconto_cartao, preco_final, usa_desconto_padrao,
   seo_title, seo_description, status,
   categorias ( id, nome, slug ),
   ${KIT_ITEMS_EMBED}

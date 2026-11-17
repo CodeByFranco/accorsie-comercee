@@ -25,19 +25,8 @@ export function CombosExemploHomeSection({
   if (kitsFiltro.length === 0 && kitsSuspensao.length === 0) return null;
 
   return (
-    <section className={`bg-store-cream py-8 sm:py-10 ${storeShellInset}`} aria-labelledby="home-combos-heading">
+    <section className={`bg-store-cream py-8 sm:py-10 ${storeShellInset}`}>
       <div className={`${storeShellContent} space-y-10`}>
-        <header>
-          <h2 id="home-combos-heading" className="text-2xl font-bold tracking-tight text-black sm:text-3xl">
-            Veja como funciona o combo
-          </h2>
-          <p className="mt-2 max-w-2xl text-sm text-store-navy-muted">
-            O kit de filtros é a peça base; na página do produto você adiciona o óleo e a quantidade. Já os kits de
-            suspensão já vêm montados com amortecedores, batentes e demais itens do conjunto.
-          </p>
-          <div className="mt-2 h-1 w-14 rounded-[1px] bg-store-navy sm:w-16" aria-hidden />
-        </header>
-
         {kitsFiltro.length > 0 ? (
           <div>
             <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
