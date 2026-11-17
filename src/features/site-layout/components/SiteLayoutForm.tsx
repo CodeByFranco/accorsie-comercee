@@ -4,6 +4,11 @@ import Image from "next/image";
 import { useActionState, useRef, useState } from "react";
 
 import { saveSiteLayout, type SaveSiteLayoutState } from "@/features/site-layout/services/saveSiteLayout";
+import {
+  SITE_HOME_BANNER_COUNT,
+  SITE_HOME_BANNER_FIELDS,
+  siteLayoutBannerUrlsFromRow,
+} from "@/features/site-layout/utils/homeBannerUrls";
 import { uploadSiteBannerFile } from "@/services/storage/uploadSiteBanner";
 import type { SiteLayoutRow } from "@/types/siteLayout";
 
@@ -12,33 +17,34 @@ type SiteLayoutFormProps = {
 };
 
 export function SiteLayoutForm({ initial }: SiteLayoutFormProps) {
-  const [banner1, setBanner1] = useState(initial.banner_1_url.trim());
-  const [banner2, setBanner2] = useState(initial.banner_2_url.trim());
-  const [busy1, setBusy1] = useState(false);
-  const [busy2, setBusy2] = useState(false);
-  const [err1, setErr1] = useState<string | null>(null);
-  const [err2, setErr2] = useState<string | null>(null);
-  const file1Ref = useRef<HTMLInputElement>(null);
-  const file2Ref = useRef<HTMLInputElement>(null);
+  const [banners, setBanners] = useState(() => siteLayoutBannerUrlsFromRow(initial, { keepEmpty: true }));
+  const [busy, setBusy] = useState(() => Array.from({ length: SITE_HOME_BANNER_COUNT }, () => false));
+  const [errs, setErrs] = useState<(string | null)[]>(() =>
+    Array.from({ length: SITE_HOME_BANNER_COUNT }, () => null)
+  );
+  const fileRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const [state, formAction, pending] = useActionState(saveSiteLayout, null as SaveSiteLayoutState | null);
 
-  const onPick = async (slot: 1 | 2, file: File | null) => {
+  const anyBusy = busy.some(Boolean);
+
+  const onPick = async (index: number, file: File | null) => {
     if (!file) return;
-    const setBusy = slot === 1 ? setBusy1 : setBusy2;
-    const setErr = slot === 1 ? setErr1 : setErr2;
-    const prev = slot === 1 ? banner1 : banner2;
-    setErr(null);
-    setBusy(true);
+    const prev = banners[index] ?? "";
+    setErrs((e) => e.map((v, i) => (i === index ? null : v)));
+    setBusy((b) => b.map((v, i) => (i === index ? true : v)));
     try {
       const url = await uploadSiteBannerFile(file, { replaceRef: prev || null });
-      if (slot === 1) setBanner1(url);
-      else setBanner2(url);
+      setBanners((current) => current.map((u, i) => (i === index ? url : u)));
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Falha no envio.");
+      setErrs((errs) => errs.map((v, i) => (i === index ? (e instanceof Error ? e.message : "Falha no envio.") : v)));
     } finally {
-      setBusy(false);
+      setBusy((b) => b.map((v, i) => (i === index ? false : v)));
     }
+  };
+
+  const clearBanner = (index: number) => {
+    setBanners((current) => current.map((u, i) => (i === index ? "" : u)));
   };
 
   return (
@@ -54,12 +60,16 @@ export function SiteLayoutForm({ initial }: SiteLayoutFormProps) {
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
         <h2 className="text-base font-semibold text-gray-900">Banners da página inicial</h2>
         <p className="mt-1 text-sm text-gray-600">
-          Envie até dois arquivos (recomendado 1920×550 px). Na loja eles
-          alternam automaticamente na faixa abaixo da barra de navegação.
+          Envie até {SITE_HOME_BANNER_COUNT} arquivos (recomendado 1920×550 px). Na loja eles alternam
+          automaticamente na faixa abaixo da barra de navegação. Os slots vazios são ignorados. Os banners 1 e 2 que
+          você já enviou permanecem aqui — só use &quot;Salvar&quot; depois de conferir as prévias.
         </p>
 
         {state?.ok === true && (
-          <p className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900" role="status">
+          <p
+            className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
+            role="status"
+          >
             {state.message}
           </p>
         )}
@@ -70,92 +80,72 @@ export function SiteLayoutForm({ initial }: SiteLayoutFormProps) {
         )}
 
         <form action={formAction} className="mt-6 space-y-8">
-          <input type="hidden" name="banner_1_url" value={banner1} />
-          <input type="hidden" name="banner_2_url" value={banner2} />
+          {SITE_HOME_BANNER_FIELDS.map((field, index) => (
+            <input key={field} type="hidden" name={field} value={banners[index] ?? ""} />
+          ))}
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            <div>
-              <p className="text-sm font-medium text-gray-800">Banner 1</p>
-              <div className="mt-2 flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 shadow-sm transition hover:bg-gray-50 disabled:opacity-60"
-                  disabled={busy1 || pending}
-                  onClick={() => file1Ref.current?.click()}
-                >
-                  {busy1 ? "Enviando…" : "Escolher imagem"}
-                </button>
-                <input
-                  ref={file1Ref}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  className="sr-only"
-                  onChange={(e) => void onPick(1, e.target.files?.[0] ?? null)}
-                />
-              </div>
-              {err1 && <p className="mt-2 text-sm text-red-700">{err1}</p>}
-              {banner1 ? (
-                <div className="mt-3 space-y-2">
-                  <div className="relative aspect-[1920/550] w-full max-w-xl overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
-                    <Image src={banner1} alt="" fill className="object-contain" unoptimized />
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: SITE_HOME_BANNER_COUNT }, (_, index) => {
+              const url = banners[index] ?? "";
+              const slotBusy = busy[index];
+              const err = errs[index];
+              const isFirst = index === 0;
+              return (
+                <div key={index}>
+                  <p className="text-sm font-medium text-gray-800">
+                    Banner {index + 1}
+                    {!isFirst ? <span className="font-normal text-gray-500"> (opcional)</span> : null}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 shadow-sm transition hover:bg-gray-50 disabled:opacity-60"
+                      disabled={slotBusy || pending}
+                      onClick={() => fileRefs.current[index]?.click()}
+                    >
+                      {slotBusy ? "Enviando…" : "Escolher imagem"}
+                    </button>
+                    <input
+                      ref={(el) => {
+                        fileRefs.current[index] = el;
+                      }}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="sr-only"
+                      onChange={(e) => void onPick(index, e.target.files?.[0] ?? null)}
+                    />
                   </div>
-                  <button
-                    type="button"
-                    className="text-sm font-medium text-gray-600 underline-offset-2 hover:text-gray-900 hover:underline"
-                    onClick={() => setBanner1("")}
-                  >
-                    Remover imagem
-                  </button>
+                  {err ? <p className="mt-2 text-sm text-red-700">{err}</p> : null}
+                  {url ? (
+                    <div className="mt-3 space-y-2">
+                      <div className="relative aspect-[1920/550] w-full overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
+                        <Image src={url} alt="" fill className="object-contain" unoptimized />
+                      </div>
+                      <button
+                        type="button"
+                        className="text-sm font-medium text-gray-600 underline-offset-2 hover:text-gray-900 hover:underline"
+                        onClick={() => clearBanner(index)}
+                      >
+                        Remover imagem
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-sm text-gray-500">
+                      {isFirst
+                        ? "Nenhuma imagem (usa o banner padrão da loja se todos estiverem vazios)."
+                        : "Vazio — não entra na rotação."}
+                    </p>
+                  )}
                 </div>
-              ) : (
-                <p className="mt-3 text-sm text-gray-500">Nenhuma imagem (usa o banner padrão da loja se ambos estiverem vazios).</p>
-              )}
-            </div>
-
-            <div>
-              <p className="text-sm font-medium text-gray-800">Banner 2</p>
-              <div className="mt-2 flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 shadow-sm transition hover:bg-gray-50 disabled:opacity-60"
-                  disabled={busy2 || pending}
-                  onClick={() => file2Ref.current?.click()}
-                >
-                  {busy2 ? "Enviando…" : "Escolher imagem"}
-                </button>
-                <input
-                  ref={file2Ref}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  className="sr-only"
-                  onChange={(e) => void onPick(2, e.target.files?.[0] ?? null)}
-                />
-              </div>
-              {err2 && <p className="mt-2 text-sm text-red-700">{err2}</p>}
-              {banner2 ? (
-                <div className="mt-3 space-y-2">
-                  <div className="relative aspect-[1920/550] w-full max-w-xl overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
-                    <Image src={banner2} alt="" fill className="object-contain" unoptimized />
-                  </div>
-                  <button
-                    type="button"
-                    className="text-sm font-medium text-gray-600 underline-offset-2 hover:text-gray-900 hover:underline"
-                    onClick={() => setBanner2("")}
-                  >
-                    Remover imagem
-                  </button>
-                </div>
-              ) : (
-                <p className="mt-3 text-sm text-gray-500">Opcional — com dois banners, a home alterna entre eles.</p>
-              )}
-            </div>
+              );
+            })}
           </div>
 
           <div className="flex flex-wrap gap-3 border-t border-gray-100 pt-6">
             <button
               type="submit"
               className="rounded-lg bg-admin-accent px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1857d1] disabled:opacity-60"
-              disabled={pending || busy1 || busy2}
+              disabled={pending || anyBusy}
             >
               {pending ? "Salvando…" : "Salvar layout"}
             </button>

@@ -1,5 +1,6 @@
 import { SiteLayoutForm } from "@/features/site-layout/components/SiteLayoutForm";
 import { getSiteLayout } from "@/features/site-layout/services/getSiteLayout";
+import { emptySiteLayoutRow } from "@/features/site-layout/utils/homeBannerUrls";
 import type { SiteLayoutRow } from "@/types/siteLayout";
 
 export const metadata = {
@@ -14,12 +15,7 @@ export default async function AdminSiteLayoutPage() {
     initial = await getSiteLayout();
   } catch (e) {
     loadError = e instanceof Error ? e.message : "Erro ao carregar.";
-    initial = {
-      id: "default",
-      banner_1_url: "",
-      banner_2_url: "",
-      updated_at: new Date(0).toISOString(),
-    };
+    initial = emptySiteLayoutRow();
   }
 
   return (
