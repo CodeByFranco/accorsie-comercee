@@ -22,7 +22,7 @@ const copy: Record<
 > = {
   success: {
     title: "Pagamento em análise ou aprovado",
-    body: "Obrigado pela compra. O status final do pedido é confirmado pelo Mercado Pago e pode levar alguns instantes. Você pode acompanhar em Minha conta quando os pedidos estiverem disponíveis.",
+    body: "Obrigado pela compra. O status final do pedido é confirmado pelo Mercado Pago e pode levar alguns instantes. Assim que o pagamento for confirmado, você acumula 2,5% do valor em cashback para usar nas próximas compras (veja em Minha conta).",
     tone: "ok",
   },
   pending: {
@@ -118,17 +118,17 @@ export default async function CheckoutRetornoPage({
                 Continuar comprando
               </Link>
             </div>
-            <p className="mt-6 border-t border-store-line/60 pt-4 text-center text-xs leading-relaxed text-store-navy/70">
-              Ficou com alguma dúvida sobre o seu pedido?{" "}
+            <p className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-center text-sm leading-relaxed text-store-navy">
+              Ficou com alguma dúvida sobre pedido, kit ou pagamento?{" "}
               <a
                 href="https://wa.me/5554999343052"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-semibold text-emerald-700 underline-offset-2 hover:underline"
+                className="font-bold text-emerald-800 underline-offset-2 hover:underline"
               >
-                Fale com o vendedor pelo WhatsApp
+                Entre em contato com o vendedor pelo WhatsApp
               </a>
-              .
+              . Estamos prontos para ajudar.
             </p>
           </div>
         </div>
