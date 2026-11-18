@@ -67,6 +67,7 @@ export default async function AdminPedidoDetailPage({ params }: PageProps) {
         logisticaStatus={pedido.logistica_status}
         retiradaLoja={retirada}
         etiquetaUrl={pedido.melhor_envio_etiqueta_url}
+        melhorEnvioId={pedido.melhor_envio_id}
       />
 
       <div className="grid gap-5 xl:grid-cols-[1fr_22rem]">
