@@ -4,6 +4,7 @@ import {
   addShipmentToMelhorEnvioCart,
   ensureMelhorEnvioAccessToken,
   generateShipmentLabel,
+  requestShipmentDocuments,
   purchaseShipment,
   quoteShipment,
 } from "@/services/melhorEnvio";
@@ -372,13 +373,18 @@ export async function executarFluxoEtiquetaMelhorEnvioAutomatico(
     };
   }
 
+  // O `generate` não devolve o PDF; o link de impressão vem do `print`. Se ainda não estiver pronto,
+  // o admin busca depois pelo botão "Imprimir etiqueta".
+  const docs = await requestShipmentDocuments(melhorEnvioId, { token });
+  const docsOk = docs.ok ? docs : null;
+
   const { error: finalErr } = await admin
     .from("pedidos")
     .update({
       melhor_envio_id: melhorEnvioId,
-      melhor_envio_etiqueta_url: etiqueta.etiquetaUrl ?? null,
-      rastreio_codigo: etiqueta.rastreioCodigo ?? compra.rastreioCodigo ?? null,
-      rastreio_url: etiqueta.rastreioUrl ?? compra.rastreioUrl ?? null,
+      melhor_envio_etiqueta_url: docsOk?.etiquetaUrl ?? etiqueta.etiquetaUrl ?? null,
+      rastreio_codigo: docsOk?.rastreioCodigo ?? etiqueta.rastreioCodigo ?? compra.rastreioCodigo ?? null,
+      rastreio_url: docsOk?.rastreioUrl ?? etiqueta.rastreioUrl ?? compra.rastreioUrl ?? null,
       transportadora_nome: opcao.nome,
       frete_provedor: "melhor_envio",
       logistica_status: "em_separacao",
@@ -395,7 +401,7 @@ export async function executarFluxoEtiquetaMelhorEnvioAutomatico(
   return {
     ok: true,
     melhorEnvioId,
-    etiquetaUrl: etiqueta.etiquetaUrl,
+    etiquetaUrl: docsOk?.etiquetaUrl ?? etiqueta.etiquetaUrl,
     message: "Etiqueta gerada. Envio comprado no Melhor Envio e dados salvos no pedido.",
   };
 }

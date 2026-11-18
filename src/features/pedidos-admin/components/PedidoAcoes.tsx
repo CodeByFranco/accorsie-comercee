@@ -7,6 +7,7 @@ import {
   fluxoEtiquetaMelhorEnvioAutomaticoAction,
   type FluxoEtiquetaMelhorEnvioActionState,
 } from "@/features/pedidos-admin/services/fluxoEtiquetaMelhorEnvioAction";
+import { imprimirDocumentosMelhorEnvioAction } from "@/features/pedidos-admin/services/melhorEnvioLogisticaActions";
 import { logisticaLabel } from "@/features/pedidos-admin/utils/pedidoAdminStatus";
 import type { PedidoLogisticaStatus, PedidoStatus } from "@/types/pedido";
 
@@ -23,12 +24,14 @@ export function PedidoAcoes({
   logisticaStatus,
   retiradaLoja,
   etiquetaUrl,
+  melhorEnvioId,
 }: {
   pedidoId: string;
   status: PedidoStatus;
   logisticaStatus: PedidoLogisticaStatus;
   retiradaLoja: boolean;
   etiquetaUrl: string | null;
+  melhorEnvioId: string | null;
 }) {
   const [erro, setErro] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -37,7 +40,21 @@ export function PedidoAcoes({
     null,
   );
 
-  const urlEtiqueta = etq?.etiquetaUrl ?? etiquetaUrl;
+  const [docs, docsAction, docsPending] = useActionState(imprimirDocumentosMelhorEnvioAction, null);
+
+  const urlEtiqueta = docs?.etiquetaUrl ?? etq?.etiquetaUrl ?? etiquetaUrl;
+  /** Envio já criado no Melhor Envio, mas o link do PDF ainda não foi buscado. */
+  const precisaBuscarEtiqueta = !urlEtiqueta && Boolean(melhorEnvioId);
+
+  const buscarEtiqueta = (label: string, className: string) => (
+    <form action={docsAction}>
+      <input type="hidden" name="pedido_id" value={pedidoId} />
+      <input type="hidden" name="melhor_envio_id" value={melhorEnvioId ?? ""} />
+      <button type="submit" className={className} disabled={docsPending}>
+        {docsPending ? "Buscando etiqueta…" : label}
+      </button>
+    </form>
+  );
   const pago = status === "pago";
 
   const definir = (input: { logisticaStatus?: PedidoLogisticaStatus; retiradaLoja?: boolean }) => {
@@ -79,6 +96,15 @@ export function PedidoAcoes({
         <a href={urlEtiqueta} target="_blank" rel="noreferrer" className={btnPrimary}>
           Imprimir etiqueta
         </a>
+        <button type="button" className={btnSecondary} disabled={pending} onClick={() => definir({ logisticaStatus: "postado" })}>
+          Marcar como postado
+        </button>
+      </>
+    );
+  } else if (precisaBuscarEtiqueta) {
+    principal = (
+      <>
+        {buscarEtiqueta("Imprimir etiqueta", btnPrimary)}
         <button type="button" className={btnSecondary} disabled={pending} onClick={() => definir({ logisticaStatus: "postado" })}>
           Marcar como postado
         </button>
@@ -132,12 +158,28 @@ export function PedidoAcoes({
         </div>
       </div>
 
+      {precisaBuscarEtiqueta && !retiradaLoja && (logisticaStatus === "postado" || logisticaStatus === "entregue") ? (
+        <div className="mt-3">
+          {buscarEtiqueta("Reimprimir etiqueta", "text-sm font-medium text-admin-accent hover:underline disabled:opacity-60")}
+        </div>
+      ) : null}
+      {docs?.declaracaoConteudoUrl ? (
+        <a href={docs.declaracaoConteudoUrl} target="_blank" rel="noreferrer" className="mt-3 ml-4 inline-block text-sm font-medium text-admin-accent hover:underline">
+          Declaração de conteúdo
+        </a>
+      ) : null}
+
       {urlEtiqueta && !retiradaLoja && (logisticaStatus === "postado" || logisticaStatus === "entregue") ? (
         <a href={urlEtiqueta} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-medium text-admin-accent hover:underline">
           Reimprimir etiqueta
         </a>
       ) : null}
 
+      {docs?.error ? (
+        <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900" role="alert">
+          {docs.error}
+        </p>
+      ) : null}
       {erro || etq?.error ? (
         <p className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900" role="alert">
           {erro ?? etq?.error}
