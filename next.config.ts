@@ -32,7 +32,7 @@ function contentSecurityPolicy(): string {
     : "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'";
   const connectDev =
     " http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*";
-  const connectSrc = `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.mercadopago.com https://staticimgly.com${
+  const connectSrc = `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.mercadopago.com https://staticimgly.com https://viacep.com.br https://brasilapi.com.br${
     isDev ? connectDev : ""
   }`;
   return [

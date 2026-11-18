@@ -1,5 +1,7 @@
 "use client";
 
+import { PedidosListSection } from "@/features/pedidos/components/PedidosListSection";
+import type { PedidoListRow } from "@/types/pedido";
 import Link from "next/link";
 import { useActionState, useId, useMemo, useRef, useState } from "react";
 
@@ -35,6 +37,7 @@ type AccountAreaContentProps = {
   }[];
   initialSection?: AccountSectionId;
   showAdminLink?: boolean;
+  pedidos: PedidoListRow[];
 };
 
 const initialUpdateState: UpdateProfileNomeState = null;
@@ -46,6 +49,7 @@ export function AccountAreaContent({
   garageVehicles,
   initialSection = "conta",
   showAdminLink = false,
+  pedidos,
 }: AccountAreaContentProps) {
   const baseId = useId();
   const idNome = `${baseId}-nome`;
@@ -565,19 +569,7 @@ export function AccountAreaContent({
     </div>
   );
 
-  const pedidosPanel = (
-    <>
-      <p className="text-sm text-store-navy-muted">
-        Quando você finalizar compras neste site, o histórico e o status dos pedidos aparecerão aqui.
-      </p>
-      <div className="rounded-lg border border-dashed border-store-line/90 bg-store-subtle/20 px-4 py-8 text-center">
-        <p className="text-sm font-medium text-store-navy">Nenhum pedido registrado ainda</p>
-        <p className="mt-2 text-sm text-store-navy-muted">
-          Esta área será preenchida automaticamente após a integração do checkout.
-        </p>
-      </div>
-    </>
-  );
+  const pedidosPanel = <PedidosListSection pedidos={pedidos} />;
 
   const suportePanel = (
     <div className="rounded-lg border border-store-line/70 bg-store-subtle/25 px-4 py-6">
