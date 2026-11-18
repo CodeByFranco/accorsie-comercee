@@ -5,6 +5,8 @@ import type { ReactNode } from "react";
 
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { storeShellContent, storeShellInset } from "@/config/storeShell";
+import { getStoreSiteInstitucional } from "@/features/site-layout/services/getSiteInstitucional";
+import { manifestoBlocks } from "@/features/site-layout/utils/institucional";
 
 const iconProps = {
   viewBox: "0 0 24 24",
@@ -58,7 +60,13 @@ const PILARES: Array<{ icone: ReactNode; titulo: string; texto: string }> = [
   },
 ];
 
-export default function SobrePage() {
+export default async function SobrePage() {
+  const { manifesto_texto } = await getStoreSiteInstitucional();
+  const blocos = manifestoBlocks(manifesto_texto);
+  const destaque = blocos[0];
+  const fecho = blocos.length > 1 ? blocos[blocos.length - 1] : undefined;
+  const meio = blocos.slice(1, fecho ? -1 : undefined);
+
   return (
     <div className="flex min-h-dvh flex-col bg-white text-store-navy">
       <main>
@@ -113,21 +121,62 @@ export default function SobrePage() {
           </ul>
         </section>
 
-        <section className="relative overflow-hidden bg-store-navy text-white">
+        <section aria-labelledby="manifesto-titulo" className="relative overflow-hidden bg-store-navy text-white">
           <div
             aria-hidden
-            className="pointer-events-none absolute -left-2 -top-8 select-none font-serif text-[10rem] leading-none text-white/10 sm:left-6 sm:top-0 sm:text-[14rem]"
-          >
-            “
-          </div>
-          <div className={`relative py-16 sm:py-20 ${storeShellInset}`}>
-            <div className={`${storeShellContent} mx-auto max-w-3xl text-center`}>
-              <p className="text-xs font-bold uppercase tracking-[0.28em] text-store-accent">Manifesto</p>
-              <div className="mx-auto mt-4 h-0.5 w-12 rounded-full bg-store-accent" />
-              <blockquote className="mt-6 text-2xl font-semibold leading-snug sm:text-[2rem] sm:leading-snug">
-                Mais do que fornecer peças, nosso papel é dar segurança na escolha, agilidade no atendimento e
-                confiança em cada solução entregue.
-              </blockquote>
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-store-accent/60 to-transparent"
+          />
+          <div className={`relative py-20 sm:py-28 ${storeShellInset}`}>
+            <div className={`${storeShellContent} mx-auto max-w-2xl text-center`}>
+              <h2 id="manifesto-titulo" className="text-xs font-bold uppercase tracking-[0.32em] text-store-accent">
+                Manifesto
+              </h2>
+              <div className="mx-auto mt-5 h-0.5 w-10 rounded-full bg-store-accent" />
+
+              {destaque ? (
+                <p className="mt-12 text-2xl font-bold leading-snug tracking-tight sm:mt-14 sm:text-[2.1rem] sm:leading-tight">
+                  {destaque.join(" ")}
+                </p>
+              ) : null}
+
+              <div className="mt-14 space-y-14 sm:mt-16 sm:space-y-16">
+                {meio.map((bloco, i) => (
+                  <div key={i} className="space-y-3">
+                    {bloco.map((linha) => (
+                      <p
+                        key={linha}
+                        className={
+                          linha.length <= 60
+                            ? "text-lg font-semibold leading-relaxed text-white sm:text-xl"
+                            : "text-base leading-loose text-white/80 sm:text-lg"
+                        }
+                      >
+                        {linha}
+                      </p>
+                    ))}
+                  </div>
+                ))}
+              </div>
+
+              {fecho ? (
+                <div className="mt-16 sm:mt-20">
+                  <span aria-hidden className="mx-auto block h-1.5 w-1.5 rounded-full bg-store-accent" />
+                  <div className="mt-10 space-y-2">
+                    {fecho.map((linha, i) => (
+                      <p
+                        key={linha}
+                        className={
+                          i === 0
+                            ? "text-xl font-bold leading-snug sm:text-2xl"
+                            : "text-xl font-bold leading-snug text-store-accent sm:text-2xl"
+                        }
+                      >
+                        {linha}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
         </section>
