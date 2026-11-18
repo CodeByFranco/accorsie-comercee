@@ -1,9 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 
 import { storeShellContent, storeShellInset } from "@/config/storeShell";
 import { manifestoBlocks } from "@/features/site-layout/utils/institucional";
 import {
+  fundoEscuro,
   paragrafos,
   safeHref,
   type SobreBloco,
@@ -91,7 +93,16 @@ const fundoClass: Record<SobreFundo, string> = {
   claro: "bg-white text-store-navy",
   cinza: "bg-[#f3f5f9] text-store-navy",
   escuro: "bg-store-navy text-white",
+  personalizado: "",
 };
+
+function fundoProps(b: SobreBloco): { className: string; style?: CSSProperties } {
+  if (b.fundo !== "personalizado") return { className: fundoClass[b.fundo] };
+  return {
+    className: fundoEscuro(b) ? "text-white" : "text-store-navy",
+    style: { backgroundColor: b.fundo_cor },
+  };
+}
 
 function Foto({ url, alt, sizes, priority }: { url: string; alt: string; sizes: string; priority?: boolean }) {
   return (
@@ -108,11 +119,12 @@ function Foto({ url, alt, sizes, priority }: { url: string; alt: string; sizes: 
 }
 
 function ImagemTexto({ b, primeiro }: { b: SobreBlocoImagemTexto; primeiro: boolean }) {
-  const escuro = b.fundo === "escuro";
+  const fp = fundoProps(b);
+  const escuro = fundoEscuro(b);
   const Titulo = primeiro ? "h1" : "h2";
   const href = safeHref(b.botao_link);
   return (
-    <section className={`py-10 sm:py-14 ${storeShellInset} ${fundoClass[b.fundo]}`}>
+    <section className={`py-10 sm:py-14 ${storeShellInset} ${fp.className}`} style={fp.style}>
       <div
         className={`${storeShellContent} grid items-center gap-8 ${b.imagem_url ? "lg:grid-cols-2" : ""} lg:gap-12`}
       >
@@ -161,9 +173,10 @@ function ImagemTexto({ b, primeiro }: { b: SobreBlocoImagemTexto; primeiro: bool
 }
 
 function Pilares({ b }: { b: SobreBlocoPilares }) {
-  const escuro = b.fundo === "escuro";
+  const fp = fundoProps(b);
+  const escuro = fundoEscuro(b);
   return (
-    <section aria-label={b.titulo || "Destaques"} className={`py-10 sm:py-14 ${storeShellInset} ${fundoClass[b.fundo]}`}>
+    <section aria-label={b.titulo || "Destaques"} className={`py-10 sm:py-14 ${storeShellInset} ${fp.className}`} style={fp.style}>
       <div className={storeShellContent}>
         {b.titulo ? <h2 className="mb-6 text-center text-2xl font-black tracking-tight">{b.titulo}</h2> : null}
         <ul className="flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-2.5">
@@ -192,7 +205,8 @@ function Pilares({ b }: { b: SobreBlocoPilares }) {
 }
 
 function Manifesto({ b }: { b: SobreBlocoManifesto }) {
-  const escuro = b.fundo === "escuro";
+  const fp = fundoProps(b);
+  const escuro = fundoEscuro(b);
   const blocos = manifestoBlocks(b.texto);
   const destaque = blocos[0];
   const fecho = blocos.length > 1 ? blocos[blocos.length - 1] : undefined;
@@ -201,7 +215,7 @@ function Manifesto({ b }: { b: SobreBlocoManifesto }) {
   const suave = escuro ? "text-white/80" : "text-store-navy-muted";
 
   return (
-    <section aria-label={b.titulo || "Manifesto"} className={`relative overflow-hidden ${fundoClass[b.fundo]}`}>
+    <section aria-label={b.titulo || "Manifesto"} className={`relative overflow-hidden ${fp.className}`} style={fp.style}>
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-store-accent/60 to-transparent"
@@ -264,10 +278,11 @@ function Manifesto({ b }: { b: SobreBlocoManifesto }) {
 }
 
 function Texto({ b }: { b: SobreBlocoTexto }) {
-  const escuro = b.fundo === "escuro";
+  const fp = fundoProps(b);
+  const escuro = fundoEscuro(b);
   const centro = b.alinhamento === "centro";
   return (
-    <section className={`py-10 sm:py-14 ${storeShellInset} ${fundoClass[b.fundo]}`}>
+    <section className={`py-10 sm:py-14 ${storeShellInset} ${fp.className}`} style={fp.style}>
       <div className={`${storeShellContent} ${centro ? "mx-auto max-w-2xl text-center" : "max-w-3xl"}`}>
         {b.titulo ? <h2 className="text-2xl font-black tracking-tight sm:text-3xl">{b.titulo}</h2> : null}
         <div
@@ -285,10 +300,11 @@ function Texto({ b }: { b: SobreBlocoTexto }) {
 }
 
 function Galeria({ b }: { b: SobreBlocoGaleria }) {
+  const fp = fundoProps(b);
   if (!b.imagens.length) return null;
-  const escuro = b.fundo === "escuro";
+  const escuro = fundoEscuro(b);
   return (
-    <section className={`py-10 sm:py-14 ${storeShellInset} ${fundoClass[b.fundo]}`}>
+    <section className={`py-10 sm:py-14 ${storeShellInset} ${fp.className}`} style={fp.style}>
       <div className={storeShellContent}>
         {b.titulo ? <h2 className="mb-6 text-2xl font-black tracking-tight sm:text-3xl">{b.titulo}</h2> : null}
         <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">

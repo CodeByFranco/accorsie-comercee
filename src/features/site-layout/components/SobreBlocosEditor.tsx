@@ -92,6 +92,18 @@ function EditorBloco({ b, set }: { b: SobreBloco; set: (b: SobreBloco) => void }
           </option>
         ))}
       </select>
+      {b.fundo === "personalizado" ? (
+        <span className="mt-2 flex items-center gap-2">
+          <input
+            type="color"
+            className="h-9 w-12 cursor-pointer rounded border border-gray-300 bg-white p-0.5"
+            value={b.fundo_cor ?? "#ffffff"}
+            onChange={(e) => set({ ...b, fundo_cor: e.target.value })}
+            aria-label="Cor do fundo"
+          />
+          <span className="font-mono text-xs text-gray-600">{b.fundo_cor ?? "#ffffff"}</span>
+        </span>
+      ) : null}
     </Campo>
   );
 

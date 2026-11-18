@@ -1,6 +1,6 @@
 import { DEFAULT_MANIFESTO_TEXTO } from "@/features/site-layout/utils/institucional";
 
-export type SobreFundo = "claro" | "cinza" | "escuro";
+export type SobreFundo = "claro" | "cinza" | "escuro" | "personalizado";
 export type SobreIcone = "escudo" | "raio" | "pessoas" | "estrela" | "chave" | "carro" | "relogio" | "coracao";
 
 export const SOBRE_ICONES: Array<{ value: SobreIcone; label: string }> = [
@@ -18,9 +18,16 @@ export const SOBRE_FUNDOS: Array<{ value: SobreFundo; label: string }> = [
   { value: "claro", label: "Branco" },
   { value: "cinza", label: "Cinza claro" },
   { value: "escuro", label: "Azul escuro" },
+  { value: "personalizado", label: "Outra cor…" },
 ];
 
-type Base = { id: string; visivel: boolean; fundo: SobreFundo };
+type Base = {
+  id: string;
+  visivel: boolean;
+  fundo: SobreFundo;
+  /** Só quando `fundo === "personalizado"` (#rrggbb). */
+  fundo_cor?: string;
+};
 
 export type SobreBlocoImagemTexto = Base & {
   tipo: "imagem_texto";
@@ -156,7 +163,21 @@ export function defaultSobreBlocos(manifestoTexto?: string | null): SobreBloco[]
 const str = (v: unknown, max = 5000) => (typeof v === "string" ? v.slice(0, max) : "");
 const oneOf = <T extends string>(v: unknown, opts: readonly T[], fallback: T): T =>
   opts.includes(v as T) ? (v as T) : fallback;
-const FUNDOS = ["claro", "cinza", "escuro"] as const;
+const FUNDOS = ["claro", "cinza", "escuro", "personalizado"] as const;
+const HEX = /^#[0-9a-f]{6}$/i;
+
+/** Cor clara ou escura? Decide a cor do texto em fundo personalizado. */
+export function corEscura(hex: string): boolean {
+  if (!HEX.test(hex)) return false;
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b) < 0.4;
+}
+
+export function fundoEscuro(b: { fundo: SobreFundo; fundo_cor?: string }): boolean {
+  if (b.fundo === "personalizado") return corEscura(b.fundo_cor ?? "");
+  return b.fundo === "escuro";
+}
 const ICONES = SOBRE_ICONES.map((i) => i.value);
 
 /** Só aceita link interno ("/...") ou http(s). */
@@ -181,6 +202,7 @@ function parseBloco(raw: unknown): SobreBloco | null {
     id: str(r.id, 40) || novoId(),
     visivel: r.visivel !== false,
     fundo: oneOf(r.fundo, FUNDOS, "claro"),
+    fundo_cor: HEX.test(str(r.fundo_cor, 7)) ? str(r.fundo_cor, 7) : "#ffffff",
   };
   switch (r.tipo) {
     case "imagem_texto":
