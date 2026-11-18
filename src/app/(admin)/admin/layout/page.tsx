@@ -1,4 +1,6 @@
+import { SiteInstitucionalForm } from "@/features/site-layout/components/SiteInstitucionalForm";
 import { SiteLayoutForm } from "@/features/site-layout/components/SiteLayoutForm";
+import { getSiteInstitucional } from "@/features/site-layout/services/getSiteInstitucional";
 import { getSiteLayout } from "@/features/site-layout/services/getSiteLayout";
 import { emptySiteLayoutRow } from "@/features/site-layout/utils/homeBannerUrls";
 import type { SiteLayoutRow } from "@/types/siteLayout";
@@ -10,6 +12,7 @@ export const metadata = {
 export default async function AdminSiteLayoutPage() {
   let initial: SiteLayoutRow;
   let loadError: string | null = null;
+  const institucional = await getSiteInstitucional();
 
   try {
     initial = await getSiteLayout();
@@ -36,6 +39,7 @@ export default async function AdminSiteLayoutPage() {
       )}
 
       <SiteLayoutForm initial={initial} />
+      <SiteInstitucionalForm initial={institucional} />
     </div>
   );
 }

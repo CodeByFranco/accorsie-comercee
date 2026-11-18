@@ -2,6 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { storeShellContent, storeShellInset } from "@/config/storeShell";
+import { getStoreSiteInstitucional } from "@/features/site-layout/services/getSiteInstitucional";
+import { textLines } from "@/features/site-layout/utils/institucional";
 
 const QUICK_LINKS = [
   { href: "/", label: "Início" },
@@ -78,7 +80,8 @@ function IconClock({ className }: { className?: string }) {
 const socialBtnClass =
   "flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition hover:bg-white/20";
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  const { horarios_texto } = await getStoreSiteInstitucional();
   const year = new Date().getFullYear();
 
   return (
@@ -147,8 +150,9 @@ export function SiteFooter() {
               <div className="flex gap-3 text-sm text-white/90">
                 <IconClock className="mt-0.5 h-5 w-5 shrink-0 text-store-accent" />
                 <div className="space-y-1">
-                  <p>Segunda a sexta: 8h — 18h</p>
-                  <p>Sábado: 8h — 13h</p>
+                  {textLines(horarios_texto).map((linha) => (
+                    <p key={linha}>{linha}</p>
+                  ))}
                 </div>
               </div>
             </div>
