@@ -36,8 +36,7 @@ export function ProductRelacionadosFieldset({
     <fieldset className="space-y-3 rounded-lg border border-gray-200 bg-gray-50/40 p-4">
       <legend className="text-sm font-semibold text-gray-900">Produtos relacionados</legend>
       <p className="text-xs leading-relaxed text-gray-600">
-        Escolha itens para exibir na vitrine junto com este produto. Se nenhum for marcado, o site sugere peças
-        compatíveis com o mesmo modelo de veículo.
+        Opcional. Sem seleção, o site sugere automaticamente.
       </p>
       <label htmlFor="relacionados_busca" className="sr-only">
         Buscar na lista

@@ -14,7 +14,7 @@ export default async function AdminFinanceiroPage() {
         <p className="text-sm font-medium text-gray-500">Financeiro</p>
         <h2 className="mt-1 text-xl font-semibold tracking-tight text-gray-900">Parcelamento</h2>
         <p className="mt-2 max-w-2xl text-sm text-gray-600">
-          Defina a partir de qual valor o cliente pode parcelar no cartão sem juros, e em até quantas vezes.
+          Parcelamento sem juros no cartão.
         </p>
       </div>
 

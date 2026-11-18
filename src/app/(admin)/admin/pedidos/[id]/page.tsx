@@ -2,233 +2,156 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { MelhorEnvioSaldoPanel } from "@/features/pedidos-admin/components/MelhorEnvioSaldoPanel";
+import { PedidoAcoes } from "@/features/pedidos-admin/components/PedidoAcoes";
+import { PedidoDadosNF } from "@/features/pedidos-admin/components/PedidoDadosNF";
 import { PedidoLogisticaForm } from "@/features/pedidos-admin/components/PedidoLogisticaForm";
 import { PedidoMercadoPagoSyncButton } from "@/features/pedidos-admin/components/PedidoMercadoPagoSyncButton";
 import { getPedidoAdminByIdWithItens } from "@/features/pedidos-admin/services/getPedidoAdminByIdWithItens";
-import { ensureMelhorEnvioAccessToken, fetchMelhorEnvioBalance } from "@/services/melhorEnvio";
 import {
-  formatCep,
+  logisticaLabel,
+  logisticaPillClass,
+  pagamentoPillClass,
+  pillBase,
+} from "@/features/pedidos-admin/utils/pedidoAdminStatus";
+import { CopyButton } from "@/features/pedidos-admin/components/CopyButton";
+import {
   formatPedidoDate,
   formatPedidoMoney,
   formatPedidoStatus,
   formatPedidoUiCode,
 } from "@/features/pedidos/utils/pedidoDisplay";
 import { isUuid } from "@/features/pedidos/utils/isUuid";
-import type { PedidoLogisticaStatus } from "@/types/pedido";
 
 type PageProps = { params: Promise<{ id: string }> };
 
-const logisticaLabel: Record<PedidoLogisticaStatus, string> = {
-  nao_iniciado: "Não iniciado",
-  em_separacao: "Em separação",
-  postado: "Postado",
-  entregue: "Entregue",
-};
-
-async function loadMelhorEnvioSaldoInicial(): Promise<{
-  data: { balance: number; reserved: number; debts: number } | null;
-  error: string | null;
-}> {
-  try {
-    const token = await ensureMelhorEnvioAccessToken();
-    const res = await fetchMelhorEnvioBalance(token);
-    if (!res.ok) {
-      return { data: null, error: res.message };
-    }
-    return {
-      data: { balance: res.balance, reserved: res.reserved, debts: res.debts },
-      error: null,
-    };
-  } catch (e) {
-    return {
-      data: null,
-      error: e instanceof Error ? e.message : "Não foi possível carregar o saldo do Melhor Envio.",
-    };
-  }
-}
-
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  return {
-    title: isUuid(id) ? `Pedido ${id.slice(0, 8)}… | Admin` : "Pedido | Admin",
-  };
+  return { title: isUuid(id) ? `Pedido | Admin` : "Pedido | Admin" };
 }
 
 export default async function AdminPedidoDetailPage({ params }: PageProps) {
   const { id } = await params;
-  if (!isUuid(id)) {
-    notFound();
-  }
+  if (!isUuid(id)) notFound();
 
-  let pedido;
-  try {
-    pedido = await getPedidoAdminByIdWithItens(id);
-  } catch {
-    throw new Error("Não foi possível carregar o pedido. Verifique SUPABASE_SERVICE_ROLE_KEY.");
-  }
+  const pedido = await getPedidoAdminByIdWithItens(id);
+  if (!pedido) notFound();
 
-  if (!pedido) {
-    notFound();
-  }
-
-  const meSaldo = await loadMelhorEnvioSaldoInicial();
-  const pedidoCodigo = formatPedidoUiCode(pedido.codigo_ui);
+  const retirada = pedido.retirada_loja === true;
 
   return (
-    <div className="space-y-8">
-      <div>
-        <Link
-          href="/admin/pedidos"
-          className="text-sm font-medium text-admin-accent hover:underline"
-        >
-          ← Voltar aos pedidos
-        </Link>
-      </div>
+    <div className="space-y-5">
+      <Link href="/admin/pedidos" className="text-sm font-medium text-admin-accent hover:underline">
+        ← Pedidos
+      </Link>
 
-      <div className="flex flex-col gap-3 border-b border-gray-100 pb-6 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Pedido</p>
-          <p className="mt-1 font-mono text-lg text-gray-900">#{pedidoCodigo}</p>
-          <p className="mt-2 text-sm text-gray-500">{formatPedidoDate(pedido.created_at)}</p>
+          <h1 className="font-mono text-2xl font-bold text-gray-900">#{formatPedidoUiCode(pedido.codigo_ui)}</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            {formatPedidoDate(pedido.created_at)} · {retirada ? "Retirada na loja" : "Entrega"}
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <span
-            className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${
-              pedido.status === "pago"
-                ? "bg-emerald-50 text-emerald-900 ring-emerald-200"
-                : pedido.status === "aguardando_pagamento"
-                  ? "bg-amber-50 text-amber-950 ring-amber-200"
-                  : "bg-gray-100 text-gray-700 ring-gray-200"
-            }`}
-          >
-            {formatPedidoStatus(pedido.status)}
-          </span>
-          <span className="inline-flex rounded-full bg-sky-50 px-2.5 py-0.5 text-xs font-semibold text-sky-900 ring-1 ring-sky-200 ring-inset">
-            {logisticaLabel[pedido.logistica_status]}
-          </span>
+          <span className={`${pillBase} ${pagamentoPillClass(pedido.status)}`}>{formatPedidoStatus(pedido.status)}</span>
+          {pedido.status === "pago" ? (
+            <span className={`${pillBase} ${logisticaPillClass(pedido.logistica_status)}`}>
+              {logisticaLabel(pedido.logistica_status, retirada)}
+            </span>
+          ) : null}
         </div>
       </div>
 
-      <section className="grid gap-6 rounded-xl border border-gray-100 bg-white p-6 shadow-sm md:grid-cols-2">
-        <div>
-          <h2 className="text-sm font-semibold text-gray-900">Cliente</h2>
-          <dl className="mt-3 space-y-2 text-sm">
-            <div>
-              <dt className="text-gray-500">E-mail da conta</dt>
-              <dd className="font-medium text-gray-900">{pedido.cliente_email ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-gray-500">CPF / CNPJ</dt>
-              <dd className="text-gray-900">{pedido.destinatario_documento ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-gray-500">Nome (entrega)</dt>
-              <dd className="font-medium text-gray-900">{pedido.destinatario_nome}</dd>
-            </div>
-            <div>
-              <dt className="text-gray-500">Telefone</dt>
-              <dd className="text-gray-900">{pedido.telefone}</dd>
-            </div>
-          </dl>
-        </div>
-        <div>
-          <h2 className="text-sm font-semibold text-gray-900">Pagamento</h2>
-          <dl className="mt-3 space-y-2 text-sm">
-            <div>
-              <dt className="text-gray-500">Mercado Pago (status)</dt>
-              <dd className="text-gray-900">{pedido.mercadopago_status ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-gray-500">ID pagamento</dt>
-              <dd className="break-all font-mono text-xs text-gray-700">
-                {pedido.mercadopago_payment_id ?? "—"}
-              </dd>
-            </div>
-          </dl>
-          <PedidoMercadoPagoSyncButton pedidoId={pedido.id} />
-        </div>
-      </section>
+      <PedidoAcoes
+        pedidoId={pedido.id}
+        status={pedido.status}
+        logisticaStatus={pedido.logistica_status}
+        retiradaLoja={retirada}
+        etiquetaUrl={pedido.melhor_envio_etiqueta_url}
+      />
 
-      <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
-        <h2 className="text-sm font-semibold text-gray-900">
-          {pedido.retirada_loja ? "Retirada na loja" : "Entrega"}
-        </h2>
-        {pedido.retirada_loja ? (
-          <p className="mt-2 text-sm text-amber-900">
-            Cliente optou por retirar no balcão — sem frete / sem postagem pelos Correios.
-          </p>
-        ) : null}
-        <p className="mt-3 text-sm text-gray-700">
-          {pedido.logradouro}, {pedido.numero}
-          {pedido.complemento ? ` — ${pedido.complemento}` : ""}
-          <br />
-          {pedido.bairro} — {pedido.cidade}/{pedido.uf}
-          <br />
-          CEP {formatCep(pedido.cep)}
-        </p>
-        <dl className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
-          <div>
-            <dt className="text-gray-500">Subtotal</dt>
-            <dd className="font-medium tabular-nums text-gray-900">{formatPedidoMoney(pedido.subtotal)}</dd>
-          </div>
-          <div>
-            <dt className="text-gray-500">Frete</dt>
-            <dd className="font-medium tabular-nums text-gray-900">{formatPedidoMoney(pedido.frete)}</dd>
-          </div>
-          <div>
-            <dt className="text-gray-500">Total</dt>
-            <dd className="font-semibold tabular-nums text-gray-900">{formatPedidoMoney(pedido.total)}</dd>
-          </div>
-        </dl>
-      </section>
-
-      <section className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
-        <div className="border-b border-gray-100 px-6 py-4">
-          <h2 className="text-base font-semibold text-gray-900">Itens</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/80 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                <th className="px-6 py-3">Produto</th>
-                <th className="px-6 py-3">Código</th>
-                <th className="px-6 py-3 text-right">Qtd.</th>
-                <th className="px-6 py-3 text-right">Preço unit.</th>
-                <th className="px-6 py-3 text-right">Subtotal</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
+      <div className="grid gap-5 xl:grid-cols-[1fr_22rem]">
+        <div className="space-y-5">
+          <section className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
+            <h2 className="border-b border-gray-100 px-5 py-3.5 text-sm font-semibold text-gray-900">Itens</h2>
+            <ul className="divide-y divide-gray-50">
               {pedido.pedido_itens.map((item) => {
                 const unit = Number(item.preco_unitario);
                 const sub = Number.isFinite(unit) ? unit * item.quantidade : 0;
                 return (
-                  <tr key={item.id}>
-                    <td className="px-6 py-4 text-gray-900">{item.titulo_snapshot}</td>
-                    <td className="px-6 py-4 font-mono text-xs text-gray-600">{item.cod_produto_snapshot}</td>
-                    <td className="px-6 py-4 text-right tabular-nums text-gray-900">{item.quantidade}</td>
-                    <td className="px-6 py-4 text-right tabular-nums text-gray-600">
-                      {formatPedidoMoney(item.preco_unitario)}
-                    </td>
-                    <td className="px-6 py-4 text-right tabular-nums font-medium text-gray-900">
-                      {formatPedidoMoney(sub)}
-                    </td>
-                  </tr>
+                  <li key={item.id} className="flex items-center gap-4 px-5 py-3 text-sm">
+                    <span className="w-8 shrink-0 text-center font-semibold tabular-nums text-gray-900">{item.quantidade}×</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-gray-900">{item.titulo_snapshot}</span>
+                      <span className="block font-mono text-xs text-gray-500">{item.cod_produto_snapshot}</span>
+                    </span>
+                    <span className="text-right tabular-nums">
+                      <span className="block font-medium text-gray-900">{formatPedidoMoney(sub)}</span>
+                      {item.quantidade > 1 ? (
+                        <span className="block text-xs text-gray-500">{formatPedidoMoney(item.preco_unitario)} un.</span>
+                      ) : null}
+                    </span>
+                  </li>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
-      </section>
+            </ul>
+            <dl className="space-y-1 border-t border-gray-100 bg-gray-50/60 px-5 py-3 text-sm">
+              <div className="flex justify-between text-gray-600">
+                <dt>Subtotal</dt>
+                <dd className="tabular-nums">{formatPedidoMoney(pedido.subtotal)}</dd>
+              </div>
+              <div className="flex justify-between text-gray-600">
+                <dt>Frete</dt>
+                <dd className="tabular-nums">{formatPedidoMoney(pedido.frete)}</dd>
+              </div>
+              <div className="flex justify-between font-semibold text-gray-900">
+                <dt>Total</dt>
+                <dd className="tabular-nums">{formatPedidoMoney(pedido.total)}</dd>
+              </div>
+            </dl>
+          </section>
 
-      <section className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
-        <h2 className="text-base font-semibold text-gray-900">Logística</h2>
-        <p className="mt-1 text-sm text-gray-500">Rastreio e dados de envio exibidos ao cliente quando integrados.</p>
-        <div className="mt-6">
-          <MelhorEnvioSaldoPanel initial={meSaldo.data} initialError={meSaldo.error} />
+          <PedidoDadosNF pedido={pedido} />
+        </div>
+
+        <div className="space-y-5">
+          {!retirada ? (
+            <section className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+              <h2 className="text-sm font-semibold text-gray-900">Rastreio</h2>
+              {pedido.rastreio_codigo ? (
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  <span className="font-mono text-sm text-gray-900">{pedido.rastreio_codigo}</span>
+                  <CopyButton value={pedido.rastreio_codigo} />
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-gray-500">Disponível após gerar a etiqueta.</p>
+              )}
+              {pedido.transportadora_nome ? <p className="mt-1 text-xs text-gray-500">{pedido.transportadora_nome}</p> : null}
+              {pedido.rastreio_url ? (
+                <a href={pedido.rastreio_url} target="_blank" rel="noreferrer" className="mt-2 inline-block text-sm font-medium text-admin-accent hover:underline">
+                  Acompanhar entrega
+                </a>
+              ) : null}
+            </section>
+          ) : null}
+
+          <section className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+            <h2 className="text-sm font-semibold text-gray-900">Pagamento</h2>
+            <dl className="mt-2 space-y-1 text-sm">
+              <div className="flex justify-between gap-2">
+                <dt className="text-gray-500">Mercado Pago</dt>
+                <dd className="text-gray-900">{pedido.mercadopago_status ?? "—"}</dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt className="text-gray-500">ID</dt>
+                <dd className="truncate font-mono text-xs text-gray-700">{pedido.mercadopago_payment_id ?? "—"}</dd>
+              </div>
+            </dl>
+            <PedidoMercadoPagoSyncButton pedidoId={pedido.id} />
+          </section>
+
           <PedidoLogisticaForm pedido={pedido} />
         </div>
-      </section>
+      </div>
     </div>
   );
 }

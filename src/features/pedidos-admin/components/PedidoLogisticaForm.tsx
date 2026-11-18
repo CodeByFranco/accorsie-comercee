@@ -1,171 +1,99 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState, useTransition } from "react";
 
-import { atualizarPedidoLogisticaAction } from "@/features/pedidos-admin/services/atualizarPedidoLogistica";
-import { PedidoMelhorEnvioFluxoAutomatico } from "@/features/pedidos-admin/components/PedidoMelhorEnvioFluxoAutomatico";
+import { definirLogisticaPedidoAction } from "@/features/pedidos-admin/services/atualizarPedidoLogistica";
 import {
   comprarEnvioMelhorEnvioAction,
   gerarEtiquetaMelhorEnvioAction,
   imprimirDocumentosMelhorEnvioAction,
 } from "@/features/pedidos-admin/services/melhorEnvioLogisticaActions";
-import type { AdminPedidoDetailWithItens, PedidoLogisticaStatus } from "@/types/pedido";
+import type { AdminPedidoDetailWithItens } from "@/types/pedido";
 
-const LOGISTICA_OPTIONS: { value: PedidoLogisticaStatus; label: string }[] = [
-  { value: "nao_iniciado", label: "Não iniciado" },
-  { value: "em_separacao", label: "Em separação" },
-  { value: "postado", label: "Postado" },
-  { value: "entregue", label: "Entregue" },
-];
+const btn =
+  "rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-800 transition hover:bg-gray-100 disabled:opacity-60";
 
-const inputClass =
-  "mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm outline-none focus:border-[#1d63ed] focus:ring-2 focus:ring-[#1d63ed]/20";
-
+/** Opções avançadas de envio: retirada na loja e etapas manuais do Melhor Envio (para quando o automático falhar). */
 export function PedidoLogisticaForm({ pedido }: { pedido: AdminPedidoDetailWithItens }) {
-  const [state, formAction, isPending] = useActionState(atualizarPedidoLogisticaAction, null);
   const [buyState, buyAction, buyPending] = useActionState(comprarEnvioMelhorEnvioAction, null);
   const [labelState, labelAction, labelPending] = useActionState(gerarEtiquetaMelhorEnvioAction, null);
   const [printState, printAction, printPending] = useActionState(imprimirDocumentosMelhorEnvioAction, null);
+  const [retiradaErro, setRetiradaErro] = useState<string | null>(null);
+  const [retiradaPending, startRetirada] = useTransition();
+  const retirada = pedido.retirada_loja === true;
+
+  const msgs = [buyState, labelState, printState].flatMap((s) =>
+    s?.error ? [{ ok: false, t: s.error }] : s?.info ? [{ ok: true, t: s.info }] : [],
+  );
 
   return (
-    <div className="space-y-5">
-      <PedidoMelhorEnvioFluxoAutomatico pedidoId={pedido.id} retiradaLoja={pedido.retirada_loja === true} />
-
-      <form action={formAction} className="space-y-5">
-        <input type="hidden" name="pedido_id" value={pedido.id} />
-        <input type="hidden" name="transportadora_nome" value={pedido.transportadora_nome ?? ""} />
-        <input type="hidden" name="frete_provedor" value={pedido.frete_provedor ?? ""} />
-        <input type="hidden" name="destinatario_documento" value={pedido.destinatario_documento ?? ""} />
-        <input type="hidden" name="rastreio_codigo" value={pedido.rastreio_codigo ?? ""} />
-        <input type="hidden" name="rastreio_url" value={pedido.rastreio_url ?? ""} />
-        <input type="hidden" name="melhor_envio_id" value={pedido.melhor_envio_id ?? ""} />
-        <input type="hidden" name="melhor_envio_etiqueta_url" value={pedido.melhor_envio_etiqueta_url ?? ""} />
-
-        <div className="grid gap-4 sm:grid-cols-2">
-        <div className="sm:col-span-2 rounded-lg border border-amber-100 bg-amber-50/80 px-4 py-3">
-          <label className="flex cursor-pointer items-start gap-3 text-sm text-gray-800">
-            <input
-              type="checkbox"
-              name="retirada_loja"
-              defaultChecked={pedido.retirada_loja === true}
-              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#1d63ed] focus:ring-[#1d63ed]"
-            />
-            <span>
-              <span className="font-medium text-gray-900">Retirada na loja</span>
-              <span className="mt-0.5 block text-xs text-gray-600">
-                Marque se o cliente retira o pedido no balcão (sem envio pelos Correios). Isso atualiza o que o
-                cliente vê no detalhe do pedido. Não altera valores já pagos (frete/total).
-              </span>
-            </span>
-          </label>
-        </div>
-
-        <div className="sm:col-span-2">
-          <label className="block text-sm font-medium text-gray-700" htmlFor="logistica_status">
-            Status de logística
-          </label>
-          <select
-            id="logistica_status"
-            name="logistica_status"
-            className={inputClass}
-            defaultValue={pedido.logistica_status}
-            required
+    <details className="group rounded-xl border border-gray-100 bg-white shadow-sm">
+      <summary className="cursor-pointer list-none px-5 py-3.5 text-sm font-medium text-gray-600 hover:text-gray-900">
+        <span className="inline-block transition group-open:rotate-90">›</span> Opções avançadas de envio
+      </summary>
+      <div className="space-y-5 border-t border-gray-100 px-5 py-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <span className="text-sm text-gray-800">{retirada ? "Cliente vai retirar na loja" : "Envio pelos Correios / transportadora"}</span>
+          <button
+            type="button"
+            className={btn}
+            disabled={retiradaPending}
+            onClick={() => {
+              setRetiradaErro(null);
+              startRetirada(async () => {
+                const r = await definirLogisticaPedidoAction({ pedidoId: pedido.id, retiradaLoja: !retirada });
+                if (r.error) setRetiradaErro(r.error);
+              });
+            }}
           >
-            {LOGISTICA_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {o.label}
-              </option>
+            {retirada ? "Mudar para envio" : "Mudar para retirada na loja"}
+          </button>
+        </div>
+        {retiradaErro ? <p className="text-xs text-red-700">{retiradaErro}</p> : null}
+
+        {!retirada ? (
+          <form className="space-y-2">
+            <input type="hidden" name="pedido_id" value={pedido.id} />
+            <input type="hidden" name="melhor_envio_id" value={pedido.melhor_envio_id ?? ""} />
+            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Melhor Envio — passo a passo</p>
+            <div className="flex flex-wrap gap-2">
+              <button type="submit" formAction={buyAction} disabled={buyPending} className={btn}>
+                {buyPending ? "Comprando…" : "1. Comprar envio"}
+              </button>
+              <button type="submit" formAction={labelAction} disabled={labelPending} className={btn}>
+                {labelPending ? "Gerando…" : "2. Gerar etiqueta"}
+              </button>
+              <button type="submit" formAction={printAction} disabled={printPending} className={btn}>
+                {printPending ? "Buscando…" : "3. Etiqueta + declaração"}
+              </button>
+            </div>
+            {msgs.map((m, i) => (
+              <p key={i} className={`text-xs ${m.ok ? "text-emerald-700" : "text-red-700"}`}>
+                {m.t}
+              </p>
             ))}
-          </select>
-        </div>
-
-      </div>
-
-      {state?.error && (
-        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900" role="alert">
-          {state.error}
-        </p>
-      )}
-      {state?.ok && (
-        <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
-          Alterações salvas.
-        </p>
-      )}
-
-      <div className="flex justify-end border-t border-gray-100 pt-4">
-        <button
-          type="submit"
-          disabled={isPending}
-          className="rounded-lg bg-admin-accent px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-[#1857d1] disabled:opacity-60"
-        >
-          {isPending ? "Salvando…" : "Salvar logística"}
-        </button>
-      </div>
-
-      <div className="rounded-lg border border-gray-200 bg-gray-50/70 p-4">
-        <h3 className="text-sm font-semibold text-gray-900">Ações Melhor Envio</h3>
-        <p className="mt-1 text-xs text-gray-600">
-          Use estas ações para concluir etapas de envio no Melhor Envio quando necessário. O código de rastreio e os
-          dados da etiqueta são gravados automaticamente no pedido.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button
-            type="submit"
-            formAction={buyAction}
-            disabled={buyPending}
-            className="rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-800 transition hover:bg-gray-100 disabled:opacity-60"
-          >
-            {buyPending ? "Comprando..." : "Comprar envio"}
-          </button>
-          <button
-            type="submit"
-            formAction={labelAction}
-            disabled={labelPending}
-            className="rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-800 transition hover:bg-gray-100 disabled:opacity-60"
-          >
-            {labelPending ? "Gerando..." : "Gerar etiqueta"}
-          </button>
-          <button
-            type="submit"
-            formAction={printAction}
-            disabled={printPending}
-            className="rounded-md border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-800 transition hover:bg-gray-100 disabled:opacity-60"
-          >
-            {printPending ? "Buscando..." : "Imprimir documentos"}
-          </button>
-        </div>
-        {buyState?.error ? <p className="mt-2 text-xs text-red-700">{buyState.error}</p> : null}
-        {buyState?.info ? <p className="mt-2 text-xs text-emerald-700">{buyState.info}</p> : null}
-        {labelState?.error ? <p className="mt-2 text-xs text-red-700">{labelState.error}</p> : null}
-        {labelState?.info ? <p className="mt-2 text-xs text-emerald-700">{labelState.info}</p> : null}
-        {printState?.error ? <p className="mt-2 text-xs text-red-700">{printState.error}</p> : null}
-        {printState?.info ? <p className="mt-2 text-xs text-emerald-700">{printState.info}</p> : null}
-        {printState?.etiquetaUrl ? (
-          <p className="mt-2 text-xs">
-            <a
-              href={printState.etiquetaUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="font-medium text-admin-accent hover:underline"
-            >
-              Abrir etiqueta
-            </a>
-          </p>
-        ) : null}
-        {printState?.declaracaoConteudoUrl ? (
-          <p className="mt-2 text-xs">
-            <a
-              href={printState.declaracaoConteudoUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="font-medium text-admin-accent hover:underline"
-            >
-              Abrir declaração de conteúdo
-            </a>
-          </p>
+            {printState?.etiquetaUrl || printState?.declaracaoConteudoUrl ? (
+              <p className="flex flex-wrap gap-4 text-sm">
+                {printState.etiquetaUrl ? (
+                  <a href={printState.etiquetaUrl} target="_blank" rel="noreferrer" className="font-medium text-admin-accent hover:underline">
+                    Abrir etiqueta
+                  </a>
+                ) : null}
+                {printState.declaracaoConteudoUrl ? (
+                  <a
+                    href={printState.declaracaoConteudoUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="font-medium text-admin-accent hover:underline"
+                  >
+                    Abrir declaração de conteúdo
+                  </a>
+                ) : null}
+              </p>
+            ) : null}
+          </form>
         ) : null}
       </div>
-      </form>
-    </div>
+    </details>
   );
 }

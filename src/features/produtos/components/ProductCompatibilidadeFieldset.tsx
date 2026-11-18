@@ -436,10 +436,6 @@ export function ProductCompatibilidadeFieldset({
         </button>
         {pickerOpen && (
           <div className="mt-3 space-y-3 border-t border-gray-100 pt-3">
-            <p className="text-xs text-gray-500">
-              Pesquise por nome, marca ou tipo. À direita de cada modelo aparecem os anos cadastrados.
-              Ao adicionar, todos esses anos são vinculados; ajuste na lista abaixo se precisar.
-            </p>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
               <div className="min-w-0 flex-1">
                 <label htmlFor="compat-picker-busca" className="mb-1 block text-xs font-medium text-gray-700">

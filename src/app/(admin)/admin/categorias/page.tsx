@@ -82,9 +82,6 @@ export default async function CategoriasPage({
       <section className="space-y-4">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Categorias de produto</h2>
-          <p className="mt-0.5 text-sm text-gray-500">
-            Organize o catálogo. Cada produto pode estar em uma ou mais categorias.
-          </p>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,24rem)_1fr] lg:items-start">
@@ -102,9 +99,6 @@ export default async function CategoriasPage({
             <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
               <div className="border-b border-gray-100 px-6 py-4">
                 <h3 className="text-base font-semibold text-gray-900">Categorias cadastradas</h3>
-                <p className="mt-0.5 text-sm text-gray-500">
-                  Edite ou remova. Ao excluir, o vínculo com produtos é removido automaticamente.
-                </p>
               </div>
 
               {listError && (

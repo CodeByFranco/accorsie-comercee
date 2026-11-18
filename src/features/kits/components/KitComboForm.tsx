@@ -38,8 +38,7 @@ export function KitComboForm({
       <div>
         <h1 className="text-xl font-semibold text-gray-900">Descontos e combo dos kits</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Cadastre os produtos do combo uma vez só (ex.: todos os óleos). Em cada kit, o cliente marca &quot;Leve
-          junto&quot;, escolhe o produto e a quantidade, e o kit inteiro passa para o desconto do combo.
+          Produtos oferecidos como «Leve junto» nos kits.
         </p>
       </div>
 
@@ -77,8 +76,7 @@ export function KitComboForm({
         ))}
       </div>
       <p className="text-xs text-gray-500">
-        Vale para todos os kits marcados com &quot;Usar desconto padrão&quot;. O desconto do combo é sobre o kit inteiro
-        mais o produto escolhido. Kits sem essa opção (ex.: suspensão) usam o desconto próprio e não mostram o combo.
+        Vale para kits com «Usar desconto padrão».
       </p>
 
       <ChoiceCard

@@ -26,9 +26,6 @@ export default async function AdminSiteLayoutPage() {
       <div>
         <p className="text-sm font-medium text-gray-500">Layout</p>
         <h2 className="mt-1 text-xl font-semibold tracking-tight text-gray-900">Site</h2>
-        <p className="mt-2 max-w-2xl text-sm text-gray-600">
-          Ajuste o que os visitantes veem na vitrine. As alterações entram na página inicial após salvar.
-        </p>
       </div>
 
       {loadError && (

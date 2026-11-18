@@ -82,8 +82,7 @@ export function KitChoicesEditor({
       <legend className="text-sm font-semibold text-gray-900">Itens de escolha do cliente</legend>
       <input type="hidden" name="kit_choices_json" value={JSON.stringify(payload)} />
       <p className="text-xs text-gray-500">
-        O cliente escolhe um dos produtos marcados e a quantidade, dentro do limite. Ex.: &quot;Óleo do motor&quot;
-        com as viscosidades disponíveis, de 3 a 5 litros. Kits com escolha usam desconto percentual.
+        O cliente escolhe um produto e a quantidade. Ex.: óleo de 3 a 5 L.
       </p>
 
       {choices.map((c) => (
