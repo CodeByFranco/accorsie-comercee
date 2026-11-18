@@ -10,22 +10,24 @@ import type { SiteLayoutRow } from "@/types/siteLayout";
 
 const EMPTY = emptySiteLayoutRow();
 
+/** Lança em falha: `unstable_cache` não grava erro, então a próxima visita tenta de novo. */
 async function fetchStoreSiteLayout(): Promise<SiteLayoutRow> {
-  try {
-    return await querySiteLayout(createPublicClient());
-  } catch {
-    return EMPTY;
-  }
+  return querySiteLayout(createPublicClient(), { strict: true });
 }
 
-const getCachedStoreSiteLayout = unstable_cache(fetchStoreSiteLayout, ["store-site-layout-v3"], {
+const getCachedStoreSiteLayout = unstable_cache(fetchStoreSiteLayout, ["store-site-layout-v4"], {
   tags: [CATALOG_CACHE_TAGS.siteLayout],
   revalidate: 60 * 60,
 });
 
 /** Banners da vitrine (cache sem cookies; `saveSiteLayout` invalida a tag). */
 export const getStoreSiteLayout = cache(async function getStoreSiteLayout(): Promise<SiteLayoutRow> {
-  return getCachedStoreSiteLayout();
+  try {
+    return await getCachedStoreSiteLayout();
+  } catch (e) {
+    console.error("getStoreSiteLayout:", e instanceof Error ? e.message : e);
+    return EMPTY;
+  }
 });
 
 /** Leitura direta (admin): sempre o valor atual. */

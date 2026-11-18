@@ -19,7 +19,11 @@ export function isMissingSiteLayoutColumnError(message: string): boolean {
   return m.includes("column") || m.includes("does not exist") || m.includes("banner_3");
 }
 
-export async function querySiteLayout(client: SupabaseClient): Promise<SiteLayoutRow> {
+/** `strict`: lança em erro em vez de devolver vazio (para não gravar falha em cache). */
+export async function querySiteLayout(
+  client: SupabaseClient,
+  options?: { strict?: boolean },
+): Promise<SiteLayoutRow> {
   const empty = emptySiteLayoutRow();
   const attempts = [SELECT_FULL, ...SELECT_FALLBACKS];
 
@@ -29,10 +33,12 @@ export async function querySiteLayout(client: SupabaseClient): Promise<SiteLayou
       return parseSiteLayoutRow(data as Partial<SiteLayoutRow>);
     }
     if (error && !isMissingSiteLayoutColumnError(error.message)) {
+      if (options?.strict) throw new Error(error.message);
       return empty;
     }
   }
 
+  if (options?.strict) throw new Error("site_layout: linha 'default' não encontrada.");
   return empty;
 }
 
