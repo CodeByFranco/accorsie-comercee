@@ -37,7 +37,14 @@ type PedidoCheckoutRow = {
 function resolveAppBaseUrl(): string {
   const explicit = process.env.NEXT_PUBLIC_APP_URL?.trim();
   if (explicit) {
-    return explicit.replace(/\/+$/, "");
+    // Aceita "dominio.com.br" sem protocolo e domínio com acento (vira punycode) — sem isso o MP
+    // não recebe `notification_url` e o pedido nunca passa para "pago".
+    const withProtocol = /^https?:\/\//i.test(explicit) ? explicit : `https://${explicit}`;
+    try {
+      return new URL(withProtocol).origin;
+    } catch {
+      return withProtocol.replace(/\/+$/, "");
+    }
   }
   const vercel = process.env.VERCEL_URL?.trim();
   if (vercel) {

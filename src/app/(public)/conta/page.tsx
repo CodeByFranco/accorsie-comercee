@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { AccountAreaContent } from "@/features/auth/components/AccountAreaContent";
 import { AuthPageShell } from "@/features/auth/components/AuthPageShell";
 import { CashbackResumo } from "@/features/cashback/components/CashbackResumo";
+import { listMyPedidos } from "@/features/pedidos/services/listMyPedidos";
 import { profileRowToEndereco } from "@/types/profileDelivery";
 import { createClient } from "@/services/supabase/server";
 
@@ -45,7 +46,9 @@ export default async function ContaPage({ searchParams }: ContaPageProps) {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(10);
-  const initialSection = params?.aba === "garagem" ? "garagem" : "conta";
+  const pedidos = await listMyPedidos();
+  const initialSection =
+    params?.aba === "garagem" ? "garagem" : params?.aba === "pedidos" ? "pedidos" : "conta";
 
   return (
     <AuthPageShell
@@ -62,6 +65,7 @@ export default async function ContaPage({ searchParams }: ContaPageProps) {
         email={email}
         initialEndereco={initialEndereco}
         garageVehicles={garageVehicles ?? []}
+        pedidos={pedidos}
         initialSection={initialSection}
         showAdminLink={showAdminLink}
       />
