@@ -12,8 +12,6 @@ import { getParcelamentoFaixas } from "@/features/financeiro/services/getParcela
 import { ParcelamentoFaixasProvider } from "@/features/financeiro/components/ParcelamentoFaixasProvider";
 import { getCatalogSliderMax } from "@/features/produtos/services/getCatalogProducts";
 
-const FALLBACK_HOME_BANNER = "/home/Banner%20inicial.png";
-
 /**
  * Layout da vitrine: só dados públicos em cache (sem cookies). Conta/garagem/link do painel
  * são lidos no navegador pela navbar (`useStoreAccount`).
@@ -27,8 +25,7 @@ export default async function PublicLayout({ children }: { children: ReactNode }
     getParcelamentoFaixas(),
   ]);
 
-  const fromDb = homeBannerUrlsFromSiteLayout(siteLayout);
-  const homeBannerSrcs = fromDb.length > 0 ? fromDb : [FALLBACK_HOME_BANNER];
+  const homeBannerSrcs = homeBannerUrlsFromSiteLayout(siteLayout);
 
   return (
     <CartProvider>
