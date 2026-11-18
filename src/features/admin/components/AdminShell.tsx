@@ -15,6 +15,7 @@ function pageTitle(pathname: string): string {
   if (pathname === "/admin/modelos") return "Marcas e modelos";
   if (pathname === "/admin/categorias") return "Categorias";
   if (pathname === "/admin/layout") return "Layout do site";
+  if (pathname === "/admin/layout/sobre") return "Página Sobre";
   if (pathname === "/admin/clientes") return "Clientes";
   if (pathname === "/admin/cupons") return "Cupons";
   if (pathname === "/admin/financeiro") return "Financeiro";
@@ -196,7 +197,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     pathname.startsWith("/admin/marcas") ||
     pathname.startsWith("/admin/modelos");
   const categoriasActive = pathname.startsWith("/admin/categorias");
-  const layoutSiteActive = pathname.startsWith("/admin/layout");
+  const layoutSiteActive = pathname === "/admin/layout";
+  const sobreActive = pathname.startsWith("/admin/layout/sobre");
   const clientesActive = pathname.startsWith("/admin/clientes");
   const cuponsActive = pathname.startsWith("/admin/cupons");
   const financeiroActive = pathname.startsWith("/admin/financeiro");
@@ -262,6 +264,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           <Link href="/admin/layout" className={navLinkClass(layoutSiteActive)}>
             <IconLayoutPanel className="h-5 w-5 shrink-0 opacity-80" />
             Layout
+          </Link>
+          <Link href="/admin/layout/sobre" className={navLinkClass(sobreActive)}>
+            <IconLayoutPanel className="h-5 w-5 shrink-0 opacity-80" />
+            Página Sobre
           </Link>
           <Link href="/admin/pedidos" className={navLinkClass(pedidosActive)}>
             <IconShoppingCart className="h-5 w-5 shrink-0 opacity-80" />

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 
 import {
@@ -37,14 +38,14 @@ export function SiteInstitucionalForm({ initial }: { initial: SiteInstitucional 
       ) : null}
 
       <form action={formAction} className="mt-6 space-y-6">
-        <label className="block">
-          <span className="text-sm font-medium text-gray-800">Manifesto</span>
-          <span className="mt-0.5 block text-xs text-gray-500">
-            Uma frase por linha. Linha em branco separa os blocos. A primeira frase vira o destaque e o último bloco
-            fecha o manifesto.
-          </span>
-          <textarea name="manifesto_texto" rows={16} defaultValue={initial.manifesto_texto} className={fieldClass} />
-        </label>
+        <input type="hidden" name="manifesto_texto" value={initial.manifesto_texto} />
+        <p className="text-sm text-gray-600">
+          O manifesto agora é editado em{" "}
+          <Link href="/admin/layout/sobre" className="font-medium text-admin-accent hover:underline">
+            Página Sobre
+          </Link>
+          .
+        </p>
 
         <label className="block">
           <span className="text-sm font-medium text-gray-800">Horário de funcionamento (rodapé)</span>
