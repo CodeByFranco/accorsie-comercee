@@ -46,36 +46,31 @@ export function MelhorEnvioSaldoPanel({
   const display = state ?? initialState;
 
   return (
-    <div className="mb-6 rounded-lg border border-sky-100 bg-sky-50/60 px-4 py-3">
+    <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-gray-900">Melhor Envio — saldo</h3>
+        <h3 className="text-xs font-medium uppercase tracking-wide text-gray-500">Saldo Melhor Envio</h3>
         <form action={formAction}>
           <button type="submit" disabled={pending} className={btnClass}>
-            {pending ? "Atualizando…" : "Atualizar saldo"}
+            {pending ? "…" : "Atualizar"}
           </button>
         </form>
       </div>
       {display?.error ? (
         <p className="mt-2 text-xs text-red-800">{display.error}</p>
       ) : display?.ok ? (
-        <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
-          <div>
-            <dt className="text-xs text-gray-600">Disponível</dt>
-            <dd className="font-semibold tabular-nums text-gray-900">
-              {formatBrl(display.balance ?? 0)}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs text-gray-600">Reservado</dt>
-            <dd className="tabular-nums text-gray-800">{formatBrl(display.reserved ?? 0)}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-gray-600">Débitos (API)</dt>
-            <dd className="tabular-nums text-gray-800">{formatBrl(display.debts ?? 0)}</dd>
-          </div>
-        </dl>
+        <div className="mt-1">
+          <p className={`text-3xl font-bold tabular-nums ${(display.balance ?? 0) < 30 ? "text-red-700" : "text-gray-900"}`}>
+            {formatBrl(display.balance ?? 0)}
+          </p>
+          {(display.reserved ?? 0) > 0 || (display.debts ?? 0) > 0 ? (
+            <p className="mt-0.5 text-xs text-gray-500">
+              Reservado {formatBrl(display.reserved ?? 0)}
+              {(display.debts ?? 0) > 0 ? ` · Débitos ${formatBrl(display.debts ?? 0)}` : ""}
+            </p>
+          ) : null}
+        </div>
       ) : (
-        <p className="mt-2 text-xs text-gray-600">Use &quot;Atualizar saldo&quot; para consultar a carteira.</p>
+        <p className="mt-2 text-sm text-gray-500">—</p>
       )}
     </div>
   );

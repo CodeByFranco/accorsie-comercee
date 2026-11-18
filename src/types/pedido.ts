@@ -58,6 +58,10 @@ export type AdminPedidoListRow = {
   destinatario_nome: string;
   logistica_status: PedidoLogisticaStatus;
   rastreio_codigo: string | null;
+  retirada_loja?: boolean | null;
+  destinatario_documento?: string | null;
+  /** Sequencial por data de criação (001, 002, ...). */
+  codigo_ui?: number | null;
 };
 
 export type AdminPedidoDetailWithItens = PedidoDetailWithItens & {

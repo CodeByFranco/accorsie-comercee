@@ -38,8 +38,7 @@ export function SiteMaintenanceToggle({ initialLojaPublica }: SiteMaintenanceTog
         <div className="min-w-0">
           <h2 className="text-sm font-semibold text-gray-900">Loja na vitrine</h2>
           <p className="mt-1 text-sm text-gray-600">
-            Visitantes veem o catálogo quando a loja está ativa. Em manutenção, são enviados para a página «em
-            construção» (admin logado continua acessando).
+            Em manutenção, visitantes veem «em construção».
           </p>
           {envForced ? (
             <p className="mt-2 text-xs font-medium text-amber-800">
@@ -48,7 +47,7 @@ export function SiteMaintenanceToggle({ initialLojaPublica }: SiteMaintenanceTog
               para usar só este controle.
             </p>
           ) : (
-            <p className="mt-2 text-xs text-gray-500">Alteração salva no Supabase; pode levar até ~20 segundos para valer em todas as requisições.</p>
+            null
           )}
           {message ? (
             <p

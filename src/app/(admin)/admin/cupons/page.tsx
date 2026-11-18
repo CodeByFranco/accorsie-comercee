@@ -71,8 +71,7 @@ export default async function AdminCuponsPage({
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Cupons de desconto</h2>
           <p className="mt-0.5 text-sm text-gray-500">
-            Cadastre palavras-chave e defina desconto em percentual ou valor fixo. O cliente informa o código antes de ir ao
-            pagamento.
+            Desconto em % ou valor fixo, informado pelo cliente no carrinho.
           </p>
         </div>
 

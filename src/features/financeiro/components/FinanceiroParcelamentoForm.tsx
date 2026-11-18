@@ -57,8 +57,7 @@ export function FinanceiroParcelamentoForm({ initial }: { initial: ParcelamentoF
     <form action={formAction} className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
       <h2 className="text-base font-semibold text-gray-900">Parcelamento sem juros</h2>
       <p className="mt-1 max-w-2xl text-sm text-gray-600">
-        Cada linha vale a partir daquele valor no cartão. Abaixo da menor faixa o cliente paga à vista. A faixa de
-        maior valor que ainda cabe no preço é a que aparece na loja e limita o checkout do Mercado Pago.
+        Cada faixa vale a partir do valor informado. Abaixo da menor, só à vista.
       </p>
 
       {state?.ok === true && (

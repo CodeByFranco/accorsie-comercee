@@ -21,7 +21,7 @@ export function PedidoMercadoPagoSyncButton({ pedidoId }: { pedidoId: string }) 
       <form action={formAction} className="flex flex-wrap items-center gap-2">
         <input type="hidden" name="pedido_id" value={pedidoId} />
         <button type="submit" disabled={pending} className={btnClass}>
-          {pending ? "Verificando pagamento..." : "Verificar pagamento (Mais rapido)"}
+          {pending ? "Atualizando…" : "Atualizar pagamento"}
         </button>
       </form>
       {state?.error ? (

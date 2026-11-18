@@ -66,8 +66,7 @@ export function ProductDescriptionEditor({
   return (
     <div className="flex flex-col gap-1.5">
       <p className="text-xs text-gray-500">
-        Use <strong className="font-semibold">Negrito</strong>, listas e o alinhamento por parágrafo. Enter cria novo
-        parágrafo; Shift+Enter quebra linha no mesmo parágrafo.
+        Shift+Enter quebra a linha sem novo parágrafo.
       </p>
       <input type="hidden" name={name} value={htmlForSubmit} readOnly onChange={() => {}} aria-hidden />
       <div className={shellClass}>

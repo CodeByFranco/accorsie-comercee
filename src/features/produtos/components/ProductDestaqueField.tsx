@@ -30,7 +30,7 @@ export function ProductDestaqueField({ defaultChecked = false }: ProductDestaque
         {on ? "Em destaque na home" : "Marcar como destaque na home"}
       </button>
       <p className="mt-2 text-xs leading-relaxed text-gray-500">
-        Produtos em destaque aparecem na seção Destaques da página inicial.
+        Aparece em Destaques na página inicial.
       </p>
     </div>
   );

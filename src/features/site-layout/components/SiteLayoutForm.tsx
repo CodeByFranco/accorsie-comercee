@@ -60,9 +60,7 @@ export function SiteLayoutForm({ initial }: SiteLayoutFormProps) {
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
         <h2 className="text-base font-semibold text-gray-900">Banners da página inicial</h2>
         <p className="mt-1 text-sm text-gray-600">
-          Envie até {SITE_HOME_BANNER_COUNT} arquivos (recomendado 1920×550 px). Na loja eles alternam
-          automaticamente na faixa abaixo da barra de navegação. Os slots vazios são ignorados. Os banners 1 e 2 que
-          você já enviou permanecem aqui — só use &quot;Salvar&quot; depois de conferir as prévias.
+          Até {SITE_HOME_BANNER_COUNT} imagens, 1920×550 px. Slots vazios são ignorados.
         </p>
 
         {state?.ok === true && (

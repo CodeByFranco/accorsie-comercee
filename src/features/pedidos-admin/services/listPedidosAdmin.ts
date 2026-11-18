@@ -3,7 +3,8 @@ import { createAdminClient } from "@/services/supabase/admin";
 import type { AdminPedidoListRow } from "@/types/pedido";
 
 /**
- * Lista todos os pedidos (painel admin). Exige `SUPABASE_SERVICE_ROLE_KEY`.
+ * Lista todos os pedidos (painel admin), mais recentes primeiro, com `codigo_ui` sequencial.
+ * Exige `SUPABASE_SERVICE_ROLE_KEY`.
  */
 export async function listPedidosAdmin(): Promise<AdminPedidoListRow[]> {
   await requireAdmin();
@@ -11,13 +12,15 @@ export async function listPedidosAdmin(): Promise<AdminPedidoListRow[]> {
   const { data, error } = await supabase
     .from("pedidos")
     .select(
-      "id, user_id, status, total, created_at, destinatario_nome, logistica_status, rastreio_codigo"
+      "id, user_id, status, total, created_at, destinatario_nome, destinatario_documento, logistica_status, rastreio_codigo, retirada_loja",
     )
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
 
   if (error) {
     console.error("listPedidosAdmin:", error.message);
     throw new Error(error.message);
   }
-  return (data ?? []) as AdminPedidoListRow[];
+  const rows = (data ?? []) as AdminPedidoListRow[];
+  return rows.map((row, i) => ({ ...row, codigo_ui: i + 1 })).reverse();
 }

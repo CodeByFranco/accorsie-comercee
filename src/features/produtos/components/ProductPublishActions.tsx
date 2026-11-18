@@ -87,7 +87,7 @@ export function ProductPublishActions({
       </div>
       {status === "draft" && (
         <p className="text-xs text-gray-500">
-          Salve as alterações do formulário antes de publicar ou abrir a prévia. Os dois usam os dados já gravados.
+          Salve antes de publicar ou ver a prévia.
         </p>
       )}
 

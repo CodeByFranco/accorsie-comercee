@@ -28,8 +28,7 @@ export function ProductSomenteRetiradaField({ defaultChecked = false }: ProductS
         {on ? "Somente retirada na loja (sem envio)" : "Marcar: somente retirada na loja"}
       </button>
       <p className="mt-2 text-xs text-gray-500">
-        Com esta opção ativa, o cliente não poderá escolher entrega no endereço para este produto. Se o
-        carrinho tiver qualquer item assim, o checkout inteiro fica só com retirada na loja.
+        Sem entrega: o carrinho com este item fica só com retirada na loja.
       </p>
     </div>
   );

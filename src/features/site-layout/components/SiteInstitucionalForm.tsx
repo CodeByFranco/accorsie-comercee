@@ -21,8 +21,7 @@ export function SiteInstitucionalForm({ initial }: { initial: SiteInstitucional 
     <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm sm:p-6">
       <h2 className="text-base font-semibold text-gray-900">Textos institucionais</h2>
       <p className="mt-1 text-sm text-gray-600">
-        Manifesto da página «Quem somos» e horário de funcionamento do rodapé. Deixe um campo vazio para voltar ao
-        texto padrão.
+        Campo vazio volta ao texto padrão.
       </p>
 
       {state ? (

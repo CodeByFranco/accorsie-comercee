@@ -112,9 +112,7 @@ export function ProductEmbalagemFieldset({
       <fieldset className="space-y-4 rounded-xl border border-gray-100 bg-gray-50/50 p-4 md:p-5">
         <legend className="text-sm font-semibold text-gray-900">Embalagens fixas (catálogo)</legend>
         <p className="text-xs leading-relaxed text-gray-600">
-          Cadastre caixas ou envelopes reutilizáveis. Depois, escolha qual embalagem este produto utiliza no envio:
-          as medidas de envio vêm da embalagem; o peso total soma o peso da caixa com o peso do produto (aba
-          Dimensões).
+          As medidas de envio vêm da embalagem; o peso soma caixa + produto.
         </p>
 
         {deleteErr && (
@@ -271,12 +269,7 @@ export function ProductEmbalagemFieldset({
               estimado)
             </p>
           </div>
-        ) : (
-          <p className="text-xs text-gray-600">
-            Selecione uma embalagem cadastrada para preencher automaticamente as dimensões de envio. O peso total
-            usa o peso da caixa mais o campo &quot;Peso do produto&quot; na aba Dimensões.
-          </p>
-        )}
+        ) : null}
       </fieldset>
     </div>
   );

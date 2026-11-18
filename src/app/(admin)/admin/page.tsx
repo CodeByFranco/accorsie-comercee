@@ -1,6 +1,9 @@
 import Link from "next/link";
 
 import { SiteMaintenanceCard } from "@/features/admin/components/SiteMaintenanceCard";
+import { MelhorEnvioSaldoPanel } from "@/features/pedidos-admin/components/MelhorEnvioSaldoPanel";
+import { pedidoNaAba } from "@/features/pedidos-admin/utils/pedidoAdminStatus";
+import { ensureMelhorEnvioAccessToken, fetchMelhorEnvioBalance } from "@/services/melhorEnvio";
 import { formatPedidoDate, formatPedidoMoney, formatPedidoStatus } from "@/features/pedidos/utils/pedidoDisplay";
 import { listPedidosAdmin } from "@/features/pedidos-admin/services/listPedidosAdmin";
 import type { AdminPedidoListRow } from "@/types/pedido";
@@ -84,6 +87,39 @@ function IconTrend() {
   );
 }
 
+async function loadSaldo(): Promise<{
+  data: { balance: number; reserved: number; debts: number } | null;
+  error: string | null;
+}> {
+  try {
+    const res = await fetchMelhorEnvioBalance(await ensureMelhorEnvioAccessToken());
+    if (!res.ok) return { data: null, error: res.message };
+    return { data: { balance: res.balance, reserved: res.reserved, debts: res.debts }, error: null };
+  } catch {
+    return { data: null, error: "Não foi possível consultar o saldo." };
+  }
+}
+
+function AcaoCard({ href, label, n, tom }: { href: string; label: string; n: number; tom: "amber" | "gray" }) {
+  const ativo = n > 0;
+  return (
+    <Link
+      href={href}
+      className={`group flex items-center justify-between rounded-xl border p-5 shadow-sm transition ${
+        ativo && tom === "amber"
+          ? "border-amber-200 bg-amber-50 hover:bg-amber-100/70"
+          : "border-gray-100 bg-white hover:bg-gray-50"
+      }`}
+    >
+      <div>
+        <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{label}</p>
+        <p className={`mt-1 text-3xl font-bold tabular-nums ${ativo && tom === "amber" ? "text-amber-900" : "text-gray-900"}`}>{n}</p>
+      </div>
+      <span className="text-sm font-medium text-admin-accent group-hover:underline">Ver →</span>
+    </Link>
+  );
+}
+
 function isSameDay(a: Date, b: Date): boolean {
   return (
     a.getFullYear() === b.getFullYear() &&
@@ -118,6 +154,9 @@ export default async function AdminDashboardPage() {
   const vendasHoje = pedidosPagos.filter((p) => isSameDay(new Date(p.created_at), hoje)).length;
   const ticketMedio = pedidosPagos.length > 0 ? receitaTotal / pedidosPagos.length : 0;
   const ultimasVendas = pedidos.slice(0, 8);
+  const aEnviar = pedidos.filter((p) => pedidoNaAba(p, "a-enviar")).length;
+  const aguardando = pedidos.filter((p) => pedidoNaAba(p, "aguardando")).length;
+  const saldo = await loadSaldo();
 
   return (
     <div className="space-y-6">
@@ -130,11 +169,6 @@ export default async function AdminDashboardPage() {
         >
           <p className="font-semibold">Configuração</p>
           <p className="mt-1 text-amber-900/90">{configError}</p>
-          <p className="mt-2 text-xs text-amber-800/80">
-            Crie <code className="rounded bg-black/5 px-1">.env</code> ou{" "}
-            <code className="rounded bg-black/5 px-1">.env.local</code> com NEXT_PUBLIC_SUPABASE_URL e
-            SUPABASE_SERVICE_ROLE_KEY.
-          </p>
         </div>
       )}
 
@@ -150,6 +184,12 @@ export default async function AdminDashboardPage() {
 
       {!configError && !loadError && (
         <>
+          <section className="grid gap-4 md:grid-cols-3">
+            <AcaoCard href="/admin/pedidos" label="Pedidos a enviar" n={aEnviar} tom="amber" />
+            <AcaoCard href="/admin/pedidos?aba=aguardando" label="Aguardando pagamento" n={aguardando} tom="gray" />
+            <MelhorEnvioSaldoPanel initial={saldo.data} initialError={saldo.error} />
+          </section>
+
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <KpiCard
               label="Receita total"
@@ -182,11 +222,8 @@ export default async function AdminDashboardPage() {
           </section>
 
           <section className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
-            <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
-              <div className="min-w-0 shrink">
-                <h2 className="text-base font-semibold text-gray-900">Últimas vendas</h2>
-                <p className="mt-0.5 text-sm text-gray-500">Acompanhe os pedidos mais recentes</p>
-              </div>
+            <div className="flex flex-col gap-4 border-b border-gray-100 px-6 py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+              <h2 className="text-base font-semibold text-gray-900">Últimos pedidos</h2>
               <Link
                 href="/admin/pedidos"
                 className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"

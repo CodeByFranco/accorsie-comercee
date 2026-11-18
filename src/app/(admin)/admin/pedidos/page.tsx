@@ -2,224 +2,192 @@ import Link from "next/link";
 
 import { listPedidosAdmin } from "@/features/pedidos-admin/services/listPedidosAdmin";
 import {
+  PEDIDO_ABAS,
+  logisticaLabel,
+  logisticaPillClass,
+  pagamentoPillClass,
+  parsePedidoAba,
+  pedidoNaAba,
+  pillBase,
+  type PedidoAbaId,
+} from "@/features/pedidos-admin/utils/pedidoAdminStatus";
+import {
   formatPedidoDate,
   formatPedidoMoney,
   formatPedidoStatus,
+  formatPedidoUiCode,
 } from "@/features/pedidos/utils/pedidoDisplay";
-import type { AdminPedidoListRow, PedidoLogisticaStatus } from "@/types/pedido";
+import type { AdminPedidoListRow } from "@/types/pedido";
 
 export const metadata = {
   title: "Pedidos | Admin",
 };
 
-const logisticaLabel: Record<PedidoLogisticaStatus, string> = {
-  nao_iniciado: "Não iniciado",
-  em_separacao: "Em separação",
-  postado: "Postado",
-  entregue: "Entregue",
+const POR_PAGINA = 25;
+
+type PageProps = {
+  searchParams: Promise<{ aba?: string; q?: string; p?: string }>;
 };
 
-function toSafeNumber(value: unknown): number {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
+function normalize(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
 }
 
-function logisticaPillClass(ls: PedidoLogisticaStatus): string {
-  switch (ls) {
-    case "entregue":
-      return "bg-emerald-50 text-emerald-900 ring-emerald-200";
-    case "postado":
-      return "bg-sky-50 text-sky-900 ring-sky-200";
-    case "em_separacao":
-      return "bg-amber-50 text-amber-950 ring-amber-200";
-    default:
-      return "bg-gray-100 text-gray-700 ring-gray-200";
+function matchBusca(p: AdminPedidoListRow, q: string): boolean {
+  const termo = normalize(q.trim().replace(/^#/, ""));
+  if (!termo) return true;
+  const digitos = termo.replace(/\D/g, "");
+  if (digitos && digitos === termo.replace(/[.\-/\s]/g, "")) {
+    if (Number(digitos) === p.codigo_ui) return true;
+    if ((p.destinatario_documento ?? "").replace(/\D/g, "").includes(digitos)) return true;
   }
+  return normalize(p.destinatario_nome ?? "").includes(termo) || normalize(p.rastreio_codigo ?? "").includes(termo);
 }
 
-function pagamentoPillClass(status: AdminPedidoListRow["status"]): string {
-  if (status === "pago") return "bg-emerald-50 text-emerald-900 ring-emerald-200";
-  if (status === "aguardando_pagamento") return "bg-amber-50 text-amber-950 ring-amber-200";
-  return "bg-gray-100 text-gray-700 ring-gray-200";
+function hrefFor(aba: PedidoAbaId, q: string, page = 1): string {
+  const sp = new URLSearchParams();
+  if (aba !== "a-enviar") sp.set("aba", aba);
+  if (q) sp.set("q", q);
+  if (page > 1) sp.set("p", String(page));
+  const s = sp.toString();
+  return s ? `/admin/pedidos?${s}` : "/admin/pedidos";
 }
 
-export default async function AdminPedidosPage() {
+export default async function AdminPedidosPage({ searchParams }: PageProps) {
+  const sp = await searchParams;
+  const aba = parsePedidoAba(sp.aba);
+  const q = (sp.q ?? "").trim();
+
   let pedidos: AdminPedidoListRow[] = [];
-  let fatalMessage: string | null = null;
-  let isConfig = false;
-
+  let erro: string | null = null;
   try {
     pedidos = await listPedidosAdmin();
   } catch (e) {
-    fatalMessage = e instanceof Error ? e.message : "Erro ao carregar pedidos.";
-    isConfig =
-      fatalMessage.includes("SUPABASE_SERVICE_ROLE_KEY") ||
-      fatalMessage.includes("NEXT_PUBLIC_SUPABASE_URL");
+    erro = e instanceof Error ? e.message : "Erro ao carregar pedidos.";
   }
 
-  const totalPedidos = pedidos.length;
-  const pedidosPagos = pedidos.filter((p) => p.status === "pago").length;
-  const emSeparacao = pedidos.filter((p) => p.logistica_status === "em_separacao").length;
-  const totalFaturado = pedidos
-    .filter((p) => p.status === "pago")
-    .reduce((acc, pedido) => acc + toSafeNumber(pedido.total), 0);
+  const buscados = q ? pedidos.filter((p) => matchBusca(p, q)) : pedidos;
+  const filtrados = buscados.filter((p) => pedidoNaAba(p, aba));
+  const totalPaginas = Math.max(1, Math.ceil(filtrados.length / POR_PAGINA));
+  const pagina = Math.min(Math.max(1, Number(sp.p) || 1), totalPaginas);
+  const visiveis = filtrados.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
 
   return (
-    <div className="space-y-6">
-      {fatalMessage && (
-        <div
-          className={`rounded-xl border px-4 py-3 text-sm shadow-sm ${
-            isConfig
-              ? "border-amber-200 bg-amber-50 text-amber-950"
-              : "border-red-200 bg-red-50 text-red-950"
-          }`}
-          role="alert"
-        >
-          <p className="font-semibold">{isConfig ? "Configuração" : "Erro ao carregar"}</p>
-          <p className={isConfig ? "mt-1 text-amber-900/90" : "mt-1"}>{fatalMessage}</p>
-          {isConfig && (
-            <p className="mt-2 text-xs text-amber-800/80">
-              Defina <code className="rounded bg-black/5 px-1">SUPABASE_SERVICE_ROLE_KEY</code> no ambiente do
-              servidor (junto com a URL do projeto) para o painel acessar pedidos.
-            </p>
-          )}
+    <div className="space-y-5">
+      {erro ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-950" role="alert">
+          <p className="font-semibold">Não foi possível carregar os pedidos.</p>
+          <p className="mt-1 text-red-900/80">{erro}</p>
         </div>
-      )}
+      ) : null}
 
-      {!fatalMessage && (
-        <section className="space-y-4">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <article className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Total de pedidos</p>
-              <p className="mt-2 text-2xl font-semibold text-gray-900">{totalPedidos}</p>
-            </article>
-            <article className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Pagos</p>
-              <p className="mt-2 text-2xl font-semibold text-emerald-700">{pedidosPagos}</p>
-            </article>
-            <article className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Em separação</p>
-              <p className="mt-2 text-2xl font-semibold text-amber-700">{emSeparacao}</p>
-            </article>
-            <article className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Faturado</p>
-              <p className="mt-2 text-2xl font-semibold text-gray-900">{formatPedidoMoney(totalFaturado)}</p>
-            </article>
-          </div>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <nav aria-label="Filtrar pedidos" className="-mx-1 flex gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {PEDIDO_ABAS.map((a) => {
+            const n = buscados.filter((p) => pedidoNaAba(p, a.id)).length;
+            const ativa = a.id === aba;
+            const destaque = a.id === "a-enviar" && n > 0;
+            return (
+              <Link
+                key={a.id}
+                href={hrefFor(a.id, q)}
+                aria-current={ativa ? "page" : undefined}
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                  ativa ? "bg-admin-accent text-white shadow-sm" : "text-gray-600 hover:bg-white hover:text-gray-900"
+                }`}
+              >
+                {a.label}
+                <span
+                  className={`rounded-full px-1.5 text-xs tabular-nums ${
+                    ativa ? "bg-white/20" : destaque ? "bg-amber-100 text-amber-900" : "bg-gray-200/70 text-gray-600"
+                  }`}
+                >
+                  {n}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
 
-          <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
-            <div className="border-b border-gray-100 px-6 py-4">
-              <h2 className="text-base font-semibold text-gray-900">Pedidos</h2>
-              <p className="mt-0.5 text-sm text-gray-500">Todos os pedidos da loja</p>
+        <form action="/admin/pedidos" className="flex gap-2">
+          {aba !== "a-enviar" ? <input type="hidden" name="aba" value={aba} /> : null}
+          <input
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder="Nome, nº do pedido ou CPF"
+            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-admin-accent focus:ring-2 focus:ring-admin-accent/20 lg:w-64"
+          />
+          <button
+            type="submit"
+            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+          >
+            Buscar
+          </button>
+        </form>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm">
+        {visiveis.length === 0 ? (
+          <p className="px-6 py-12 text-center text-sm text-gray-500">
+            {q ? "Nenhum pedido encontrado." : aba === "a-enviar" ? "Nada para enviar agora. 🎉" : "Nenhum pedido aqui."}
+          </p>
+        ) : (
+          <ul className="divide-y divide-gray-100">
+            {visiveis.map((p) => (
+              <li key={p.id}>
+                <Link
+                  href={`/admin/pedidos/${p.id}`}
+                  className="grid grid-cols-[auto_1fr_auto] items-center gap-x-4 gap-y-1 px-4 py-3.5 transition hover:bg-gray-50 sm:px-6 md:grid-cols-[4.5rem_1fr_auto_auto_7rem]"
+                >
+                  <span className="font-mono text-sm font-semibold text-gray-900">#{formatPedidoUiCode(p.codigo_ui)}</span>
+                  <span className="min-w-0">
+                    <span className="block truncate font-medium text-gray-900">{p.destinatario_nome}</span>
+                    <span className="block text-xs text-gray-500">
+                      {formatPedidoDate(p.created_at)}
+                      {p.retirada_loja ? " · Retirada na loja" : p.rastreio_codigo ? ` · ${p.rastreio_codigo}` : ""}
+                    </span>
+                  </span>
+                  <span className="col-start-3 row-start-1 text-right text-sm font-semibold tabular-nums text-gray-900 md:col-start-5">
+                    {formatPedidoMoney(p.total)}
+                  </span>
+                  <span className="col-span-3 flex flex-wrap gap-1.5 md:col-span-2 md:col-start-3 md:row-start-1 md:justify-end">
+                    <span className={`${pillBase} ${pagamentoPillClass(p.status)}`}>{formatPedidoStatus(p.status)}</span>
+                    {p.status === "pago" ? (
+                      <span className={`${pillBase} ${logisticaPillClass(p.logistica_status)}`}>
+                        {logisticaLabel(p.logistica_status, p.retirada_loja)}
+                      </span>
+                    ) : null}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {totalPaginas > 1 ? (
+          <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 text-sm sm:px-6">
+            <span className="text-gray-500">
+              Página {pagina} de {totalPaginas}
+            </span>
+            <div className="flex gap-2">
+              {pagina > 1 ? (
+                <Link href={hrefFor(aba, q, pagina - 1)} className="rounded-lg border border-gray-200 px-3 py-1.5 hover:bg-gray-50">
+                  Anterior
+                </Link>
+              ) : null}
+              {pagina < totalPaginas ? (
+                <Link href={hrefFor(aba, q, pagina + 1)} className="rounded-lg border border-gray-200 px-3 py-1.5 hover:bg-gray-50">
+                  Próxima
+                </Link>
+              ) : null}
             </div>
-
-            {pedidos.length === 0 ? (
-              <p className="px-6 py-10 text-center text-sm text-gray-500">Nenhum pedido ainda.</p>
-            ) : (
-              <>
-                <div className="divide-y divide-gray-100 md:hidden">
-                  {pedidos.map((p) => (
-                    <article key={p.id} className="space-y-3 px-4 py-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-xs text-gray-500">{formatPedidoDate(p.created_at)}</p>
-                          <p className="mt-1 font-medium text-gray-900">{p.destinatario_nome}</p>
-                        </div>
-                        <p className="text-sm font-semibold tabular-nums text-gray-900">
-                          {formatPedidoMoney(p.total)}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        <span
-                          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${pagamentoPillClass(
-                            p.status,
-                          )}`}
-                        >
-                          {formatPedidoStatus(p.status)}
-                        </span>
-                        <span
-                          className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${logisticaPillClass(p.logistica_status)}`}
-                        >
-                          {logisticaLabel[p.logistica_status]}
-                        </span>
-                      </div>
-                      <p className="truncate font-mono text-xs text-gray-600">
-                        Rastreio: {p.rastreio_codigo ?? "—"}
-                      </p>
-                      <Link
-                        href={`/admin/pedidos/${p.id}`}
-                        className="inline-flex rounded-lg bg-admin-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-[#1857d1]"
-                      >
-                        Abrir pedido
-                      </Link>
-                    </article>
-                  ))}
-                </div>
-
-                <div className="hidden overflow-x-auto md:block">
-                  <table className="w-full min-w-[720px] text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-100 bg-gray-50/80 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                        <th className="px-6 py-3">Data</th>
-                        <th className="px-6 py-3">Cliente (entrega)</th>
-                        <th className="px-6 py-3">Pagamento</th>
-                        <th className="px-6 py-3">Logística</th>
-                        <th className="px-6 py-3">Rastreio</th>
-                        <th className="px-6 py-3 text-right">Total</th>
-                        <th className="px-6 py-3 text-right">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {pedidos.map((p) => (
-                        <tr key={p.id} className="text-gray-900 transition hover:bg-gray-50/80">
-                          <td className="whitespace-nowrap px-6 py-4 text-gray-600">
-                            {formatPedidoDate(p.created_at)}
-                          </td>
-                          <td className="max-w-[200px] px-6 py-4">
-                            <span className="font-medium text-gray-900">{p.destinatario_nome}</span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${pagamentoPillClass(
-                                p.status,
-                              )}`}
-                            >
-                              {formatPedidoStatus(p.status)}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${logisticaPillClass(
-                                p.logistica_status,
-                              )}`}
-                            >
-                              {logisticaLabel[p.logistica_status]}
-                            </span>
-                          </td>
-                          <td className="max-w-[140px] truncate px-6 py-4 font-mono text-xs text-gray-600">
-                            {p.rastreio_codigo ?? "—"}
-                          </td>
-                          <td className="px-6 py-4 text-right tabular-nums font-medium">
-                            {formatPedidoMoney(p.total)}
-                          </td>
-                          <td className="px-6 py-4 text-right">
-                            <Link
-                              href={`/admin/pedidos/${p.id}`}
-                              className="font-medium text-admin-accent hover:underline"
-                            >
-                              Abrir
-                            </Link>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
           </div>
-        </section>
-      )}
+        ) : null}
+      </div>
     </div>
   );
 }

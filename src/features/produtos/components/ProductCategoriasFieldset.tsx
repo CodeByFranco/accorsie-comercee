@@ -15,9 +15,6 @@ export function ProductCategoriasFieldset({
   return (
     <fieldset className="rounded-xl border border-gray-100 bg-gray-50/60 p-4">
       <legend className="px-0.5 text-sm font-medium text-gray-800">Categorias</legend>
-      <p className="mt-1 text-xs text-gray-500">
-        Opcional. Marque uma ou mais categorias para organizar o catálogo.
-      </p>
 
       {categorias.length === 0 ? (
         <p className="mt-3 text-sm text-gray-600">

@@ -78,7 +78,7 @@ export function KitPublishActions({ kitId, status }: { kitId: string; status: Ki
       </div>
       {status === "draft" && (
         <p className="text-xs text-gray-500">
-          Salve as alterações do formulário antes de publicar. A validação usa os dados já gravados.
+          Salve antes de publicar.
         </p>
       )}
       {error && (

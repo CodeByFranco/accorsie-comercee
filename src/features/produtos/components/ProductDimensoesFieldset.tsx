@@ -19,8 +19,7 @@ export function ProductDimensoesFieldset({
     <fieldset className="space-y-4 rounded-xl border border-gray-100 bg-gray-50/50 p-4 md:p-5">
       <legend className="text-sm font-semibold text-gray-900">Dimensões do produto (bruto)</legend>
       <p className="text-xs leading-relaxed text-gray-600">
-        Medidas da peça fora da embalagem de envio. Na aba Embalagem, o peso informado aqui entra na soma com o
-        peso da caixa.
+        Medidas da peça sem embalagem.
       </p>
       <p className="text-xs leading-relaxed text-admin-accent">
         {fieldsRequired
