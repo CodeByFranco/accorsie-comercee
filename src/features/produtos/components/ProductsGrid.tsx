@@ -88,12 +88,16 @@ export function ProductsGrid({
                     </p>
                     <CartaoParcelamentoLinha amount={precoCartaoCard} />
                   </div>
-                  <p className="mt-0.5 w-full truncate rounded-full border border-[#1d63ed]/40 bg-transparent px-2 py-0.5 text-center text-[10px] leading-tight text-[#1d63ed]/90 sm:text-[11px]">
-                    Confira a compatibilidade
-                  </p>
                 </div>
                 <div className="mt-auto pt-1">
-                  <ProductAddCartButton product={p} />
+                  <ProductAddCartButton
+                    product={p}
+                    aviso={
+                      <p className="w-full truncate rounded-full border border-[#1d63ed]/40 bg-transparent px-2 py-0.5 text-center text-[10px] leading-tight text-[#1d63ed]/90 sm:text-[11px]">
+                        Confira a compatibilidade
+                      </p>
+                    }
+                  />
                 </div>
               </article>
             </li>

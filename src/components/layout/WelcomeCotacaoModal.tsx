@@ -4,6 +4,11 @@ import Image from "next/image";
 import { Poppins } from "next/font/google";
 import { useCallback, useEffect, useState } from "react";
 
+import {
+  ABRIR_GARAGEM_EVENT,
+  AVISO_FECHADO_EVENT,
+  GaragemCartaoAnimado,
+} from "@/features/garagem/components/GaragemAnimada";
 import { ABRIR_COTACAO_EVENT } from "@/components/layout/WhatsAppAssistantButton";
 
 const poppins = Poppins({ subsets: ["latin"], weight: ["400", "600", "700", "800"] });
@@ -36,6 +41,7 @@ export function WelcomeCotacaoModal() {
 
   const fechar = useCallback(() => {
     setEstado("oculto");
+    window.dispatchEvent(new Event(AVISO_FECHADO_EVENT));
     try {
       sessionStorage.setItem(STORAGE_KEY, "fechado");
     } catch {
@@ -75,9 +81,9 @@ export function WelcomeCotacaoModal() {
           window.clearInterval(id);
           return c;
         }
-        return c + 1;
+        return Math.min(FALA_TOTAL, c + 2);
       });
-    }, 28);
+    }, 20);
     return () => window.clearInterval(id);
   }, [open, geracao]);
 
@@ -193,6 +199,27 @@ export function WelcomeCotacaoModal() {
               </a>
             ))}
           </div>
+
+          {/* No celular: convite para a garagem, com o carrinho entrando */}
+          <button
+            type="button"
+            onClick={() => {
+              fechar();
+              window.dispatchEvent(new Event(ABRIR_GARAGEM_EVENT));
+            }}
+            className="relative flex w-full items-center gap-3 overflow-hidden rounded-2xl border border-store-accent/40 bg-[#fff4ec] px-3 py-2 text-left transition hover:bg-[#ffeadb] lg:hidden"
+          >
+            <GaragemCartaoAnimado className="h-14 w-14">
+              <span className="leading-tight">
+                <span className="block text-[13px] font-extrabold text-store-navy">
+                  Adicione seu carro à garagem
+                </span>
+                <span className="mt-0.5 block text-[11px] text-store-navy/75">
+                  e veja só as peças compatíveis com ele.
+                </span>
+              </span>
+            </GaragemCartaoAnimado>
+          </button>
 
           <p className="text-center text-xs font-semibold italic text-store-navy">
             Accorsi Auto Peças, <span className="text-store-accent">sua solução está aqui!</span>

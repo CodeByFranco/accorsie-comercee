@@ -18,7 +18,7 @@ const BENEFICIOS: Array<{ icone: ReactNode; titulo: string; texto: string }> = [
   {
     icone: (
       // eslint-disable-next-line @next/next/no-img-element -- ícone local estático
-      <img src="/icons/presente.png" alt="" className="h-8 w-8 shrink-0 opacity-90" />
+      <img src="/icons/presente.png" alt="" className="h-6 w-6 shrink-0 sm:h-8 sm:w-8 opacity-90" />
     ),
     titulo: "Brinde Accorsi",
     texto: "Brinde especial em todo pedido",
@@ -55,17 +55,17 @@ export function HomeBeneficiosFaixa() {
       className={`bg-store-cream py-4 sm:py-5 ${storeShellInset}`}
     >
       <ul
-        className={`${storeShellContent} flex flex-col items-center gap-2 sm:flex-row sm:justify-center sm:gap-2.5`}
+        className={`${storeShellContent} grid grid-cols-3 gap-2 sm:flex sm:flex-row sm:justify-center sm:gap-2.5`}
       >
         {BENEFICIOS.map((b) => (
           <li
             key={b.titulo}
-            className="flex w-fit max-w-full items-center gap-2 rounded-md border border-store-navy/12 bg-[#e8edf5] px-3.5 py-2.5 shadow-[0_2px_10px_rgba(52,69,107,0.12)]"
+            className="flex min-w-0 flex-col items-center gap-1.5 rounded-md border border-store-navy/12 bg-[#e8edf5] px-1.5 py-2.5 text-center sm:w-fit sm:max-w-full sm:flex-row sm:gap-2 sm:px-3.5 sm:text-left shadow-[0_2px_10px_rgba(52,69,107,0.12)]"
           >
             {b.icone}
             <div className="min-w-0">
-              <p className="text-xs font-semibold text-store-navy">{b.titulo}</p>
-              <p className="mt-0.5 text-[11px] leading-snug text-store-navy/65 sm:text-xs">{b.texto}</p>
+              <p className="text-[11px] font-semibold leading-tight sm:text-xs text-store-navy">{b.titulo}</p>
+              <p className="mt-0.5 text-[10px] leading-snug text-store-navy/65 sm:text-xs">{b.texto}</p>
             </div>
           </li>
         ))}

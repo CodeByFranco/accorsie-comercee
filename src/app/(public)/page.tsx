@@ -111,7 +111,6 @@ export default async function Home({
 
   return (
     <div className="flex min-h-dvh flex-col bg-store-cream font-sans text-store-navy">
-      <HomeBeneficiosFaixa />
       <VehicleFilter
         marcas={vehicleFilterData.marcas}
         modelos={vehicleFilterData.modelos}
@@ -129,6 +128,7 @@ export default async function Home({
               <CategoriesSection categorias={categorias} />
             </div>
           </section>
+          <HomeBeneficiosFaixa />
         </>
       ) : (
         <>
@@ -137,6 +137,7 @@ export default async function Home({
               <CategoriesSection categorias={categorias} />
             </div>
           </section>
+          <HomeBeneficiosFaixa />
           <section className={`bg-store-cream pt-4 sm:pt-5 ${storeShellInset}`}>
             <div className={storeShellContent}>
               <KitsDestaqueCards

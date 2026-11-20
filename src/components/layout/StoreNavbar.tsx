@@ -10,6 +10,7 @@ import { storeShellContent, storeShellInset } from "@/config/storeShell";
 import { CART_ICON_SRC } from "@/features/carrinho/constants";
 import { useCart } from "@/features/carrinho/CartContext";
 import { useStoreAccount } from "@/features/auth/hooks/useStoreAccount";
+import { ABRIR_GARAGEM_EVENT, GaragemIconeCabecalho } from "@/features/garagem/components/GaragemAnimada";
 import { HomeBannerCarousel } from "@/components/layout/HomeBannerCarousel";
 import {
   buildCatalogQueryString,
@@ -23,7 +24,6 @@ const LINK_NAV_AFTER_CATEGORIAS = [
   { href: "/sobre", label: "SOBRE NÓS" },
 ] as const;
 
-const ICON_GARAGE = "/icons/garagem%201.png";
 const ICON_PROFILE = "/icons/perfil.png";
 
 /** Nome real do arquivo (sem %-encoding): o otimizador do next/image codifica a URL sozinho. */
@@ -196,6 +196,16 @@ export function StoreNavbar({
     router.push("/conta?aba=garagem");
   };
 
+  const openGarageRef = useRef(openGarage);
+  useEffect(() => {
+    openGarageRef.current = openGarage;
+  });
+  useEffect(() => {
+    const abrir = () => openGarageRef.current();
+    window.addEventListener(ABRIR_GARAGEM_EVENT, abrir);
+    return () => window.removeEventListener(ABRIR_GARAGEM_EVENT, abrir);
+  }, []);
+
   const applyCategoriaFilter = (categoriaId: string) => {
     closeCategorias();
     closeMobileNav();
@@ -335,19 +345,14 @@ export function StoreNavbar({
                   className="flex shrink-0 items-center gap-1.5 rounded-full border border-store-line bg-store-subtle px-1.5 py-1.5 text-left transition hover:border-store-navy-muted/50 xl:gap-2.5 xl:px-4 xl:py-2"
                   aria-label="Minha garagem"
                 >
-                  <Image
-                    src={ICON_GARAGE}
-                    alt=""
-                    width={ICON_PX}
-                    height={ICON_PX}
-                    className={iconImgClass}
-                  />
-                  <span className="hidden min-w-0 leading-tight xl:block">
-                    <span className="block text-sm font-bold text-store-navy">Minha Garagem</span>
-                    <span className="block text-xs font-normal text-store-navy-muted">
-                      Adicione seu veículo
+                  <GaragemIconeCabecalho className="h-8 w-8 sm:h-9 sm:w-9 xl:h-10 xl:w-10">
+                    <span className="min-w-0 leading-tight">
+                      <span className="block text-sm font-bold text-store-navy">Minha Garagem</span>
+                      <span className="block text-xs font-normal text-store-navy-muted">
+                        Adicione seu veículo
+                      </span>
                     </span>
-                  </span>
+                  </GaragemIconeCabecalho>
                 </button>
                 <button
                   type="button"
