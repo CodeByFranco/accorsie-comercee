@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -10,32 +11,17 @@ function pageTitle(pathname: string): string {
   if (pathname === "/admin/pedidos") return "Pedidos";
   if (/^\/admin\/pedidos\/[^/]+$/.test(pathname)) return "Detalhe do pedido";
   if (pathname === "/admin/marcas-e-modelos") return "Marcas e modelos";
-  if (pathname === "/admin/consulta-fipe") return "Consulta FIPE";
   if (pathname === "/admin/marcas") return "Marcas e modelos";
   if (pathname === "/admin/modelos") return "Marcas e modelos";
   if (pathname === "/admin/categorias") return "Categorias";
   if (pathname === "/admin/layout") return "Layout do site";
-  if (pathname === "/admin/layout/sobre") return "Página Sobre";
+  if (pathname === "/admin/layout/sobre") return "Página Sobre nós";
   if (pathname === "/admin/clientes") return "Clientes";
   if (pathname === "/admin/cupons") return "Cupons";
   if (pathname === "/admin/financeiro") return "Financeiro";
   if (pathname === "/admin/produtos/novo") return "Cadastrar produto";
   if (/^\/admin\/produtos\/[^/]+\/edit$/.test(pathname)) return "Editar produto";
   return "Painel";
-}
-
-function IconCar({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M5 11l1.5-4h11L19 11M5 11h14v5H5v-5zm2.5 0V9M16.5 11V9M7 17.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zm10 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
 }
 
 function IconOverview({ className }: { className?: string }) {
@@ -119,19 +105,6 @@ function IconTag({ className }: { className?: string }) {
   );
 }
 
-function IconFipeTable({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM4 10h16M10 5v14"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 function IconShoppingCart({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -202,7 +175,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const clientesActive = pathname.startsWith("/admin/clientes");
   const cuponsActive = pathname.startsWith("/admin/cupons");
   const financeiroActive = pathname.startsWith("/admin/financeiro");
-  const consultaFipeActive = pathname.startsWith("/admin/consulta-fipe");
 
   const navLinkClass = (active: boolean) =>
     [
@@ -210,6 +182,12 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       active
         ? "bg-[#1d63ed]/20 text-white"
         : "text-gray-400 hover:bg-white/[0.06] hover:text-white",
+    ].join(" ");
+
+  const subLinkClass = (active: boolean) =>
+    [
+      "ml-8 flex items-center gap-2 rounded-lg border-l border-white/10 px-3 py-2 text-[13px] font-medium transition-colors",
+      active ? "text-white bg-white/[0.06]" : "text-gray-500 hover:bg-white/[0.06] hover:text-white",
     ].join(" ");
 
   return (
@@ -231,19 +209,27 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         ].join(" ")}
       >
         <div className="flex h-16 items-center gap-3 border-b border-white/5 px-5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-admin-accent text-white">
-            <IconCar className="h-5 w-5" />
-          </div>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-bold tracking-tight text-white">Accorsi Auto Peças</p>
-            <p className="text-xs text-gray-500">Painel admin</p>
-          </div>
+          <Link href="/admin" className="flex min-w-0 flex-col gap-1" aria-label="Accorsi Auto Peças — painel admin">
+            <Image
+              src="/home/logo-footer.png"
+              alt="Accorsi Auto Peças"
+              width={3766}
+              height={374}
+              priority
+              className="h-auto w-[190px]"
+            />
+            <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500">Painel admin</span>
+          </Link>
         </div>
 
         <nav className="flex flex-1 flex-col gap-1 p-3" aria-label="Principal">
           <Link href="/admin" className={navLinkClass(overviewActive)}>
             <IconOverview className="h-5 w-5 shrink-0 opacity-80" />
             Visão geral
+          </Link>
+          <Link href="/admin/pedidos" className={navLinkClass(pedidosActive)}>
+            <IconShoppingCart className="h-5 w-5 shrink-0 opacity-80" />
+            Pedidos
           </Link>
           <Link href="/admin/produtos" className={navLinkClass(productsActive)}>
             <IconPackage className="h-5 w-5 shrink-0 opacity-80" />
@@ -253,26 +239,19 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <IconLayers className="h-5 w-5 shrink-0 opacity-80" />
             Marcas e modelos
           </Link>
-          <Link href="/admin/consulta-fipe" className={navLinkClass(consultaFipeActive)}>
-            <IconFipeTable className="h-5 w-5 shrink-0 opacity-80" />
-            Consulta FIPE
-          </Link>
           <Link href="/admin/categorias" className={navLinkClass(categoriasActive)}>
             <IconTag className="h-5 w-5 shrink-0 opacity-80" />
             Categorias
           </Link>
-          <Link href="/admin/layout" className={navLinkClass(layoutSiteActive)}>
+          <Link href="/admin/layout" className={navLinkClass(layoutSiteActive || sobreActive)}>
             <IconLayoutPanel className="h-5 w-5 shrink-0 opacity-80" />
             Layout
           </Link>
-          <Link href="/admin/layout/sobre" className={navLinkClass(sobreActive)}>
-            <IconLayoutPanel className="h-5 w-5 shrink-0 opacity-80" />
-            Página Sobre
-          </Link>
-          <Link href="/admin/pedidos" className={navLinkClass(pedidosActive)}>
-            <IconShoppingCart className="h-5 w-5 shrink-0 opacity-80" />
-            Pedidos
-          </Link>
+          {(layoutSiteActive || sobreActive) && (
+            <Link href="/admin/layout/sobre" className={subLinkClass(sobreActive)}>
+              Página Sobre nós
+            </Link>
+          )}
           <Link href="/admin/cupons" className={navLinkClass(cuponsActive)}>
             <IconTag className="h-5 w-5 shrink-0 opacity-80" />
             Cupons
