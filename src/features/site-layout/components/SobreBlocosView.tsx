@@ -9,6 +9,9 @@ import {
   paragrafos,
   safeHref,
   type SobreBloco,
+  type SobreBlocoCapa,
+  type SobreBlocoChamada,
+  type SobreBlocoLinhaTempo,
   type SobreBlocoGaleria,
   type SobreBlocoImagemTexto,
   type SobreBlocoManifesto,
@@ -90,18 +93,55 @@ export function SobreIconeSvg({ icone }: { icone: SobreIcone }) {
 }
 
 const fundoClass: Record<SobreFundo, string> = {
-  claro: "bg-white text-store-navy",
-  cinza: "bg-[#f3f5f9] text-store-navy",
-  escuro: "bg-store-navy text-white",
+  claro: "bg-white text-store-ink",
+  creme: "bg-store-sand text-store-ink",
+  cinza: "bg-[#f3f5f9] text-store-ink",
+  escuro: "bg-store-ink text-white",
   personalizado: "",
 };
 
 function fundoProps(b: SobreBloco): { className: string; style?: CSSProperties } {
   if (b.fundo !== "personalizado") return { className: fundoClass[b.fundo] };
   return {
-    className: fundoEscuro(b) ? "text-white" : "text-store-navy",
+    className: fundoEscuro(b) ? "text-white" : "text-store-ink",
     style: { backgroundColor: b.fundo_cor },
   };
+}
+
+/** Espaçamento generoso e largura de leitura das seções editoriais. */
+const secao = `py-20 sm:py-28 ${storeShellInset}`;
+const tituloSerif = "font-serif font-normal leading-[1.08] tracking-tight";
+
+function Etiqueta({ texto, escuro }: { texto: string; escuro: boolean }) {
+  if (!texto) return null;
+  return (
+    <p
+      className={`flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.22em] ${
+        escuro ? "text-white/60" : "text-store-ink/55"
+      }`}
+    >
+      <span aria-hidden className="h-px w-8 bg-store-accent" />
+      {texto}
+    </p>
+  );
+}
+
+function Botao({ texto, link, variante }: { texto: string; link: string; variante: "cheio" | "contorno" }) {
+  const href = safeHref(link);
+  if (!texto || !href) return null;
+  return (
+    <Link
+      href={href}
+      className={`inline-flex items-center gap-2 px-6 py-3.5 text-xs font-semibold uppercase tracking-[0.18em] transition ${
+        variante === "cheio"
+          ? "bg-store-accent text-white hover:bg-[#f07f38]"
+          : "border border-current hover:bg-white hover:text-store-ink"
+      }`}
+    >
+      {texto}
+      <span aria-hidden>→</span>
+    </Link>
+  );
 }
 
 function Foto({ url, alt, sizes, priority }: { url: string; alt: string; sizes: string; priority?: boolean }) {
@@ -118,53 +158,74 @@ function Foto({ url, alt, sizes, priority }: { url: string; alt: string; sizes: 
   );
 }
 
+function Paragrafos({ texto, escuro, className = "" }: { texto: string; escuro: boolean; className?: string }) {
+  const ps = paragrafos(texto);
+  if (!ps.length) return null;
+  return (
+    <div className={`space-y-5 text-base leading-[1.8] ${escuro ? "text-white/75" : "text-store-ink/70"} ${className}`}>
+      {ps.map((p, i) => (
+        <p key={i} className="whitespace-pre-line">
+          {p}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+function Capa({ b, primeiro }: { b: SobreBlocoCapa; primeiro: boolean }) {
+  const Titulo = primeiro ? "h1" : "h2";
+  return (
+    <section className={`relative isolate overflow-hidden bg-store-ink text-white ${storeShellInset}`}>
+      {b.imagem_url ? (
+        <>
+          <Foto url={b.imagem_url} alt={b.imagem_alt} sizes="100vw" priority={primeiro} />
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-gradient-to-r from-store-ink via-store-ink/85 to-store-ink/40"
+          />
+        </>
+      ) : null}
+      <div className={`${storeShellContent} relative flex min-h-[32rem] flex-col justify-center py-24 sm:min-h-[38rem]`}>
+        <div className="max-w-2xl">
+          <Etiqueta texto={b.etiqueta} escuro />
+          <Titulo className={`${tituloSerif} mt-6 text-5xl uppercase tracking-[0.04em] sm:text-6xl lg:text-7xl`}>
+            {b.titulo}
+          </Titulo>
+          {b.texto ? <p className="mt-8 max-w-xl text-lg leading-relaxed text-white/80">{b.texto}</p> : null}
+          {b.botao_texto ? (
+            <div className="mt-10">
+              <Botao texto={b.botao_texto} link={b.botao_link} variante="cheio" />
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function ImagemTexto({ b, primeiro }: { b: SobreBlocoImagemTexto; primeiro: boolean }) {
   const fp = fundoProps(b);
   const escuro = fundoEscuro(b);
   const Titulo = primeiro ? "h1" : "h2";
-  const href = safeHref(b.botao_link);
   return (
-    <section className={`py-10 sm:py-14 ${storeShellInset} ${fp.className}`} style={fp.style}>
+    <section className={`${secao} ${fp.className}`} style={fp.style}>
       <div
-        className={`${storeShellContent} grid items-center gap-8 ${b.imagem_url ? "lg:grid-cols-2" : ""} lg:gap-12`}
+        className={`${storeShellContent} grid items-center gap-12 ${b.imagem_url ? "lg:grid-cols-2" : ""} lg:gap-20`}
       >
         {b.imagem_url ? (
-          <div
-            className={`relative aspect-[4/3] overflow-hidden rounded-2xl border border-store-line/80 shadow-[0_12px_40px_rgba(52,69,107,0.16)] ${
-              b.imagem_lado === "direita" ? "lg:order-2" : ""
-            }`}
-          >
+          <div className={`relative aspect-[4/5] overflow-hidden sm:aspect-[4/3] lg:aspect-[4/5] ${b.imagem_lado === "direita" ? "lg:order-2" : ""}`}>
             <Foto url={b.imagem_url} alt={b.imagem_alt} sizes="(max-width: 1024px) 100vw, 36rem" priority={primeiro} />
           </div>
         ) : null}
 
-        <div>
-          {b.etiqueta ? (
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-store-accent">{b.etiqueta}</p>
-          ) : null}
-          {b.titulo ? (
-            <Titulo className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">{b.titulo}</Titulo>
-          ) : null}
-          <div
-            className={`mt-5 space-y-4 text-sm leading-relaxed sm:text-base ${
-              escuro ? "text-white/80" : "text-store-navy-muted"
-            }`}
-          >
-            {paragrafos(b.texto).map((p, i) => (
-              <p key={i} className="whitespace-pre-line">
-                {p}
-              </p>
-            ))}
-          </div>
-          {b.botao_texto && href ? (
-            <Link
-              href={href}
-              className={`mt-7 inline-flex rounded-lg px-4 py-2.5 text-sm font-bold transition ${
-                escuro ? "bg-white text-store-navy hover:bg-white/90" : "bg-store-navy text-white hover:bg-store-navy/90"
-              }`}
-            >
-              {b.botao_texto}
-            </Link>
+        <div className="max-w-xl">
+          <Etiqueta texto={b.etiqueta} escuro={escuro} />
+          {b.titulo ? <Titulo className={`${tituloSerif} mt-5 text-4xl sm:text-5xl`}>{b.titulo}</Titulo> : null}
+          <Paragrafos texto={b.texto} escuro={escuro} className="mt-8" />
+          {b.botao_texto ? (
+            <div className="mt-10">
+              <Botao texto={b.botao_texto} link={b.botao_link} variante={escuro ? "cheio" : "contorno"} />
+            </div>
           ) : null}
         </div>
       </div>
@@ -176,29 +237,70 @@ function Pilares({ b }: { b: SobreBlocoPilares }) {
   const fp = fundoProps(b);
   const escuro = fundoEscuro(b);
   return (
-    <section aria-label={b.titulo || "Destaques"} className={`py-10 sm:py-14 ${storeShellInset} ${fp.className}`} style={fp.style}>
+    <section aria-label={b.titulo || "Destaques"} className={`${secao} ${fp.className}`} style={fp.style}>
       <div className={storeShellContent}>
-        {b.titulo ? <h2 className="mb-6 text-center text-2xl font-black tracking-tight">{b.titulo}</h2> : null}
-        <ul className="flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap sm:justify-center sm:gap-2.5">
+        {b.etiqueta || b.titulo || b.texto ? (
+          <div className="max-w-2xl">
+            <Etiqueta texto={b.etiqueta} escuro={escuro} />
+            {b.titulo ? <h2 className={`${tituloSerif} mt-5 text-4xl sm:text-5xl`}>{b.titulo}</h2> : null}
+            <Paragrafos texto={b.texto} escuro={escuro} className="mt-6" />
+          </div>
+        ) : null}
+        <ul
+          className={`mt-14 grid gap-px sm:grid-cols-2 ${
+            b.itens.length >= 4 ? "lg:grid-cols-4" : b.itens.length === 3 ? "lg:grid-cols-3" : ""
+          } ${
+            escuro ? "bg-white/10" : "bg-store-ink/10"
+          }`}
+        >
           {b.itens.map((item, i) => (
-            <li
-              key={i}
-              className={`flex w-fit max-w-full items-center gap-2 rounded-md border px-3.5 py-2.5 shadow-[0_2px_10px_rgba(52,69,107,0.12)] ${
-                escuro ? "border-white/15 bg-white/10" : "border-store-navy/12 bg-[#e8edf5]"
-              }`}
-            >
+            <li key={i} className={`p-8 ${escuro ? "bg-store-ink" : fundoClass.creme}`}>
               <SobreIconeSvg icone={item.icone} />
-              <div className="min-w-0">
-                <h3 className="text-xs font-semibold">{item.titulo}</h3>
-                {item.texto ? (
-                  <p className={`mt-0.5 text-[11px] leading-snug sm:text-xs ${escuro ? "text-white/70" : "text-store-navy/65"}`}>
-                    {item.texto}
-                  </p>
-                ) : null}
-              </div>
+              <h3 className="mt-6 font-serif text-2xl font-normal">{item.titulo}</h3>
+              {item.texto ? (
+                <p className={`mt-3 text-sm leading-relaxed ${escuro ? "text-white/65" : "text-store-ink/65"}`}>
+                  {item.texto}
+                </p>
+              ) : null}
             </li>
           ))}
         </ul>
+      </div>
+    </section>
+  );
+}
+
+function LinhaTempo({ b }: { b: SobreBlocoLinhaTempo }) {
+  const fp = fundoProps(b);
+  const escuro = fundoEscuro(b);
+  if (!b.itens.length) return null;
+  return (
+    <section aria-label={b.titulo || "Linha do tempo"} className={`${secao} ${fp.className}`} style={fp.style}>
+      <div className={storeShellContent}>
+        <div className="max-w-2xl">
+          <Etiqueta texto={b.etiqueta} escuro={escuro} />
+          {b.titulo ? <h2 className={`${tituloSerif} mt-5 text-4xl sm:text-5xl`}>{b.titulo}</h2> : null}
+          <Paragrafos texto={b.texto} escuro={escuro} className="mt-6" />
+        </div>
+        <ol className="relative mt-16 grid gap-12 md:grid-flow-col md:auto-cols-fr md:gap-8">
+          <span
+            aria-hidden
+            className={`absolute left-0 right-0 top-[4.25rem] hidden h-px md:block ${escuro ? "bg-white/20" : "bg-store-ink/15"}`}
+          />
+          {b.itens.map((it, i) => (
+            <li key={i} className="relative">
+              <span className={`${tituloSerif} block h-12 text-5xl text-store-accent`}>{it.ano}</span>
+              <span
+                aria-hidden
+                className="relative mt-5 hidden h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-store-accent md:block"
+              />
+              <h3 className="mt-5 font-serif text-xl font-normal">{it.titulo}</h3>
+              {it.texto ? (
+                <p className={`mt-2 text-sm leading-relaxed ${escuro ? "text-white/65" : "text-store-ink/65"}`}>{it.texto}</p>
+              ) : null}
+            </li>
+          ))}
+        </ol>
       </div>
     </section>
   );
@@ -211,32 +313,27 @@ function Manifesto({ b }: { b: SobreBlocoManifesto }) {
   const destaque = blocos[0];
   const fecho = blocos.length > 1 ? blocos[blocos.length - 1] : undefined;
   const meio = blocos.slice(1, fecho ? -1 : undefined);
-  const forte = escuro ? "text-white" : "text-store-navy";
-  const suave = escuro ? "text-white/80" : "text-store-navy-muted";
+  const forte = escuro ? "text-white" : "text-store-ink";
+  const suave = escuro ? "text-white/70" : "text-store-ink/70";
 
   return (
     <section aria-label={b.titulo || "Manifesto"} className={`relative overflow-hidden ${fp.className}`} style={fp.style}>
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-store-accent/60 to-transparent"
-      />
-      <div className={`relative py-20 sm:py-28 ${storeShellInset}`}>
-        <div className={`${storeShellContent} mx-auto max-w-2xl text-center`}>
+      <div className={`relative py-24 sm:py-32 ${storeShellInset}`}>
+        <div className={`${storeShellContent} mx-auto max-w-3xl text-center`}>
           {b.titulo ? (
-            <>
-              <h2 className="text-xs font-bold uppercase tracking-[0.32em] text-store-accent">{b.titulo}</h2>
-              <div className="mx-auto mt-5 h-0.5 w-10 rounded-full bg-store-accent" />
-            </>
+            <h2 className="flex items-center justify-center gap-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-store-accent">
+              <span aria-hidden className="h-px w-8 bg-store-accent" />
+              {b.titulo}
+              <span aria-hidden className="h-px w-8 bg-store-accent" />
+            </h2>
           ) : null}
 
           {destaque ? (
-            <p className="mt-12 text-2xl font-bold leading-snug tracking-tight sm:mt-14 sm:text-[2.1rem] sm:leading-tight">
-              {destaque.join(" ")}
-            </p>
+            <p className={`${tituloSerif} mt-12 text-4xl sm:mt-14 sm:text-5xl`}>{destaque.join(" ")}</p>
           ) : null}
 
           {meio.length ? (
-            <div className="mt-14 space-y-14 sm:mt-16 sm:space-y-16">
+            <div className="mt-16 space-y-14 sm:mt-20 sm:space-y-16">
               {meio.map((bloco, i) => (
                 <div key={i} className="space-y-3">
                   {bloco.map((linha, j) => (
@@ -244,8 +341,8 @@ function Manifesto({ b }: { b: SobreBlocoManifesto }) {
                       key={j}
                       className={
                         linha.length <= 60
-                          ? `text-lg font-semibold leading-relaxed sm:text-xl ${forte}`
-                          : `text-base leading-loose sm:text-lg ${suave}`
+                          ? `font-serif text-2xl leading-snug ${forte}`
+                          : `text-base leading-[1.9] sm:text-lg ${suave}`
                       }
                     >
                       {linha}
@@ -257,14 +354,11 @@ function Manifesto({ b }: { b: SobreBlocoManifesto }) {
           ) : null}
 
           {fecho ? (
-            <div className="mt-16 sm:mt-20">
+            <div className="mt-20 sm:mt-24">
               <span aria-hidden className="mx-auto block h-1.5 w-1.5 rounded-full bg-store-accent" />
               <div className="mt-10 space-y-2">
                 {fecho.map((linha, i) => (
-                  <p
-                    key={i}
-                    className={`text-xl font-bold leading-snug sm:text-2xl ${i === 0 ? "" : "text-store-accent"}`}
-                  >
+                  <p key={i} className={`font-serif text-3xl leading-snug sm:text-4xl ${i === 0 ? "" : "text-store-accent"}`}>
                     {linha}
                   </p>
                 ))}
@@ -282,18 +376,10 @@ function Texto({ b }: { b: SobreBlocoTexto }) {
   const escuro = fundoEscuro(b);
   const centro = b.alinhamento === "centro";
   return (
-    <section className={`py-10 sm:py-14 ${storeShellInset} ${fp.className}`} style={fp.style}>
+    <section className={`${secao} ${fp.className}`} style={fp.style}>
       <div className={`${storeShellContent} ${centro ? "mx-auto max-w-2xl text-center" : "max-w-3xl"}`}>
-        {b.titulo ? <h2 className="text-2xl font-black tracking-tight sm:text-3xl">{b.titulo}</h2> : null}
-        <div
-          className={`mt-4 space-y-4 text-sm leading-relaxed sm:text-base ${escuro ? "text-white/80" : "text-store-navy-muted"}`}
-        >
-          {paragrafos(b.texto).map((p, i) => (
-            <p key={i} className="whitespace-pre-line">
-              {p}
-            </p>
-          ))}
-        </div>
+        {b.titulo ? <h2 className={`${tituloSerif} text-4xl sm:text-5xl`}>{b.titulo}</h2> : null}
+        <Paragrafos texto={b.texto} escuro={escuro} className="mt-8" />
       </div>
     </section>
   );
@@ -304,23 +390,51 @@ function Galeria({ b }: { b: SobreBlocoGaleria }) {
   if (!b.imagens.length) return null;
   const escuro = fundoEscuro(b);
   return (
-    <section className={`py-10 sm:py-14 ${storeShellInset} ${fp.className}`} style={fp.style}>
+    <section className={`${secao} ${fp.className}`} style={fp.style}>
       <div className={storeShellContent}>
-        {b.titulo ? <h2 className="mb-6 text-2xl font-black tracking-tight sm:text-3xl">{b.titulo}</h2> : null}
-        <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
+        <Etiqueta texto={b.etiqueta} escuro={escuro} />
+        {b.titulo ? <h2 className={`${tituloSerif} mt-5 text-4xl sm:text-5xl`}>{b.titulo}</h2> : null}
+        <ul className="mt-12 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {b.imagens.map((img, i) => (
-            <li key={i}>
-              <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-store-line/80">
+            <li key={i} className={i === 0 ? "col-span-2 row-span-2" : ""}>
+              <div className={`relative overflow-hidden ${i === 0 ? "aspect-square" : "aspect-[4/3] lg:aspect-square"}`}>
                 <Foto url={img.url} alt={img.legenda} sizes="(max-width: 1024px) 50vw, 24rem" />
               </div>
               {img.legenda ? (
-                <p className={`mt-2 text-xs sm:text-sm ${escuro ? "text-white/70" : "text-store-navy-muted"}`}>
-                  {img.legenda}
-                </p>
+                <p className={`mt-2 text-xs ${escuro ? "text-white/60" : "text-store-ink/60"}`}>{img.legenda}</p>
               ) : null}
             </li>
           ))}
         </ul>
+      </div>
+    </section>
+  );
+}
+
+function Chamada({ b }: { b: SobreBlocoChamada }) {
+  const fp = fundoProps(b);
+  const escuro = b.imagem_url ? true : fundoEscuro(b);
+  return (
+    <section
+      className={`relative isolate overflow-hidden ${b.imagem_url ? "bg-store-ink text-white" : fp.className} ${storeShellInset}`}
+      style={b.imagem_url ? undefined : fp.style}
+    >
+      {b.imagem_url ? (
+        <>
+          <Foto url={b.imagem_url} alt="" sizes="100vw" />
+          <div aria-hidden className="absolute inset-0 bg-store-ink/80" />
+        </>
+      ) : null}
+      <div className={`${storeShellContent} relative mx-auto max-w-2xl py-24 text-center sm:py-28`}>
+        {b.titulo ? <h2 className={`${tituloSerif} text-4xl sm:text-5xl`}>{b.titulo}</h2> : null}
+        {b.texto ? (
+          <p className={`mt-6 text-lg leading-relaxed ${escuro ? "text-white/75" : "text-store-ink/70"}`}>{b.texto}</p>
+        ) : null}
+        {b.botao_texto ? (
+          <div className="mt-10">
+            <Botao texto={b.botao_texto} link={b.botao_link} variante="cheio" />
+          </div>
+        ) : null}
       </div>
     </section>
   );
@@ -332,16 +446,22 @@ export function SobreBlocosView({ blocos }: { blocos: SobreBloco[] }) {
     <>
       {visiveis.map((b, i) => {
         switch (b.tipo) {
+          case "capa":
+            return <Capa key={b.id} b={b} primeiro={i === 0} />;
           case "imagem_texto":
             return <ImagemTexto key={b.id} b={b} primeiro={i === 0} />;
           case "pilares":
             return <Pilares key={b.id} b={b} />;
+          case "linha_tempo":
+            return <LinhaTempo key={b.id} b={b} />;
           case "manifesto":
             return <Manifesto key={b.id} b={b} />;
           case "texto":
             return <Texto key={b.id} b={b} />;
           case "galeria":
             return <Galeria key={b.id} b={b} />;
+          case "chamada":
+            return <Chamada key={b.id} b={b} />;
         }
       })}
     </>

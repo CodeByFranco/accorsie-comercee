@@ -459,7 +459,7 @@ export function VehicleFilter({
     <span
       className={[
         compact
-          ? "relative block h-6 w-6 shrink-0 sm:h-6 sm:w-6"
+          ? "relative block h-5 w-5 shrink-0 min-[380px]:h-6 min-[380px]:w-6"
           : "relative block h-7 w-7 shrink-0",
         !active && "opacity-90",
       ].join(" ")}
@@ -524,7 +524,7 @@ export function VehicleFilter({
               aria-label={label}
               onClick={() => onVehicleTypeTab(id)}
               className={[
-                "relative z-10 flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold transition-colors duration-200 sm:gap-2 sm:px-3 sm:text-sm",
+                "relative z-10 flex min-h-9 min-w-0 flex-1 basis-0 items-center justify-center gap-1 rounded-full px-1 py-1 text-[11px] font-semibold min-[380px]:gap-1.5 min-[380px]:px-2 min-[380px]:text-xs transition-colors duration-200 sm:gap-2 sm:px-3 sm:text-sm",
                 active ? "text-store-accent" : "text-store-navy hover:bg-store-subtle/70",
               ].join(" ")}
             >

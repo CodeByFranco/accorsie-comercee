@@ -320,51 +320,72 @@ export function PlateVehicleFinder({
   const toolbarBody = (
     <>
       {variant === "filterToolbar" ? (
-        <div className="flex min-h-0 w-full flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-2 sm:py-0 md:gap-3">
+        <div className="flex min-h-0 w-full flex-1 flex-col items-center justify-center gap-1.5 sm:gap-2 sm:py-1">
           <p id={placaQuotaDescId} className="sr-only">
             {quotaSrLabel}
           </p>
-          <div className="my-0.5 mx-1 flex w-full min-w-0 flex-1 items-center justify-center text-center sm:mx-2 sm:my-0 sm:mr-3 sm:w-auto sm:justify-end sm:text-right md:mx-2.5">
-            <p className="m-0 w-full text-xs font-bold leading-snug text-white sm:text-sm sm:leading-snug md:text-base">
-              Digite a sua placa aqui e encontre peças compatíveis
+          <div className="flex w-full min-w-0 flex-col items-center text-center">
+            <p className="m-0 text-sm font-extrabold leading-tight text-white sm:text-lg">
+              Busque pela placa
+            </p>
+            <p className="m-0 mt-0.5 text-[10px] leading-snug text-white/80 sm:text-xs">
+              e veja só as peças que servem no seu carro
+            </p>
+            <p className="m-0 hidden text-[10px] leading-snug text-white/55 sm:mt-0.5 sm:block sm:text-[11px]" aria-hidden>
+              {sessionLoggedIn
+                ? `Até ${PLACA_CONSULTA_USER_DAILY_MAX} consultas por dia`
+                : `${PLACA_CONSULTA_ANON_LIFETIME_MAX} consulta grátis sem login · ${PLACA_CONSULTA_USER_DAILY_MAX}/dia com conta`}
             </p>
           </div>
-          <div
-            className="mx-auto hidden h-9 w-px shrink-0 self-center bg-store-accent sm:mx-0 sm:block"
-            aria-hidden
-          />
-          <div className="flex w-full shrink-0 flex-row items-center justify-center gap-1.5 sm:w-auto sm:max-w-[11rem] sm:justify-start">
-            <input
-              type="text"
-              inputMode="text"
-              autoCapitalize="characters"
-              autoCorrect="off"
-              spellCheck={false}
-              maxLength={8}
-              value={placa}
-              onChange={(e) => setPlaca(normalizePlateInput(e.target.value))}
-              placeholder="ABC1D23"
-              aria-describedby={placaQuotaDescId}
-              className="h-10 w-[7.75rem] shrink-0 rounded-full border border-white/25 bg-white px-3 text-xs font-semibold tracking-[0.06em] text-store-navy outline-none transition placeholder:text-store-navy/45 focus:border-store-accent/90 focus:ring-1 focus:ring-store-accent/30 sm:w-[8.5rem] sm:text-sm"
-            />
+          <form
+            className="flex w-full shrink-0 flex-row items-stretch justify-center"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!loading) void applyFromApi();
+            }}
+          >
+            {/* Placa Mercosul */}
+            <label className="relative flex w-[7.5rem] shrink-0 flex-col overflow-hidden rounded-l-md sm:w-[10.5rem] sm:rounded-l-lg border-2 border-r-0 border-[#111] bg-white shadow-sm focus-within:ring-2 focus-within:ring-store-accent/70 sm:w-[10.5rem]">
+              <span
+                aria-hidden
+                className="flex h-[10px] items-center justify-between bg-[#003399] px-1 text-[6px] sm:h-[14px] sm:px-1.5 sm:text-[8px] font-bold uppercase leading-none tracking-[0.18em] text-white"
+              >
+                <span className="h-[7px] w-[10px] rounded-[1px] bg-[#009c3b] [background-image:linear-gradient(135deg,transparent_30%,#ffdf00_30%,#ffdf00_70%,transparent_70%)]" />
+                <span>Brasil</span>
+                <span className="h-[7px] w-[10px]" />
+              </span>
+              <span className="sr-only">Placa do veículo</span>
+              <input
+                type="text"
+                inputMode="text"
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
+                maxLength={8}
+                value={placa}
+                onChange={(e) => setPlaca(normalizePlateInput(e.target.value))}
+                placeholder="ABC1D23"
+                aria-describedby={placaQuotaDescId}
+                className="h-7 w-full bg-transparent px-1.5 text-center font-mono text-sm font-bold uppercase tracking-[0.14em] text-[#111] outline-none placeholder:text-[#111]/25 sm:h-10 sm:px-2 sm:text-xl"
+              />
+            </label>
             <button
-              type="button"
+              type="submit"
               disabled={loading}
-              onClick={applyFromApi}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-store-accent text-store-navy shadow-sm transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
-              aria-label={loading ? "Consultando placa" : "Buscar placa"}
-              title={loading ? "Consultando…" : "Buscar placa"}
+              className="flex shrink-0 items-center justify-center gap-1 rounded-r-md border-2 border-l-0 border-[#111] bg-store-accent px-2.5 text-xs font-extrabold sm:gap-1.5 sm:rounded-r-lg sm:text-sm text-store-navy shadow-sm transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70 sm:px-4"
+              aria-label={loading ? "Consultando placa" : "Buscar peças pela placa"}
             >
               {loading ? (
                 <span
-                  className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-store-navy border-t-transparent"
+                  className="h-4 w-4 animate-spin rounded-full border-2 border-store-navy border-t-transparent"
                   aria-hidden
                 />
               ) : (
-                <IconSearchSymbol className="h-[1.05rem] w-[1.05rem]" />
+                <IconSearchSymbol className="h-4 w-4" />
               )}
+              <span>{loading ? "Buscando" : "Buscar"}</span>
             </button>
-          </div>
+          </form>
         </div>
       ) : (
         <div className="mx-auto flex w-full max-w-md flex-col items-center text-center">

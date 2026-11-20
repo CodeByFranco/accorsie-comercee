@@ -1,6 +1,6 @@
 import { DEFAULT_MANIFESTO_TEXTO } from "@/features/site-layout/utils/institucional";
 
-export type SobreFundo = "claro" | "cinza" | "escuro" | "personalizado";
+export type SobreFundo = "claro" | "creme" | "cinza" | "escuro" | "personalizado";
 export type SobreIcone = "escudo" | "raio" | "pessoas" | "estrela" | "chave" | "carro" | "relogio" | "coracao";
 
 export const SOBRE_ICONES: Array<{ value: SobreIcone; label: string }> = [
@@ -16,6 +16,7 @@ export const SOBRE_ICONES: Array<{ value: SobreIcone; label: string }> = [
 
 export const SOBRE_FUNDOS: Array<{ value: SobreFundo; label: string }> = [
   { value: "claro", label: "Branco" },
+  { value: "creme", label: "Creme" },
   { value: "cinza", label: "Cinza claro" },
   { value: "escuro", label: "Azul escuro" },
   { value: "personalizado", label: "Outra cor…" },
@@ -44,7 +45,10 @@ export type SobreBlocoImagemTexto = Base & {
 
 export type SobreBlocoPilares = Base & {
   tipo: "pilares";
+  etiqueta: string;
   titulo: string;
+  /** Parágrafo de introdução (opcional). */
+  texto: string;
   itens: Array<{ icone: SobreIcone; titulo: string; texto: string }>;
 };
 
@@ -64,11 +68,45 @@ export type SobreBlocoTexto = Base & {
 
 export type SobreBlocoGaleria = Base & {
   tipo: "galeria";
+  etiqueta: string;
   titulo: string;
   imagens: Array<{ url: string; legenda: string }>;
 };
 
+/** Capa de tela cheia: foto de fundo escurecida, título grande e botão. */
+export type SobreBlocoCapa = Base & {
+  tipo: "capa";
+  etiqueta: string;
+  titulo: string;
+  texto: string;
+  imagem_url: string;
+  imagem_alt: string;
+  botao_texto: string;
+  botao_link: string;
+};
+
+export type SobreBlocoLinhaTempo = Base & {
+  tipo: "linha_tempo";
+  etiqueta: string;
+  titulo: string;
+  texto: string;
+  itens: Array<{ ano: string; titulo: string; texto: string }>;
+};
+
+/** Faixa final com chamada para ação (foto de fundo opcional). */
+export type SobreBlocoChamada = Base & {
+  tipo: "chamada";
+  titulo: string;
+  texto: string;
+  imagem_url: string;
+  botao_texto: string;
+  botao_link: string;
+};
+
 export type SobreBloco =
+  | SobreBlocoCapa
+  | SobreBlocoLinhaTempo
+  | SobreBlocoChamada
   | SobreBlocoImagemTexto
   | SobreBlocoPilares
   | SobreBlocoManifesto
@@ -78,6 +116,9 @@ export type SobreBloco =
 export type SobreBlocoTipo = SobreBloco["tipo"];
 
 export const SOBRE_TIPOS: Array<{ value: SobreBlocoTipo; label: string; descricao: string }> = [
+  { value: "capa", label: "Capa", descricao: "Foto de fundo em tela cheia com título grande." },
+  { value: "linha_tempo", label: "Linha do tempo", descricao: "Anos e marcos da história." },
+  { value: "chamada", label: "Chamada final", descricao: "Faixa com convite e botão." },
   { value: "imagem_texto", label: "Imagem + texto", descricao: "Foto de um lado, título e texto do outro." },
   { value: "texto", label: "Texto", descricao: "Título e parágrafos." },
   { value: "pilares", label: "Destaques", descricao: "Cartõezinhos com ícone, título e frase curta." },
@@ -106,45 +147,117 @@ export function novoBloco(tipo: SobreBlocoTipo): SobreBloco {
         botao_link: "",
       };
     case "pilares":
-      return { ...base, tipo, titulo: "", itens: [{ icone: "estrela", titulo: "Destaque", texto: "Frase curta." }] };
+      return {
+        ...base,
+        tipo,
+        etiqueta: "",
+        titulo: "",
+        texto: "",
+        itens: [{ icone: "estrela", titulo: "Destaque", texto: "Frase curta." }],
+      };
+    case "capa":
+      return {
+        ...base,
+        tipo,
+        fundo: "escuro",
+        etiqueta: "",
+        titulo: "Novo título",
+        texto: "",
+        imagem_url: "",
+        imagem_alt: "",
+        botao_texto: "",
+        botao_link: "",
+      };
+    case "linha_tempo":
+      return {
+        ...base,
+        tipo,
+        fundo: "creme",
+        etiqueta: "Linha do tempo",
+        titulo: "Nossa história",
+        texto: "",
+        itens: [{ ano: "2016", titulo: "Marco", texto: "Descrição curta." }],
+      };
+    case "chamada":
+      return {
+        ...base,
+        tipo,
+        fundo: "escuro",
+        titulo: "Venha nos visitar",
+        texto: "",
+        imagem_url: "",
+        botao_texto: "",
+        botao_link: "",
+      };
     case "manifesto":
       return { ...base, tipo, fundo: "escuro", titulo: "Manifesto", texto: "Primeira frase em destaque." };
     case "texto":
       return { ...base, tipo, titulo: "Novo título", texto: "Escreva aqui.", alinhamento: "esquerda" };
     case "galeria":
-      return { ...base, tipo, titulo: "", imagens: [] };
+      return { ...base, tipo, etiqueta: "", titulo: "", imagens: [] };
   }
 }
 
 export function defaultSobreBlocos(manifestoTexto?: string | null): SobreBloco[] {
   return [
     {
+      id: "capa",
+      tipo: "capa",
+      visivel: true,
+      fundo: "escuro",
+      etiqueta: "Accorsi Auto Peças",
+      titulo: "Tradição & família desde 2016",
+      texto:
+        "Empresa familiar nascida no segmento de auto elétrica. Peças de reposição com a orientação de quem vive o setor automotivo todos os dias.",
+      imagem_url: "/sobre/loja.jpg",
+      imagem_alt: "Fachada da Accorsi Auto Peças",
+      botao_texto: "Ver produtos",
+      botao_link: "/produtos",
+    },
+    {
       id: "inicio",
       tipo: "imagem_texto",
       visivel: true,
-      fundo: "claro",
-      etiqueta: "Desde 2016",
-      titulo: "Quem somos",
+      fundo: "creme",
+      etiqueta: "Quem somos",
+      titulo: "Mais do que vender peças",
       texto: [
         "Com origem no segmento de auto elétrica, a Accorsi Auto Peças atua no mercado desde 2016, com foco na reposição de peças automotivas, construída na vivência do dia a dia do setor e na leitura precisa das necessidades de quem depende do serviço.",
         "Somos uma empresa familiar, com sólida experiência no ramo automotivo.",
       ].join("\n\n"),
       imagem_url: "/sobre/loja.jpg",
       imagem_alt: "Fachada da Accorsi Auto Peças",
-      imagem_lado: "esquerda",
-      botao_texto: "Ver produtos",
-      botao_link: "/produtos",
+      imagem_lado: "direita",
+      botao_texto: "",
+      botao_link: "",
     },
     {
       id: "pilares",
       tipo: "pilares",
       visivel: true,
-      fundo: "claro",
-      titulo: "",
+      fundo: "escuro",
+      etiqueta: "O que nos move",
+      titulo: "Atender bem, orientar com segurança",
+      texto: "",
       itens: [
         { icone: "escudo", titulo: "Segurança na escolha", texto: "A peça certa para quem depende do carro no dia a dia." },
         { icone: "raio", titulo: "Agilidade no atendimento", texto: "Resposta rápida quando o serviço não pode esperar." },
         { icone: "pessoas", titulo: "Confiança em cada solução", texto: "Experiência de quem vive o setor automotivo desde 2016." },
+        { icone: "coracao", titulo: "Empresa familiar", texto: "Respeito e lealdade como base de um negócio sólido." },
+      ],
+    },
+    {
+      id: "historia",
+      tipo: "linha_tempo",
+      visivel: true,
+      fundo: "creme",
+      etiqueta: "Linha do tempo",
+      titulo: "Nossa trajetória",
+      texto: "Da auto elétrica à loja online, os marcos da Accorsi.",
+      itens: [
+        { ano: "Origem", titulo: "Auto elétrica", texto: "A família começa no segmento de auto elétrica." },
+        { ano: "2016", titulo: "Nasce a Accorsi Auto Peças", texto: "Foco na reposição de peças automotivas em Bento Gonçalves." },
+        { ano: "Hoje", titulo: "Loja online", texto: "O mesmo atendimento, agora também pela internet." },
       ],
     },
     {
@@ -155,6 +268,17 @@ export function defaultSobreBlocos(manifestoTexto?: string | null): SobreBloco[]
       titulo: "Manifesto",
       texto: manifestoTexto?.trim() || DEFAULT_MANIFESTO_TEXTO,
     },
+    {
+      id: "chamada",
+      tipo: "chamada",
+      visivel: true,
+      fundo: "escuro",
+      titulo: "Encontre a peça certa",
+      texto: "Pesquise pelo seu veículo ou fale com a nossa equipe.",
+      imagem_url: "/sobre/loja.jpg",
+      botao_texto: "Ver produtos",
+      botao_link: "/produtos",
+    },
   ];
 }
 
@@ -163,7 +287,7 @@ export function defaultSobreBlocos(manifestoTexto?: string | null): SobreBloco[]
 const str = (v: unknown, max = 5000) => (typeof v === "string" ? v.slice(0, max) : "");
 const oneOf = <T extends string>(v: unknown, opts: readonly T[], fallback: T): T =>
   opts.includes(v as T) ? (v as T) : fallback;
-const FUNDOS = ["claro", "cinza", "escuro", "personalizado"] as const;
+const FUNDOS = ["claro", "creme", "cinza", "escuro", "personalizado"] as const;
 const HEX = /^#[0-9a-f]{6}$/i;
 
 /** Cor clara ou escura? Decide a cor do texto em fundo personalizado. */
@@ -222,7 +346,9 @@ function parseBloco(raw: unknown): SobreBloco | null {
       return {
         ...base,
         tipo: "pilares",
+        etiqueta: str(r.etiqueta, 80),
         titulo: str(r.titulo, 200),
+        texto: str(r.texto, 1000),
         itens: (Array.isArray(r.itens) ? r.itens : []).slice(0, 12).map((it) => {
           const i = (it ?? {}) as Record<string, unknown>;
           return { icone: oneOf(i.icone, ICONES, "estrela"), titulo: str(i.titulo, 120), texto: str(i.texto, 300) };
@@ -242,6 +368,7 @@ function parseBloco(raw: unknown): SobreBloco | null {
       return {
         ...base,
         tipo: "galeria",
+        etiqueta: str(r.etiqueta, 80),
         titulo: str(r.titulo, 200),
         imagens: (Array.isArray(r.imagens) ? r.imagens : [])
           .slice(0, 24)
@@ -250,6 +377,40 @@ function parseBloco(raw: unknown): SobreBloco | null {
             return { url: safeImageUrl(str(i.url, 1000)), legenda: str(i.legenda, 200) };
           })
           .filter((i) => i.url),
+      };
+    case "capa":
+      return {
+        ...base,
+        tipo: "capa",
+        etiqueta: str(r.etiqueta, 80),
+        titulo: str(r.titulo, 200),
+        texto: str(r.texto, 1000),
+        imagem_url: safeImageUrl(str(r.imagem_url, 1000)),
+        imagem_alt: str(r.imagem_alt, 200),
+        botao_texto: str(r.botao_texto, 60),
+        botao_link: safeHref(str(r.botao_link, 500)),
+      };
+    case "linha_tempo":
+      return {
+        ...base,
+        tipo: "linha_tempo",
+        etiqueta: str(r.etiqueta, 80),
+        titulo: str(r.titulo, 200),
+        texto: str(r.texto, 1000),
+        itens: (Array.isArray(r.itens) ? r.itens : []).slice(0, 20).map((it) => {
+          const i = (it ?? {}) as Record<string, unknown>;
+          return { ano: str(i.ano, 20), titulo: str(i.titulo, 120), texto: str(i.texto, 400) };
+        }),
+      };
+    case "chamada":
+      return {
+        ...base,
+        tipo: "chamada",
+        titulo: str(r.titulo, 200),
+        texto: str(r.texto, 1000),
+        imagem_url: safeImageUrl(str(r.imagem_url, 1000)),
+        botao_texto: str(r.botao_texto, 60),
+        botao_link: safeHref(str(r.botao_link, 500)),
       };
     default:
       return null;

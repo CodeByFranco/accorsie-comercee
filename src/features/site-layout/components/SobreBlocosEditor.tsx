@@ -108,6 +108,104 @@ function EditorBloco({ b, set }: { b: SobreBloco; set: (b: SobreBloco) => void }
   );
 
   switch (b.tipo) {
+    case "capa":
+      return (
+        <div className="space-y-3">
+          <Campo label="Foto de fundo" dica="Fica escurecida por trás do texto.">
+            <ImagemUpload url={b.imagem_url} onChange={(imagem_url) => set({ ...b, imagem_url })} />
+          </Campo>
+          <Campo label="Descrição da foto">
+            <input className={field} value={b.imagem_alt} onChange={(e) => set({ ...b, imagem_alt: e.target.value })} />
+          </Campo>
+          <Campo label="Texto pequeno acima do título">
+            <input className={field} value={b.etiqueta} onChange={(e) => set({ ...b, etiqueta: e.target.value })} />
+          </Campo>
+          <Campo label="Título">
+            <input className={field} value={b.titulo} onChange={(e) => set({ ...b, titulo: e.target.value })} />
+          </Campo>
+          <Campo label="Texto">
+            <textarea rows={3} className={field} value={b.texto} onChange={(e) => set({ ...b, texto: e.target.value })} />
+          </Campo>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Campo label="Botão (texto)" dica="Vazio = sem botão.">
+              <input className={field} value={b.botao_texto} onChange={(e) => set({ ...b, botao_texto: e.target.value })} />
+            </Campo>
+            <Campo label="Botão (link)">
+              <input className={field} value={b.botao_link} onChange={(e) => set({ ...b, botao_link: e.target.value })} />
+            </Campo>
+          </div>
+        </div>
+      );
+
+    case "linha_tempo":
+      return (
+        <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Campo label="Texto pequeno acima do título">
+              <input className={field} value={b.etiqueta} onChange={(e) => set({ ...b, etiqueta: e.target.value })} />
+            </Campo>
+            {fundo}
+          </div>
+          <Campo label="Título">
+            <input className={field} value={b.titulo} onChange={(e) => set({ ...b, titulo: e.target.value })} />
+          </Campo>
+          <Campo label="Introdução (opcional)">
+            <input className={field} value={b.texto} onChange={(e) => set({ ...b, texto: e.target.value })} />
+          </Campo>
+          {b.itens.map((it, i) => {
+            const setItem = (patch: Partial<typeof it>) =>
+              set({ ...b, itens: b.itens.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
+            return (
+              <div key={i} className="grid gap-2 rounded-lg border border-gray-100 bg-gray-50 p-3 sm:grid-cols-[6rem_1fr_auto]">
+                <input className={field} placeholder="Ano" value={it.ano} onChange={(e) => setItem({ ano: e.target.value })} />
+                <div className="space-y-2">
+                  <input className={field} placeholder="Marco" value={it.titulo} onChange={(e) => setItem({ titulo: e.target.value })} />
+                  <input className={field} placeholder="Frase curta" value={it.texto} onChange={(e) => setItem({ texto: e.target.value })} />
+                </div>
+                <button
+                  type="button"
+                  className={`${btnGhost} self-start`}
+                  onClick={() => set({ ...b, itens: b.itens.filter((_, j) => j !== i) })}
+                >
+                  Remover
+                </button>
+              </div>
+            );
+          })}
+          <button
+            type="button"
+            className={btnGhost}
+            onClick={() => set({ ...b, itens: [...b.itens, { ano: "", titulo: "", texto: "" }] })}
+          >
+            + Adicionar marco
+          </button>
+        </div>
+      );
+
+    case "chamada":
+      return (
+        <div className="space-y-3">
+          <Campo label="Foto de fundo (opcional)" dica="Sem foto, usa a cor de fundo.">
+            <ImagemUpload url={b.imagem_url} onChange={(imagem_url) => set({ ...b, imagem_url })} />
+          </Campo>
+          {b.imagem_url ? null : fundo}
+          <Campo label="Título">
+            <input className={field} value={b.titulo} onChange={(e) => set({ ...b, titulo: e.target.value })} />
+          </Campo>
+          <Campo label="Texto">
+            <input className={field} value={b.texto} onChange={(e) => set({ ...b, texto: e.target.value })} />
+          </Campo>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Campo label="Botão (texto)">
+              <input className={field} value={b.botao_texto} onChange={(e) => set({ ...b, botao_texto: e.target.value })} />
+            </Campo>
+            <Campo label="Botão (link)">
+              <input className={field} value={b.botao_link} onChange={(e) => set({ ...b, botao_link: e.target.value })} />
+            </Campo>
+          </div>
+        </div>
+      );
+
     case "imagem_texto":
       return (
         <div className="space-y-3">
@@ -199,11 +297,17 @@ function EditorBloco({ b, set }: { b: SobreBloco; set: (b: SobreBloco) => void }
       return (
         <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Campo label="Título (opcional)">
-              <input className={field} value={b.titulo} onChange={(e) => set({ ...b, titulo: e.target.value })} />
+            <Campo label="Texto pequeno acima do título">
+              <input className={field} value={b.etiqueta} onChange={(e) => set({ ...b, etiqueta: e.target.value })} />
             </Campo>
             {fundo}
           </div>
+          <Campo label="Título (opcional)">
+            <input className={field} value={b.titulo} onChange={(e) => set({ ...b, titulo: e.target.value })} />
+          </Campo>
+          <Campo label="Introdução (opcional)">
+            <input className={field} value={b.texto} onChange={(e) => set({ ...b, texto: e.target.value })} />
+          </Campo>
           {b.itens.map((it, i) => {
             const setItem = (patch: Partial<typeof it>) =>
               set({ ...b, itens: b.itens.map((x, j) => (j === i ? { ...x, ...patch } : x)) });
@@ -257,6 +361,9 @@ function EditorBloco({ b, set }: { b: SobreBloco; set: (b: SobreBloco) => void }
     case "galeria":
       return (
         <div className="space-y-3">
+          <Campo label="Texto pequeno acima do título">
+            <input className={field} value={b.etiqueta} onChange={(e) => set({ ...b, etiqueta: e.target.value })} />
+          </Campo>
           <div className="grid gap-3 sm:grid-cols-2">
             <Campo label="Título (opcional)">
               <input className={field} value={b.titulo} onChange={(e) => set({ ...b, titulo: e.target.value })} />

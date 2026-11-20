@@ -14,6 +14,9 @@
   --store-cream: #ffffff;
   --store-line: #c9c9c9;
   --store-subtle: #f2f2f2;
+  /* Creme e azul profundo das seções editoriais (Quem somos) */
+  --store-sand: #f3eee6;
+  --store-ink: #1d2740;
 
   /* Largura máxima do conteúdo da loja (navbar, linha, páginas) — 72rem ≈ max-w-6xl */
   --store-content-max: 72rem;
@@ -24,6 +27,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-libertinus), ui-serif, Georgia, serif;
   --font-store: "Canva Sans", ui-sans-serif, system-ui, sans-serif;
 
   --color-store-navy: var(--store-navy);
@@ -32,6 +36,8 @@
   --color-store-cream: var(--store-cream);
   --color-store-line: var(--store-line);
   --color-store-subtle: var(--store-subtle);
+  --color-store-sand: var(--store-sand);
+  --color-store-ink: var(--store-ink);
 
   --max-w-store: var(--store-content-max);
 

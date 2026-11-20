@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import type { ReactNode } from "react";
 
 import { CART_ICON_SRC } from "@/features/carrinho/constants";
 import { useCart } from "@/features/carrinho/CartContext";
@@ -8,9 +9,11 @@ import type { ProductSummary } from "@/types/product";
 
 type ProductAddCartButtonProps = {
   product: ProductSummary;
+  /** Aviso fixo logo acima do botão (ex.: "Confira a compatibilidade"). */
+  aviso?: ReactNode;
 };
 
-export function ProductAddCartButton({ product }: ProductAddCartButtonProps) {
+export function ProductAddCartButton({ product, aviso }: ProductAddCartButtonProps) {
   const { addProduct, lines } = useCart();
   const stock = Math.max(0, Math.floor(Number(product.quantidade_estoque)));
   const inCart = lines.find((l) => l.id === product.id)?.quantity ?? 0;
@@ -26,6 +29,7 @@ export function ProductAddCartButton({ product }: ProductAddCartButtonProps) {
           Última peça disponível
         </p>
       ) : null}
+      {aviso}
       <button
         type="button"
         disabled={disabled}
