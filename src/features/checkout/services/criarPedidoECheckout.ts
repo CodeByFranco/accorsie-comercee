@@ -8,6 +8,7 @@ import type { CheckoutPayload } from "@/features/checkout/types";
 import { getStorePickupAddress } from "@/config/storePickupAddress";
 import { createAdminClient } from "@/services/supabase/admin";
 import { createClient } from "@/services/supabase/server";
+import { cotarFreteServidor } from "@/services/melhorEnvio/cotarFreteServidor";
 import { createPreference, isTestAccessToken, pickInitPoint } from "@/services/mercadopago/client";
 import { sendPedidoTransactionalEmail } from "@/services/email/transactionalPedidoEmail";
 import { buildMercadoPagoPreferenceItems } from "@/features/checkout/utils/buildMercadoPagoPreferenceItems";
@@ -213,6 +214,26 @@ export async function criarPedidoECheckout(
   );
   if (entregaError) {
     return { ok: false, message: entregaError };
+  }
+
+  // Segurança: o valor do frete vem do navegador; recota no servidor e só aceita um preço real.
+  // Frete 0 (grátis) é validado pelo mínimo do pedido em criar_pedido_checkout.
+  if (!retirada && freteInformado > 0) {
+    const itensMap = new Map<string, number>();
+    for (const l of p_itens) itensMap.set(l.produto_id, (itensMap.get(l.produto_id) ?? 0) + l.quantidade);
+    const cotacao = await cotarFreteServidor(supabase, payload.cep, itensMap);
+    if (!cotacao.ok) {
+      return { ok: false, message: cotacao.error };
+    }
+    const freteValido = cotacao.opcoes.some(
+      (o) => Math.abs(o.precoCentavos / 100 - freteInformado) < 0.01,
+    );
+    if (!freteValido) {
+      return {
+        ok: false,
+        message: "O valor do frete mudou. Recalcule o frete e tente novamente.",
+      };
+    }
   }
 
   const loja = retirada ? getStorePickupAddress() : null;
