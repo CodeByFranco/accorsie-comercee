@@ -175,6 +175,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const clientesActive = pathname.startsWith("/admin/clientes");
   const cuponsActive = pathname.startsWith("/admin/cupons");
   const financeiroActive = pathname.startsWith("/admin/financeiro");
+  const contasActive = pathname.startsWith("/admin/contas");
 
   const navLinkClass = (active: boolean) =>
     [
@@ -264,6 +265,10 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <IconUsers className="h-5 w-5 shrink-0 opacity-80" />
             Clientes
           </Link>
+          <Link href="/admin/contas" className={navLinkClass(contasActive)}>
+            <IconKey className="h-5 w-5 shrink-0 opacity-80" />
+            Contas
+          </Link>
         </nav>
       </aside>
 
@@ -321,5 +326,16 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         <div className="mx-auto max-w-7xl p-4 md:p-6 lg:p-8">{children}</div>
       </div>
     </div>
+  );
+}
+
+function IconKey({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="7.5" cy="15.5" r="4.5" />
+      <path d="m10.7 12.3 9.8-9.8" />
+      <path d="m16 7 3 3" />
+      <path d="m19 4 2 2" />
+    </svg>
   );
 }
