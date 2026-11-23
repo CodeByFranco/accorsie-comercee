@@ -18,7 +18,7 @@ import {
   salvarModoEntregaPreferido,
   type ModoEntrega,
 } from "@/features/frete/modoEntregaPreferencia";
-import { getStorePickupAddress } from "@/config/storePickupAddress";
+import { formatStorePickupAddress, getStorePickupAddress } from "@/config/storePickupAddress";
 import { cartRequiresSomenteRetirada } from "@/features/produtos/utils/mapProductSummaryRow";
 import { unitPriceAfterPaymentDiscount } from "@/features/produtos/utils/paymentDiscount";
 
@@ -66,7 +66,21 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
     [lines],
   );
   const exigeRetiradaLoja = useMemo(() => cartRequiresSomenteRetirada(lines), [lines]);
-  const retiradaDisponivel = useMemo(() => getStorePickupAddress() !== null, []);
+  const lojaRetirada = useMemo(() => getStorePickupAddress(), []);
+  const retiradaDisponivel = lojaRetirada !== null;
+  const [distanciaLoja, setDistanciaLoja] = useState<number | null>(null);
+  const cepDistancia = initialProfileCep.replace(/\D/g, "");
+  useEffect(() => {
+    if (!retiradaDisponivel || cepDistancia.length !== 8) return;
+    const ctrl = new AbortController();
+    fetch(`/api/frete/distancia-loja?cep=${cepDistancia}`, { signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { km?: number } | null) => {
+        if (typeof d?.km === "number") setDistanciaLoja(d.km);
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, [retiradaDisponivel, cepDistancia]);
   const [modoEntrega, setModoEntregaState] = useState<ModoEntrega>("envio");
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- sessionStorage só existe após hidratar
@@ -259,6 +273,38 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
                   </p>
                 ) : (
                   <>
+                {lojaRetirada ? (
+                  <fieldset className="mb-3">
+                    <legend className="mb-2 text-sm font-bold uppercase tracking-wide text-black">
+                      Retirar na loja
+                    </legend>
+                    <label className="flex cursor-pointer items-start justify-between gap-2 rounded border border-store-line/70 bg-white px-2 py-2">
+                      <span className="flex items-start gap-2">
+                        <input
+                          type="radio"
+                          name="cart-frete"
+                          className="mt-0.5"
+                          checked={retirada}
+                          onChange={() => setModoEntrega("retirada")}
+                        />
+                        <span>
+                          <span className="block font-semibold text-black">Você busca no balcão</span>
+                          <span className="mt-0.5 block">{formatStorePickupAddress(lojaRetirada)}</span>
+                          {distanciaLoja !== null ? (
+                            <span className="mt-1 block font-semibold text-store-navy">
+                              A loja fica a aproximadamente{" "}
+                              {distanciaLoja < 1
+                                ? `${Math.round(distanciaLoja * 1000)} m`
+                                : `${distanciaLoja.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} km`}{" "}
+                              de você
+                            </span>
+                          ) : null}
+                        </span>
+                      </span>
+                      <strong className="text-emerald-700">Grátis</strong>
+                    </label>
+                  </fieldset>
+                ) : null}
                 {missingProfileCep ? (
                   <p>
                     Defina seu CEP no <Link href="/conta" className="font-semibold underline">perfil</Link> para
@@ -301,20 +347,6 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
                       </label>
                     ))}
                   </fieldset>
-                ) : null}
-                {retiradaDisponivel ? (
-                  <label className="mt-2 flex cursor-pointer items-center justify-between gap-2 rounded border border-store-line/70 bg-white px-2 py-1.5">
-                    <span className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        name="cart-frete"
-                        checked={retirada}
-                        onChange={() => setModoEntrega("retirada")}
-                      />
-                      <span>Retirar na loja (você busca no balcão)</span>
-                    </span>
-                    <strong className="text-emerald-700">Grátis</strong>
-                  </label>
                 ) : null}
                   </>
                 )}

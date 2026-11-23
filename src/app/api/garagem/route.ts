@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 
+import { resolveCatalogModeloId } from "@/features/compatibilidade/services/resolveCatalogModelo";
 import { createClient } from "@/services/supabase/server";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type SaveGaragePayload = {
   placa?: string;
@@ -51,14 +54,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Placa inválida. Use ABC1234 ou ABC1D23." }, { status: 400 });
   }
 
+  const marca = normalizeText(body.marca);
+  const modelo = normalizeText(body.modelo);
+  const ano = normalizeYear(body.ano);
+  // Sem modelo_id o "Filtrar" da garagem só manda o ano — resolve no catálogo quando o client não enviou.
+  let modeloId = normalizeText(body.modeloId);
+  if (modeloId && !UUID_RE.test(modeloId)) modeloId = null;
+  if (!modeloId) {
+    modeloId = await resolveCatalogModeloId({ marca, modelo, ano }).catch(() => null);
+  }
+
   const { error } = await supabase.from("garagem_veiculos").upsert(
     {
       user_id: user.id,
       placa,
-      marca: normalizeText(body.marca),
-      modelo: normalizeText(body.modelo),
-      ano: normalizeYear(body.ano),
-      modelo_id: normalizeText(body.modeloId),
+      marca,
+      modelo,
+      ano,
+      modelo_id: modeloId,
     },
     { onConflict: "user_id,placa" }
   );

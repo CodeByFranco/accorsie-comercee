@@ -273,11 +273,11 @@ export function pickInitPoint(
 }
 
 /**
- * Estorna o pagamento inteiro (`POST /v1/payments/:id/refunds`, sem `amount` = total).
+ * Estorna o pagamento (`POST /v1/payments/:id/refunds`); sem `amount` estorna o total, com `amount` é parcial.
  */
 export async function refundPayment(
   paymentId: string,
-  config: MercadoPagoClientConfig & { idempotencyKey?: string },
+  config: MercadoPagoClientConfig & { idempotencyKey?: string; amount?: number },
 ): Promise<{ ok: true } | { ok: false; status: number; detail: string }> {
   const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const id = encodeURIComponent(paymentId.trim());
@@ -292,7 +292,11 @@ export async function refundPayment(
 
   let res: Response;
   try {
-    res = await fetchWithTimeout(url, { method: "POST", headers, body: "{}" }, timeoutMs);
+    const body =
+      config.amount !== undefined && Number.isFinite(config.amount)
+        ? JSON.stringify({ amount: Math.round(config.amount * 100) / 100 })
+        : "{}";
+    res = await fetchWithTimeout(url, { method: "POST", headers, body }, timeoutMs);
   } catch (e) {
     const detail = isAbortError(e)
       ? "Tempo esgotado ao solicitar reembolso no Mercado Pago."

@@ -747,3 +747,27 @@ export async function fetchShipmentTracking(
   }
   return { ok: true, byId };
 }
+
+/**
+ * Cancela uma etiqueta comprada e devolve o valor à Melhor Carteira (`POST /api/v2/me/shipment/cancel`).
+ * Só funciona antes da postagem; depois disso o Melhor Envio recusa.
+ */
+export async function cancelShipment(
+  shipmentId: string,
+  token: string,
+  description = "Pedido cancelado pela loja",
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const id = normalizeShipmentId(shipmentId);
+  if (!id) return { ok: false, message: "ID do envio Melhor Envio é obrigatório." };
+  const res = await postShipmentAction(
+    "/api/v2/me/shipment/cancel",
+    { order: { id, reason_id: "2", description } },
+    token,
+  );
+  if (!res.ok) return { ok: false, message: res.message };
+  const row = res.json && typeof res.json === "object" ? (res.json as Record<string, unknown>)[id] : null;
+  if (row && typeof row === "object" && (row as Record<string, unknown>).canceled === false) {
+    return { ok: false, message: "O Melhor Envio não permitiu cancelar esta etiqueta." };
+  }
+  return { ok: true };
+}
