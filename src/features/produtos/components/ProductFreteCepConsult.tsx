@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { useFreteQuote } from "@/features/frete/hooks/useFreteQuote";
 import { formatCep } from "@/features/pedidos/utils/pedidoDisplay";
+import { getStorePickupAddress } from "@/config/storePickupAddress";
 
 const money = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -109,6 +110,12 @@ export function ProductFreteCepConsult({
                   <span className="font-semibold tabular-nums text-black">{money.format(op.precoCentavos / 100)}</span>
                 </li>
               ))}
+              {getStorePickupAddress() ? (
+                <li className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 border-t border-store-line/60 pt-1.5">
+                  <span className="text-store-navy">Retirar na loja</span>
+                  <span className="font-semibold text-emerald-700">Grátis</span>
+                </li>
+              ) : null}
             </ul>
           ) : (
             <p className="text-store-navy-muted">Nenhuma opção retornada para este CEP.</p>

@@ -122,6 +122,8 @@ export function PlateVehicleFinder({
   const [pendingMatch, setPendingMatch] = useState<PendingVehicleMatch | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [vehicleInfo, setVehicleInfo] = useState<VehicleInfoModalData | null>(null);
+  /** Texto do filtro aplicado automaticamente após a consulta (null = nenhum modelo do catálogo bateu). */
+  const [appliedLabel, setAppliedLabel] = useState<string | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -154,6 +156,7 @@ export function PlateVehicleFinder({
 
     setLoading(true);
     setPendingMatch(null);
+    setAppliedLabel(null);
     setFeedback(null);
     setLastErrorCode(null);
 
@@ -206,8 +209,13 @@ export function PlateVehicleFinder({
           const nomeModelo = normalizeText(modelo.nome);
           let score = 0;
 
-          if (modeloApi && nomeModelo === modeloApi) score += 10;
-          else if (modeloApi && (nomeModelo.includes(modeloApi) || modeloApi.includes(nomeModelo))) score += 7;
+          if (!modeloApi || !nomeModelo) return { modelo, score: 0 };
+          if (nomeModelo === modeloApi) score += 10;
+          else if (` ${modeloApi} `.includes(` ${nomeModelo} `) || ` ${nomeModelo} `.includes(` ${modeloApi} `))
+            score += 7 + Math.min(nomeModelo.length, 20) / 10;
+          else if (modeloApi.split(" ")[0] === nomeModelo.split(" ")[0]) score += 4;
+          // Sem semelhança no nome do modelo, a marca sozinha não basta.
+          if (score === 0) return { modelo, score: 0 };
 
           score += brandScore(marcaNameById.get(modelo.marca_id), marcaApi);
 
@@ -242,10 +250,15 @@ export function PlateVehicleFinder({
         ano: anoAplicado,
         catalogIdMatchesApi,
       });
-      const nomeExibicao =
-        successPayload.informacoesVeiculo?.modelo ?? successPayload.modelo ?? winner.nome;
+      // Modelo existe no catálogo: aplica o filtro na hora e avisa qual foi.
+      onResolvedVehicle(winner, anoAplicado);
+      const marcaNome = marcaNameById.get(winner.marca_id);
+      const filtroTxt = `${marcaNome ? `${marcaNome} ` : ""}${winner.nome}${anoAplicado ? ` ${anoAplicado}` : ""}`;
+      setAppliedLabel(filtroTxt);
       setFeedback(
-        `Veículo identificado: ${nomeExibicao}${anoAplicado ? ` (${anoAplicado})` : ""}. Deseja aplicar esse filtro?`
+        catalogIdMatchesApi
+          ? `Filtro aplicado: ${filtroTxt}.`
+          : `Filtro aplicado: ${filtroTxt}. Confira se combina com seu carro.`
       );
     } catch {
       setPendingMatch(null);
@@ -258,20 +271,11 @@ export function PlateVehicleFinder({
   };
 
   const onApplyFilter = () => {
+    setModalOpen(false);
     if (!pendingMatch) {
-      setModalOpen(false);
       router.push("/produtos");
       setFeedback("Veículo consultado. Você pode refinar os filtros no catálogo de produtos.");
-      return;
     }
-    onResolvedVehicle(pendingMatch.modelo, pendingMatch.ano);
-    setModalOpen(false);
-    setFeedback(
-      pendingMatch.catalogIdMatchesApi
-        ? `Filtro aplicado: ${pendingMatch.modeloNome}${pendingMatch.ano ? ` (${pendingMatch.ano})` : ""}.`
-        : `Filtro pelo catálogo: ${pendingMatch.modeloNome}${pendingMatch.ano ? ` (${pendingMatch.ano})` : ""}. Confira se combina com seu carro.`
-    );
-    setPendingMatch(null);
   };
 
   const onSaveGarage = async () => {
@@ -500,13 +504,30 @@ export function PlateVehicleFinder({
                 A consulta retornou poucos detalhes, mas a placa foi processada com sucesso.
               </p>
             )}
+            {loading ? (
+              <p className="mt-3 text-sm text-store-navy-muted">Procurando esse modelo no catálogo…</p>
+            ) : appliedLabel ? (
+              <div className="mt-3 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm text-emerald-900" role="status">
+                <p className="font-extrabold">Filtro aplicado: {appliedLabel}</p>
+                <p className="mt-0.5 text-xs">
+                  {pendingMatch?.catalogIdMatchesApi
+                    ? "Os produtos já estão filtrados para o seu veículo."
+                    : "Encontramos um modelo parecido no catálogo. Confira se combina com seu carro."}
+                </p>
+              </div>
+            ) : (
+              <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="status">
+                Não temos esse modelo cadastrado no catálogo, então nenhum filtro foi aplicado.
+              </div>
+            )}
             <div className="mt-4 flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={onApplyFilter}
-                className="h-10 rounded-lg bg-store-navy px-3 text-xs font-extrabold text-white transition hover:bg-store-navy/90"
+                disabled={loading}
+                className="h-10 rounded-lg bg-store-navy px-3 text-xs font-extrabold text-white transition hover:bg-store-navy/90 disabled:opacity-60"
               >
-                Buscar produtos
+                {appliedLabel ? "Ver produtos filtrados" : "Buscar produtos"}
               </button>
               <button
                 type="button"

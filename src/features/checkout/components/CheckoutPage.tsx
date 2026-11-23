@@ -27,6 +27,11 @@ const money = new Intl.NumberFormat("pt-BR", {
 
 const inputClass =
   "mt-1 block w-full rounded-md border border-store-line bg-white px-3 py-2 text-sm text-store-navy shadow-sm outline-none transition placeholder:text-store-navy-muted/70 focus:border-store-navy focus:ring-1 focus:ring-store-navy";
+import {
+  lerModoEntregaPreferido,
+  salvarModoEntregaPreferido,
+  type ModoEntrega,
+} from "@/features/frete/modoEntregaPreferencia";
 
 type CheckoutPageProps = {
   defaultDestinatarioNome?: string;
@@ -37,7 +42,6 @@ type CheckoutPageProps = {
   saldoCashback?: number;
 };
 
-type ModoEntrega = "envio" | "retirada";
 
 export function CheckoutPage({
   defaultDestinatarioNome = "",
@@ -93,8 +97,14 @@ export function CheckoutPage({
   useEffect(() => {
     if (exigeRetiradaLoja) {
       setModoEntrega("retirada");
+    } else if (lojaRetirada && lerModoEntregaPreferido() === "retirada") {
+      setModoEntrega("retirada");
     }
-  }, [exigeRetiradaLoja]);
+  }, [exigeRetiradaLoja, lojaRetirada]);
+
+  useEffect(() => {
+    if (!exigeRetiradaLoja) salvarModoEntregaPreferido(modoEntrega);
+  }, [modoEntrega, exigeRetiradaLoja]);
 
   const itensPayload = useMemo(
     () => lines.map((l) => ({ produto_id: l.id, quantidade: l.quantity })),

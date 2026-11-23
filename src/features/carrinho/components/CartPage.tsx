@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { BrindeSelo } from "@/components/store/BrindeSelo";
 import { StorefrontPhoto } from "@/features/produtos/components/StorefrontPhoto";
@@ -13,6 +13,12 @@ import { FreteGratisBarra } from "@/features/frete/components/FreteGratisBarra";
 import { FreteGratisSugestoes } from "@/features/frete/components/FreteGratisSugestoes";
 import { atingeFreteGratis, opcaoFreteGratisId } from "@/features/frete/freteGratis";
 import { useFreteQuote } from "@/features/frete/hooks/useFreteQuote";
+import {
+  lerModoEntregaPreferido,
+  salvarModoEntregaPreferido,
+  type ModoEntrega,
+} from "@/features/frete/modoEntregaPreferencia";
+import { getStorePickupAddress } from "@/config/storePickupAddress";
 import { cartRequiresSomenteRetirada } from "@/features/produtos/utils/mapProductSummaryRow";
 import { unitPriceAfterPaymentDiscount } from "@/features/produtos/utils/paymentDiscount";
 
@@ -60,6 +66,17 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
     [lines],
   );
   const exigeRetiradaLoja = useMemo(() => cartRequiresSomenteRetirada(lines), [lines]);
+  const retiradaDisponivel = useMemo(() => getStorePickupAddress() !== null, []);
+  const [modoEntrega, setModoEntregaState] = useState<ModoEntrega>("envio");
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sessionStorage só existe após hidratar
+    if (retiradaDisponivel && lerModoEntregaPreferido() === "retirada") setModoEntregaState("retirada");
+  }, [retiradaDisponivel]);
+  function setModoEntrega(m: ModoEntrega) {
+    setModoEntregaState(m);
+    salvarModoEntregaPreferido(m);
+  }
+  const retirada = exigeRetiradaLoja || (retiradaDisponivel && modoEntrega === "retirada");
   const profileCep = initialProfileCep.trim();
   const missingProfileCep =
     hasItems && !exigeRetiradaLoja && profileCep.replace(/\D/g, "").length !== 8;
@@ -69,11 +86,11 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
   const freteGratisAplicado =
     atingiuFreteGratis && freteGratisId !== null && frete.selectedId === freteGratisId;
   const shipping =
-    hasItems && !exigeRetiradaLoja && !missingProfileCep && !freteGratisAplicado ? frete.freteValue : 0;
+    hasItems && !retirada && !missingProfileCep && !freteGratisAplicado ? frete.freteValue : 0;
   const total = subtotal + shipping;
   const canGoCheckout =
     hasItems &&
-    (exigeRetiradaLoja || (!missingProfileCep && Boolean(frete.selectedOption)));
+    (retirada || (!missingProfileCep && Boolean(frete.selectedOption)));
 
   return (
     <div className={`flex flex-1 flex-col py-8 sm:py-10 ${storeShellInset}`}>
@@ -224,7 +241,9 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
               <div className="flex justify-between gap-4">
                 <dt className="text-store-navy">Frete</dt>
                 <dd className="font-semibold tabular-nums text-black">
-                  {freteGratisAplicado ? <span className="text-emerald-700">Grátis</span> : money.format(shipping)}
+                  {retirada ? (
+                    <span className="text-emerald-700">Retirada na loja</span>
+                  ) : freteGratisAplicado ? <span className="text-emerald-700">Grátis</span> : money.format(shipping)}
                 </dd>
               </div>
             </dl>
@@ -238,7 +257,9 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
                     Este pedido inclui produtos <strong>somente para retirada na loja</strong>. O frete não se
                     aplica; no checkout você confirma os dados para retirada.
                   </p>
-                ) : missingProfileCep ? (
+                ) : (
+                  <>
+                {missingProfileCep ? (
                   <p>
                     Defina seu CEP no <Link href="/conta" className="font-semibold underline">perfil</Link> para
                     calcular o frete.
@@ -256,8 +277,11 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
                           <input
                             type="radio"
                             name="cart-frete"
-                            checked={frete.selectedId === opcao.id}
-                            onChange={() => frete.setSelectedId(opcao.id)}
+                            checked={!retirada && frete.selectedId === opcao.id}
+                            onChange={() => {
+                              setModoEntrega("envio");
+                              frete.setSelectedId(opcao.id);
+                            }}
                           />
                           <span>
                             {opcao.nome}
@@ -278,6 +302,22 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
                     ))}
                   </fieldset>
                 ) : null}
+                {retiradaDisponivel ? (
+                  <label className="mt-2 flex cursor-pointer items-center justify-between gap-2 rounded border border-store-line/70 bg-white px-2 py-1.5">
+                    <span className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="cart-frete"
+                        checked={retirada}
+                        onChange={() => setModoEntrega("retirada")}
+                      />
+                      <span>Retirar na loja (você busca no balcão)</span>
+                    </span>
+                    <strong className="text-emerald-700">Grátis</strong>
+                  </label>
+                ) : null}
+                  </>
+                )}
               </div>
             ) : null}
 
