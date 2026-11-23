@@ -271,3 +271,42 @@ export function pickInitPoint(
   }
   return point;
 }
+
+/**
+ * Estorna o pagamento inteiro (`POST /v1/payments/:id/refunds`, sem `amount` = total).
+ */
+export async function refundPayment(
+  paymentId: string,
+  config: MercadoPagoClientConfig & { idempotencyKey?: string },
+): Promise<{ ok: true } | { ok: false; status: number; detail: string }> {
+  const timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const id = encodeURIComponent(paymentId.trim());
+  const url = `${MERCADOPAGO_API_BASE}${PAYMENTS_V1_PATH}/${id}/refunds`;
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${config.accessToken}`,
+    "Content-Type": "application/json",
+  };
+  if (config.idempotencyKey?.trim()) {
+    headers["X-Idempotency-Key"] = config.idempotencyKey.trim();
+  }
+
+  let res: Response;
+  try {
+    res = await fetchWithTimeout(url, { method: "POST", headers, body: "{}" }, timeoutMs);
+  } catch (e) {
+    const detail = isAbortError(e)
+      ? "Tempo esgotado ao solicitar reembolso no Mercado Pago."
+      : "Falha de rede ao solicitar reembolso no Mercado Pago.";
+    return { ok: false, status: 0, detail };
+  }
+
+  if (res.ok) return { ok: true };
+
+  let json: unknown = null;
+  try {
+    json = await res.json();
+  } catch {
+    /* corpo vazio */
+  }
+  return { ok: false, status: res.status, detail: parseErrorDetail(json, res.statusText) };
+}

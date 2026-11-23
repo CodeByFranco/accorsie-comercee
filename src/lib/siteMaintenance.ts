@@ -7,6 +7,7 @@ export const MAINTENANCE_MODE = TRUE_VALUES.has(
 const MAINTENANCE_BYPASS_PREFIXES = [
   "/_next",
   "/api/webhooks/mercadopago",
+  "/api/cron/sincronizar-pedidos",
   "/em-construcao",
   "/login",
 ];

@@ -6,6 +6,7 @@ import { PedidoAcoes } from "@/features/pedidos-admin/components/PedidoAcoes";
 import { PedidoDadosNF } from "@/features/pedidos-admin/components/PedidoDadosNF";
 import { PedidoLogisticaForm } from "@/features/pedidos-admin/components/PedidoLogisticaForm";
 import { PedidoMercadoPagoSyncButton } from "@/features/pedidos-admin/components/PedidoMercadoPagoSyncButton";
+import { PedidoReembolsarButton } from "@/features/pedidos-admin/components/PedidoReembolsarButton";
 import { getPedidoAdminByIdWithItens } from "@/features/pedidos-admin/services/getPedidoAdminByIdWithItens";
 import {
   logisticaLabel,
@@ -148,6 +149,7 @@ export default async function AdminPedidoDetailPage({ params }: PageProps) {
               </div>
             </dl>
             <PedidoMercadoPagoSyncButton pedidoId={pedido.id} />
+            {pedido.status === "pago" ? <PedidoReembolsarButton pedidoId={pedido.id} /> : null}
           </section>
 
           <PedidoLogisticaForm pedido={pedido} />
