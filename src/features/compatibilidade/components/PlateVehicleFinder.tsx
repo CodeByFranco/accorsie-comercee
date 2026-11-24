@@ -27,7 +27,7 @@ type PlateVehicleFinderProps = {
   marcas: VehicleFilterMarca[];
   /** Busca (com cache) os modelos de uma marca — o catálogo não vem inteiro para o navegador. */
   carregarMarca: (marcaId: string) => Promise<VehicleFilterModelo[]>;
-  onResolvedVehicle: (modelo: VehicleFilterModelo, ano: number | null) => void;
+  onResolvedVehicle: (modelo: VehicleFilterModelo, ano: number | null) => void | Promise<void>;
   /** `filterToolbar`: faixa ao lado dos filtros (home). `default`: bloco completo acima. */
   variant?: "default" | "filterToolbar";
 };
@@ -188,7 +188,7 @@ export function PlateVehicleFinder({
         catalogIdMatchesApi,
       });
       // Modelo existe no catálogo: aplica o filtro na hora e avisa qual foi.
-      onResolvedVehicle(winner, anoAplicado);
+      await onResolvedVehicle(winner, anoAplicado);
       const marcaNome = marcaNameById.get(winner.marca_id);
       const filtroTxt = `${marcaNome ? `${marcaNome} ` : ""}${winner.nome}${anoAplicado ? ` ${anoAplicado}` : ""}`;
       setAppliedLabel(filtroTxt);

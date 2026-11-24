@@ -328,7 +328,9 @@ export async function criarPedidoECheckout(
     if (teleError) console.error("[checkout] falha ao marcar tele rápida no pedido.");
   }
 
-  if (payload.usar_cashback === true) {
+  // A regra do admin pode tornar o uso obrigatório (não depende do que o navegador mandou).
+  const { data: cashbackObrigatorio } = await supabase.rpc("meu_cashback_uso_obrigatorio");
+  if (payload.usar_cashback === true || cashbackObrigatorio === true) {
     const { error: cashbackError } = await supabase.rpc("aplicar_cashback_pedido", {
       p_pedido_id: pedidoId,
       p_valor: 999999,

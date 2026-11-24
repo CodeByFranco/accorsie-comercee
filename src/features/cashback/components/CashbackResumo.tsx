@@ -1,3 +1,4 @@
+import { CASHBACK_PADRAO, descreverRegraCashback, formatPercentual, type CashbackConfig } from "@/features/cashback/cashbackRegras";
 type CashbackTransacao = {
   id: string;
   tipo: string;
@@ -9,13 +10,15 @@ type CashbackTransacao = {
 type CashbackResumoProps = {
   saldo: number;
   transacoes: CashbackTransacao[];
+  config?: CashbackConfig;
 };
 
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const date = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" });
 
-/** Saldo de cashback (2,5% das compras pagas) e últimos lançamentos. */
-export function CashbackResumo({ saldo, transacoes }: CashbackResumoProps) {
+/** Saldo de cashback (percentual configurado no admin) e últimos lançamentos. */
+export function CashbackResumo({ saldo, transacoes, config = CASHBACK_PADRAO }: CashbackResumoProps) {
+  const regra = descreverRegraCashback(config);
   return (
     <section
       className="mb-6 rounded-sm border border-emerald-200 bg-emerald-50 p-5 shadow-sm sm:p-6"
@@ -27,8 +30,10 @@ export function CashbackResumo({ saldo, transacoes }: CashbackResumoProps) {
             Meu cashback
           </h2>
           <p className="mt-1 text-sm text-store-navy">
-            Ganhe 2,5% do valor de cada compra paga para abater nas próximas compras.
+            Ganhe {formatPercentual(config.percentual)}% do valor de cada compra paga para abater nas próximas
+            compras.
           </p>
+          {regra ? <p className="mt-1 text-xs text-store-navy-muted">{regra}</p> : null}
         </div>
         <p className="text-2xl font-bold tabular-nums text-emerald-800">{money.format(saldo)}</p>
       </div>

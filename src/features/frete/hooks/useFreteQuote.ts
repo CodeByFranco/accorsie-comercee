@@ -25,6 +25,24 @@ function onlyCepDigits(raw: string): string {
   return raw.replace(/\D/g, "").slice(0, 8);
 }
 
+const SELECTED_KEY = "accorsi:frete-opcao";
+
+function lerOpcaoPreferida(): string | null {
+  try {
+    return window.sessionStorage.getItem(SELECTED_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function salvarOpcaoPreferida(id: string): void {
+  try {
+    window.sessionStorage.setItem(SELECTED_KEY, id);
+  } catch {
+    /* sem storage: segue sem lembrar */
+  }
+}
+
 function pickCheapest(opcoes: MelhorEnvioQuoteOption[]): string | null {
   if (opcoes.length === 0) return null;
   return [...opcoes].sort((a, b) => a.precoCentavos - b.precoCentavos)[0]?.id ?? null;
@@ -88,11 +106,13 @@ export function useFreteQuote(items: FreteItemInput[], cep: string, enabled: boo
         const cheapest = pickCheapest(opcoes);
         setState((prev) => {
           const keepCurrent = prev.selectedId && opcoes.some((o) => o.id === prev.selectedId);
+          const preferida = lerOpcaoPreferida();
+          const usarPreferida = preferida && opcoes.some((o) => o.id === preferida);
           return {
             loading: false,
           error: opcoes.length > 0 ? null : "Nenhuma opcao de frete disponivel para este CEP.",
             opcoes,
-            selectedId: keepCurrent ? prev.selectedId : cheapest,
+            selectedId: keepCurrent ? prev.selectedId : usarPreferida ? preferida : cheapest,
           };
         });
       })
@@ -115,6 +135,7 @@ export function useFreteQuote(items: FreteItemInput[], cep: string, enabled: boo
   );
 
   const setSelectedId = useCallback((id: string) => {
+    salvarOpcaoPreferida(id);
     setState((prev) => ({ ...prev, selectedId: id }));
   }, []);
 

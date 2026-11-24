@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { AccountAreaContent } from "@/features/auth/components/AccountAreaContent";
 import { AuthPageShell } from "@/features/auth/components/AuthPageShell";
+import { getCashbackConfig } from "@/features/cashback/cashbackConfig";
 import { CashbackResumo } from "@/features/cashback/components/CashbackResumo";
 import { listMyPedidos } from "@/features/pedidos/services/listMyPedidos";
 import { profileRowToEndereco } from "@/types/profileDelivery";
@@ -50,6 +51,8 @@ export default async function ContaPage({ searchParams }: ContaPageProps) {
   const initialSection =
     params?.aba === "garagem" ? "garagem" : params?.aba === "pedidos" ? "pedidos" : "conta";
 
+  const cashbackConfig = await getCashbackConfig();
+
   return (
     <AuthPageShell
       title="Minha conta"
@@ -59,6 +62,7 @@ export default async function ContaPage({ searchParams }: ContaPageProps) {
       <CashbackResumo
         saldo={Math.max(0, Number(saldoCashbackRaw) || 0)}
         transacoes={cashbackTransacoes ?? []}
+        config={cashbackConfig}
       />
       <AccountAreaContent
         initialNomeCompleto={nomeCompleto}
