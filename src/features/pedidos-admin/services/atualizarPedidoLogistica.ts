@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { requireAdmin } from "@/lib/auth/requireAdmin";
-import { sendPedidoTransactionalEmail } from "@/services/email/transactionalPedidoEmail";
+import { notificarSePostado } from "@/features/pedidos-admin/services/notificarPedidoPostado";
 import { createAdminClient } from "@/services/supabase/admin";
 
 export type AtualizarPedidoLogisticaState = { ok?: boolean; error?: string };
@@ -30,8 +30,6 @@ function buildPatch(formData: FormData): Record<string, string | boolean | null>
   };
 }
 
-type AdminClient = ReturnType<typeof createAdminClient>;
-
 const FRIENDLY: Record<string, string> = {
   pedido_nao_encontrado: "Pedido não encontrado.",
   patch_chave_invalida: "Dados inválidos.",
@@ -39,35 +37,6 @@ const FRIENDLY: Record<string, string> = {
   frete_provedor_invalido: "Origem do frete inválida.",
   retirada_loja_invalida: "Valor inválido para retirada na loja.",
 };
-
-async function notificarSePostado(supabase: AdminClient, pedidoId: string): Promise<void> {
-try {
-  const { data: pedidoEmail } = await supabase
-    .from("pedidos")
-    .select("user_id, total, logistica_status, rastreio_codigo, rastreio_url")
-    .eq("id", pedidoId)
-    .maybeSingle();
-
-  if (pedidoEmail?.user_id && pedidoEmail.logistica_status === "postado") {
-    const { data: authUser, error: authErr } = await supabase.auth.admin.getUserById(pedidoEmail.user_id);
-    if (!authErr && authUser?.user?.email) {
-      await sendPedidoTransactionalEmail(supabase, {
-        pedidoId,
-        kind: "pedido_enviado",
-        toEmail: authUser.user.email,
-        total: pedidoEmail.total as string | number | null,
-        trackingCode: pedidoEmail.rastreio_codigo,
-        trackingUrl: pedidoEmail.rastreio_url,
-      });
-    }
-  }
-} catch (emailError) {
-  console.error(
-    "atualizarPedidoLogisticaAction email:",
-    emailError instanceof Error ? emailError.message : emailError,
-  );
-}
-}
 
 const STATUS_VALIDOS = new Set(["nao_iniciado", "em_separacao", "postado", "entregue"]);
 

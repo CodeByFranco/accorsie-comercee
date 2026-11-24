@@ -4,6 +4,7 @@ export {
 } from "./ensureMelhorEnvioAccessToken";
 export {
   addShipmentToMelhorEnvioCart,
+  cancelShipment,
   createOrder,
   fetchMelhorEnvioBalance,
   getMelhorEnvioConfigFromEnv,

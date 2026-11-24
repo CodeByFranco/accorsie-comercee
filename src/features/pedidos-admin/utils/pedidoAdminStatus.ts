@@ -5,6 +5,7 @@ export const PEDIDO_ABAS = [
   { id: "aguardando", label: "Aguardando pagamento" },
   { id: "postados", label: "Postados" },
   { id: "entregues", label: "Entregues" },
+  { id: "devolucoes", label: "Devoluções" },
   { id: "todos", label: "Todos" },
 ] as const;
 
@@ -14,7 +15,7 @@ export function parsePedidoAba(v: string | undefined): PedidoAbaId {
   return PEDIDO_ABAS.some((a) => a.id === v) ? (v as PedidoAbaId) : "a-enviar";
 }
 
-type StatusFields = Pick<AdminPedidoListRow, "status" | "logistica_status">;
+type StatusFields = Pick<AdminPedidoListRow, "status" | "logistica_status" | "devolucao_status">;
 
 export function pedidoNaAba(p: StatusFields, aba: PedidoAbaId): boolean {
   switch (aba) {
@@ -23,9 +24,11 @@ export function pedidoNaAba(p: StatusFields, aba: PedidoAbaId): boolean {
     case "aguardando":
       return p.status === "aguardando_pagamento";
     case "postados":
-      return p.logistica_status === "postado";
+      return p.logistica_status === "postado" && !p.devolucao_status;
     case "entregues":
-      return p.logistica_status === "entregue";
+      return p.logistica_status === "entregue" && !p.devolucao_status;
+    case "devolucoes":
+      return p.devolucao_status === "aguardando_retorno";
     default:
       return true;
   }
@@ -69,5 +72,7 @@ export function pagamentoPillClass(status: PedidoStatus): string {
     return "bg-red-50 text-red-900 ring-red-200";
   return "bg-gray-100 text-gray-700 ring-gray-200";
 }
+
+export const devolucaoPillClass = "bg-orange-50 text-orange-900 ring-orange-200";
 
 export const pillBase = "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset";

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { listPedidosAdmin } from "@/features/pedidos-admin/services/listPedidosAdmin";
 import {
   PEDIDO_ABAS,
+  devolucaoPillClass,
   logisticaLabel,
   logisticaPillClass,
   pagamentoPillClass,
@@ -160,6 +161,9 @@ export default async function AdminPedidosPage({ searchParams }: PageProps) {
                       <span className={`${pillBase} ${logisticaPillClass(p.logistica_status)}`}>
                         {logisticaLabel(p.logistica_status, p.retirada_loja)}
                       </span>
+                    ) : null}
+                    {p.devolucao_status === "aguardando_retorno" ? (
+                      <span className={`${pillBase} ${devolucaoPillClass}`}>Em devolução</span>
                     ) : null}
                   </span>
                 </Link>

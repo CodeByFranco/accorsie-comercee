@@ -707,3 +707,67 @@ export async function requestShipmentDocuments(
   if (!res.ok) return res;
   return parseShipmentActionJson(id, res.json);
 }
+
+export type MelhorEnvioTrackingInfo = {
+  status: string | null;
+  tracking: string | null;
+  melhorenvioTracking: string | null;
+  postedAt: string | null;
+  deliveredAt: string | null;
+};
+
+/**
+ * Status/rastreio de envios (`POST /api/v2/me/shipment/tracking`).
+ * Resposta: `{ "<id>": { status, tracking, melhorenvio_tracking, posted_at, delivered_at, ... } }`.
+ */
+export async function fetchShipmentTracking(
+  shipmentIds: string[],
+  token: string,
+): Promise<{ ok: true; byId: Record<string, MelhorEnvioTrackingInfo> } | { ok: false; message: string }> {
+  const ids = shipmentIds.map((s) => s.trim()).filter(Boolean);
+  if (ids.length === 0) return { ok: true, byId: {} };
+
+  const res = await postShipmentAction("/api/v2/me/shipment/tracking", { orders: ids }, token);
+  if (!res.ok) return { ok: false, message: res.message };
+
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+  const byId: Record<string, MelhorEnvioTrackingInfo> = {};
+  if (res.json && typeof res.json === "object") {
+    for (const [id, raw] of Object.entries(res.json as Record<string, unknown>)) {
+      if (!raw || typeof raw !== "object") continue;
+      const o = raw as Record<string, unknown>;
+      byId[id] = {
+        status: str(o.status),
+        tracking: str(o.tracking),
+        melhorenvioTracking: str(o.melhorenvio_tracking),
+        postedAt: str(o.posted_at),
+        deliveredAt: str(o.delivered_at),
+      };
+    }
+  }
+  return { ok: true, byId };
+}
+
+/**
+ * Cancela uma etiqueta comprada e devolve o valor à Melhor Carteira (`POST /api/v2/me/shipment/cancel`).
+ * Só funciona antes da postagem; depois disso o Melhor Envio recusa.
+ */
+export async function cancelShipment(
+  shipmentId: string,
+  token: string,
+  description = "Pedido cancelado pela loja",
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const id = normalizeShipmentId(shipmentId);
+  if (!id) return { ok: false, message: "ID do envio Melhor Envio é obrigatório." };
+  const res = await postShipmentAction(
+    "/api/v2/me/shipment/cancel",
+    { order: { id, reason_id: "2", description } },
+    token,
+  );
+  if (!res.ok) return { ok: false, message: res.message };
+  const row = res.json && typeof res.json === "object" ? (res.json as Record<string, unknown>)[id] : null;
+  if (row && typeof row === "object" && (row as Record<string, unknown>).canceled === false) {
+    return { ok: false, message: "O Melhor Envio não permitiu cancelar esta etiqueta." };
+  }
+  return { ok: true };
+}

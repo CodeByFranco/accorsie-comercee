@@ -1,3 +1,6 @@
+import { getStorePickupAddress } from "@/config/storePickupAddress";
+import { FinanceiroTeleRapidaForm } from "@/features/financeiro/components/FinanceiroTeleRapidaForm";
+import { getTeleRapidaConfigAdmin } from "@/features/frete/teleRapida/teleRapidaConfig";
 import { FinanceiroParcelamentoForm } from "@/features/financeiro/components/FinanceiroParcelamentoForm";
 import { getParcelamentoFaixasAdmin } from "@/features/financeiro/services/getParcelamentoFaixas";
 
@@ -6,7 +9,8 @@ export const metadata = {
 };
 
 export default async function AdminFinanceiroPage() {
-  const { faixas, error } = await getParcelamentoFaixasAdmin();
+  const [{ faixas, error }, tele] = await Promise.all([getParcelamentoFaixasAdmin(), getTeleRapidaConfigAdmin()]);
+  const loja = getStorePickupAddress();
 
   return (
     <div className="space-y-6">
@@ -30,6 +34,17 @@ export default async function AdminFinanceiroPage() {
       ) : null}
 
       <FinanceiroParcelamentoForm initial={faixas} />
+
+      <div className="pt-4">
+        <h2 className="text-xl font-semibold tracking-tight text-gray-900">Tele rápida</h2>
+        {tele.error ? (
+          <p className="mt-2 text-sm text-amber-800" role="alert">
+            Não foi possível ler a configuração: {tele.error}. Aplique a migração{" "}
+            <code className="rounded bg-amber-50 px-1">supabase/migrations/20261123150000_tele_rapida.sql</code>.
+          </p>
+        ) : null}
+      </div>
+      <FinanceiroTeleRapidaForm initial={tele.config} cidadeLoja={loja ? `${loja.cidade}/${loja.uf}` : null} />
     </div>
   );
 }

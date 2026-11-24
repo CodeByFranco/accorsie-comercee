@@ -8,6 +8,7 @@ import type { CheckoutPayload } from "@/features/checkout/types";
 import { getStorePickupAddress } from "@/config/storePickupAddress";
 import { createAdminClient } from "@/services/supabase/admin";
 import { createClient } from "@/services/supabase/server";
+import { TELE_RAPIDA_ID } from "@/features/frete/teleRapida/teleRapida";
 import { cotarFreteServidor } from "@/services/melhorEnvio/cotarFreteServidor";
 import { createPreference, isTestAccessToken, pickInitPoint } from "@/services/mercadopago/client";
 import { sendPedidoTransactionalEmail } from "@/services/email/transactionalPedidoEmail";
@@ -218,6 +219,7 @@ export async function criarPedidoECheckout(
 
   // Segurança: o valor do frete vem do navegador; recota no servidor e só aceita um preço real.
   // Frete 0 (grátis) é validado pelo mínimo do pedido em criar_pedido_checkout.
+  let teleRapida = false;
   if (!retirada && freteInformado > 0) {
     const itensMap = new Map<string, number>();
     for (const l of p_itens) itensMap.set(l.produto_id, (itensMap.get(l.produto_id) ?? 0) + l.quantidade);
@@ -233,7 +235,11 @@ export async function criarPedidoECheckout(
         ok: false,
         message: "O valor do frete mudou. Recalcule o frete e tente novamente.",
       };
-    }
+    }    teleRapida =
+      payload.frete_opcao_id === TELE_RAPIDA_ID &&
+      cotacao.opcoes.some(
+        (o) => o.id === TELE_RAPIDA_ID && Math.abs(o.precoCentavos / 100 - freteInformado) < 0.01,
+      );
   }
 
   const loja = retirada ? getStorePickupAddress() : null;
@@ -311,6 +317,15 @@ export async function criarPedidoECheckout(
 
   if (!pedidoId) {
     return { ok: false, message: "Resposta inesperada ao criar o pedido. Tente novamente." };
+  }
+
+  if (teleRapida) {
+    // Coluna não é exposta na RPC; grava com service role logo após criar o pedido.
+    const { error: teleError } = await createAdminClient()
+      .from("pedidos")
+      .update({ tele_rapida: true })
+      .eq("id", pedidoId);
+    if (teleError) console.error("[checkout] falha ao marcar tele rápida no pedido.");
   }
 
   if (payload.usar_cashback === true) {

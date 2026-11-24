@@ -30,6 +30,7 @@ export type PedidoDetailWithItens = PedidoListRow & {
   subtotal: unknown;
   frete: unknown;
   retirada_loja?: boolean;
+  tele_rapida?: boolean | null;
   destinatario_nome: string;
   telefone: string;
   cep: string;
@@ -48,6 +49,8 @@ export type PedidoDetailWithItens = PedidoListRow & {
 
 export type PedidoLogisticaStatus = "nao_iniciado" | "em_separacao" | "postado" | "entregue";
 
+export type PedidoDevolucaoStatus = "aguardando_retorno" | "recebida";
+
 /** Linha para listagem no painel admin (service role). */
 export type AdminPedidoListRow = {
   id: string;
@@ -62,6 +65,7 @@ export type AdminPedidoListRow = {
   destinatario_documento?: string | null;
   /** Sequencial por data de criação (001, 002, ...). */
   codigo_ui?: number | null;
+  devolucao_status?: PedidoDevolucaoStatus | null;
 };
 
 export type AdminPedidoDetailWithItens = PedidoDetailWithItens & {
@@ -80,4 +84,12 @@ export type AdminPedidoDetailWithItens = PedidoDetailWithItens & {
   logistica_status: PedidoLogisticaStatus;
   /** E-mail em `auth.users`, quando disponível. */
   cliente_email: string | null;
+  cancelamento_motivo: string | null;
+  reembolso_valor: unknown;
+  reembolsado_em: string | null;
+  devolucao_status: PedidoDevolucaoStatus | null;
+  devolucao_motivo: string | null;
+  devolucao_rastreio: string | null;
+  devolucao_solicitada_em: string | null;
+  devolucao_recebida_em: string | null;
 };

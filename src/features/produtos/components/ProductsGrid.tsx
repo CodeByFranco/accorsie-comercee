@@ -63,8 +63,8 @@ export function ProductsGrid({
               <article
                 className={
                   compact
-                    ? "relative z-0 flex h-full flex-col gap-2 bg-white px-3 pb-3 pt-2 sm:px-3.5 sm:pb-3.5"
-                    : "relative z-0 flex h-full flex-col gap-3 bg-white p-4 sm:p-5"
+                    ? "relative z-0 flex h-full flex-col gap-2 overflow-hidden rounded-sm border border-store-navy/10 bg-white px-3 pb-3 pt-2 shadow-sm sm:px-3.5 sm:pb-3.5"
+                    : "relative z-0 flex h-full flex-col gap-3 overflow-hidden rounded-sm border border-store-navy/10 bg-white p-4 shadow-sm sm:p-5"
                 }
               >
                 <Link

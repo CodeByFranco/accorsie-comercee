@@ -8,6 +8,8 @@ function subjectFor(kind: TransactionalEmailKind): string {
       return "Pagamento confirmado";
     case "pedido_enviado":
       return "Pedido enviado";
+    case "pedido_reembolsado":
+      return "Pedido cancelado — reembolso realizado";
     default: {
       const _exhaustive: never = kind;
       return _exhaustive;
@@ -56,6 +58,17 @@ function bodyFor(payload: TransactionalEmailPayload): string {
       ]
         .filter((line) => line !== "")
         .join("\n");
+
+    case "pedido_reembolsado":
+      return [
+        "Seu pedido foi cancelado e o reembolso já foi solicitado ao Mercado Pago.",
+        ...(payload.totalLabel ? [`Valor reembolsado: ${payload.totalLabel}`] : []),
+        "",
+        "Pix: o valor volta para a sua conta em poucos minutos.",
+        "Cartão de crédito: o estorno aparece em até 2 faturas, conforme o seu banco.",
+        "",
+        `Detalhes do pedido: ${payload.pedidoUrl}`,
+      ].join("\n");
 
     default: {
       const _exhaustive: never = payload.kind;

@@ -2,7 +2,7 @@
  * Eventos de e-mail transacional alinhados ao RPC `admin_pedido_marcar_email_disparado`
  * (`pedido_criado`, `pagamento_confirmado`, `enviado`).
  */
-export type TransactionalEmailKind = "pedido_criado" | "pagamento_confirmado" | "pedido_enviado";
+export type TransactionalEmailKind = "pedido_criado" | "pagamento_confirmado" | "pedido_enviado" | "pedido_reembolsado";
 
 /** Payload mínimo para montar assunto/corpo e link do pedido. */
 export type TransactionalEmailPayload = {

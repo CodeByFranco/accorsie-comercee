@@ -5,7 +5,9 @@ import { getEmailSender } from "@/services/email/getEmailSender";
 import { buildPedidoAbsoluteUrl } from "@/services/email/publicAppUrl";
 import type { TransactionalEmailKind } from "@/services/email/types";
 
-function kindToRpcTipo(kind: TransactionalEmailKind): "pedido_criado" | "pagamento_confirmado" | "enviado" {
+function kindToRpcTipo(
+  kind: Exclude<TransactionalEmailKind, "pedido_reembolsado">,
+): "pedido_criado" | "pagamento_confirmado" | "enviado" {
   if (kind === "pedido_enviado") {
     return "enviado";
   }
@@ -51,7 +53,9 @@ export async function sendPedidoTransactionalEmail(
       ? "email_pedido_criado_at"
       : opts.kind === "pagamento_confirmado"
         ? "email_pagamento_confirmado_at"
-        : "email_enviado_at";
+        : opts.kind === "pedido_reembolsado"
+          ? "email_reembolso_at"
+          : "email_enviado_at";
 
   const { data: row, error: readError } = await admin
     .from("pedidos")
@@ -97,6 +101,15 @@ export async function sendPedidoTransactionalEmail(
   const result = await sender.send({ to, subject, text });
   if (!result.ok) {
     console.error("[email] envio falhou:", opts.kind, opts.pedidoId);
+    return;
+  }
+
+  if (opts.kind === "pedido_reembolsado") {
+    const { error: stampError } = await admin
+      .from("pedidos")
+      .update({ email_reembolso_at: new Date().toISOString() })
+      .eq("id", opts.pedidoId);
+    if (stampError) console.error("[email] marcar reembolso:", stampError.message);
     return;
   }
 

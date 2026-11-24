@@ -6,6 +6,7 @@ import { useEffect, useId, useMemo, useState } from "react";
 
 import type { VehicleFilterMarca, VehicleFilterModelo } from "@/features/compatibilidade/services/getVehicleFilterCatalogData";
 import { getModeloAnos } from "@/features/compatibilidade/services/getModeloAnos";
+import { rankMarcasCandidatas, rankModelos } from "@/features/compatibilidade/utils/matchCatalogModelo";
 import { PLACA_CONSULTA_ANON_LIFETIME_MAX, PLACA_CONSULTA_USER_DAILY_MAX } from "@/lib/placaConsultaQuota";
 import { createClient } from "@/services/supabase/client";
 
@@ -45,48 +46,6 @@ type VehicleInfoModalData = {
   modelo: string | null;
   ano: number | null;
 };
-
-function normalizeText(raw: string | null | undefined): string {
-  return (raw ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim();
-}
-
-const BRAND_SYNONYMS: Record<string, string[]> = {
-  volkswagen: ["vw", "volks", "volks wagen"],
-  chevrolet: ["gm", "chevy"],
-  mercedes: ["mercedes benz", "mercedes-benz", "mb"],
-  mitsubishi: ["mit"],
-  landrover: ["land rover"],
-  citroen: ["citroën"],
-  peugeot: ["peugeot-citroen", "psa"],
-  bmw: ["b.m.w"],
-};
-
-function canonicalizeBrandName(raw: string | null | undefined): string {
-  const base = normalizeText(raw).replace(/\s+/g, "");
-  if (!base) return "";
-  for (const [canonical, aliases] of Object.entries(BRAND_SYNONYMS)) {
-    if (base === canonical) return canonical;
-    if (aliases.some((alias) => normalizeText(alias).replace(/\s+/g, "") === base)) return canonical;
-  }
-  return base;
-}
-
-/** Pontuação de semelhança entre o nome da marca do catálogo e o da API (0 = nada a ver). */
-function brandScore(nomeMarcaCatalogo: string | undefined, marcaApi: string): number {
-  const nomeMarca = canonicalizeBrandName(nomeMarcaCatalogo);
-  if (!marcaApi || !nomeMarca) return 0;
-  if (nomeMarca === marcaApi) return 4;
-  if (nomeMarca.includes(marcaApi) || marcaApi.includes(nomeMarca)) return 2;
-  return 0;
-}
-
-/** Máximo de marcas candidatas cujos modelos são carregados para comparar com a placa. */
-const MAX_MARCAS_CANDIDATAS = 3;
 
 function normalizePlateInput(raw: string): string {
   return raw.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 7);
@@ -191,57 +150,35 @@ export function PlateVehicleFinder({
 
       const modeloRaw = successPayload.informacoesVeiculo?.modelo ?? successPayload.modelo;
       const marcaRaw = successPayload.informacoesVeiculo?.marca ?? successPayload.marca;
-      const modeloApi = normalizeText(modeloRaw);
-      const marcaApi = canonicalizeBrandName(marcaRaw);
       const anoApi = successPayload.informacoesVeiculo?.ano ?? successPayload.ano ?? null;
 
-      const marcasCandidatas = marcas
-        .map((m) => ({ id: m.id, score: brandScore(m.nome, marcaApi) }))
-        .filter((m) => m.score > 0)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, MAX_MARCAS_CANDIDATAS);
+      const marcasCandidatas = rankMarcasCandidatas(marcas, marcaRaw);
       const modelosCandidatos = (
         await Promise.all(marcasCandidatas.map((m) => carregarMarca(m.id)))
       ).flat();
+      const candidates = rankModelos(modelosCandidatos, marcaNameById, modeloRaw, marcaRaw);
 
-      const candidates = modelosCandidatos
-        .map((modelo) => {
-          const nomeModelo = normalizeText(modelo.nome);
-          let score = 0;
-
-          if (!modeloApi || !nomeModelo) return { modelo, score: 0 };
-          if (nomeModelo === modeloApi) score += 10;
-          else if (` ${modeloApi} `.includes(` ${nomeModelo} `) || ` ${nomeModelo} `.includes(` ${modeloApi} `))
-            score += 7 + Math.min(nomeModelo.length, 20) / 10;
-          else if (modeloApi.split(" ")[0] === nomeModelo.split(" ")[0]) score += 4;
-          // Sem semelhança no nome do modelo, a marca sozinha não basta.
-          if (score === 0) return { modelo, score: 0 };
-
-          score += brandScore(marcaNameById.get(modelo.marca_id), marcaApi);
-
-          return { modelo, score };
-        })
-        .filter((entry) => entry.score > 0)
-        .sort((a, b) => b.score - a.score);
-
-      const winner = candidates[0]?.modelo;
-      if (!winner) {
+      if (candidates.length === 0) {
         setPendingMatch(null);
         setFeedback("Encontramos a placa, mas não achamos um modelo compatível no seu catálogo.");
         return;
       }
 
-      const nomeWinnerNorm = normalizeText(winner.nome);
-      const marcaWinnerNorm = canonicalizeBrandName(marcaNameById.get(winner.marca_id));
-      const exactModelo = Boolean(modeloApi && nomeWinnerNorm === modeloApi);
-      const exactMarca = Boolean(marcaApi && marcaWinnerNorm === marcaApi);
-      const catalogIdMatchesApi = exactModelo && (!marcaApi || exactMarca);
-
+      // Entre as melhores versões, prefere a que tem o ano do veículo cadastrado.
+      let chosen = candidates[0];
       let anoAplicado: number | null = null;
       if (anoApi != null) {
-        const anos = await getModeloAnos(winner.id);
-        if (anos.includes(anoApi)) anoAplicado = anoApi;
+        for (const c of candidates.slice(0, 5)) {
+          const anos = await getModeloAnos(c.modelo.id);
+          if (anos.includes(anoApi)) {
+            chosen = c;
+            anoAplicado = anoApi;
+            break;
+          }
+        }
       }
+      const winner = chosen.modelo;
+      const catalogIdMatchesApi = chosen.exact;
 
       setPendingMatch({
         modelo: winner,
@@ -294,7 +231,8 @@ export function PlateVehicleFinder({
           marca: vehicleInfo?.marca ?? null,
           modelo: vehicleInfo?.modelo ?? pendingMatch?.modeloNome ?? null,
           ano: vehicleInfo?.ano ?? pendingMatch?.ano ?? null,
-          modeloId: pendingMatch?.catalogIdMatchesApi ? pendingMatch.modeloId : null,
+          // Mesmo modelo usado no filtro; o servidor resolve se vier vazio.
+          modeloId: pendingMatch?.modeloId ?? null,
         }),
       });
 

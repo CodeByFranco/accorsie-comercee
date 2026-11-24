@@ -29,6 +29,8 @@ export type CheckoutPayload = CheckoutEntregaInput & {
   forma_pagamento: FormaPagamentoCheckout;
   /** Sem envio (Correios/Melhor Envio): frete zero e endereço da loja gravado no pedido. */
   retirada_loja?: boolean;
+  /** ID da opção de frete escolhida (ex.: "tele-rapida"); revalidado no servidor. */
+  frete_opcao_id?: string;
   /** Código do cupom (opcional); validado na RPC `criar_pedido_checkout`. */
   cupom_codigo?: string;
   /** Kits aplicados com as escolhas do cliente (desconto oficial validado na RPC). */

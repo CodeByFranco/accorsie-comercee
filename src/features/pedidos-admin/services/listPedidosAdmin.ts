@@ -12,7 +12,7 @@ export async function listPedidosAdmin(): Promise<AdminPedidoListRow[]> {
   const { data, error } = await supabase
     .from("pedidos")
     .select(
-      "id, user_id, status, total, created_at, destinatario_nome, destinatario_documento, logistica_status, rastreio_codigo, retirada_loja",
+      "id, user_id, status, total, created_at, destinatario_nome, destinatario_documento, logistica_status, rastreio_codigo, retirada_loja, devolucao_status",
     )
     .order("created_at", { ascending: true })
     .order("id", { ascending: true });

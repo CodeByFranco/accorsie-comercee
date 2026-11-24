@@ -169,7 +169,7 @@ export async function executarFluxoEtiquetaMelhorEnvioAutomatico(
   const { data: pedido, error: pedidoErr } = await admin
     .from("pedidos")
     .select(
-      "id, status, frete, subtotal, retirada_loja, destinatario_nome, destinatario_documento, telefone, cep, logradouro, numero, complemento, bairro, cidade, uf, melhor_envio_id, user_id",
+      "id, status, frete, subtotal, retirada_loja, tele_rapida, destinatario_nome, destinatario_documento, telefone, cep, logradouro, numero, complemento, bairro, cidade, uf, melhor_envio_id, user_id",
     )
     .eq("id", pedidoId)
     .maybeSingle();
@@ -178,6 +178,9 @@ export async function executarFluxoEtiquetaMelhorEnvioAutomatico(
     return { ok: false, message: "Pedido não encontrado." };
   }
 
+  if ((pedido as { tele_rapida?: boolean | null }).tele_rapida === true) {
+    return { ok: false, message: "Pedido é tele rápida — entrega própria da loja, sem etiqueta Melhor Envio." };
+  }
   if (pedido.retirada_loja === true) {
     return { ok: false, message: "Pedido é retirada na loja — não há envio Melhor Envio." };
   }
