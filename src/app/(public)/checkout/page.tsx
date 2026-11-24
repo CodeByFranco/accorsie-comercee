@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { getStorePickupAddress } from "@/config/storePickupAddress";
+import { getCashbackConfig } from "@/features/cashback/cashbackConfig";
 import { CheckoutPage } from "@/features/checkout/components/CheckoutPage";
 import { profileRowToEndereco } from "@/types/profileDelivery";
 import { createClient } from "@/services/supabase/server";
@@ -30,6 +31,10 @@ export default async function CheckoutRoutePage() {
   const lojaRetirada = getStorePickupAddress();
   const { data: saldoRaw } = await supabase.rpc("meu_saldo_cashback");
   const saldoCashback = Math.max(0, Number(saldoRaw) || 0);
+  const [{ data: obrigatorioRaw }, cashbackConfig] = await Promise.all([
+    supabase.rpc("meu_cashback_uso_obrigatorio"),
+    getCashbackConfig(),
+  ]);
 
   return (
     <div className="flex min-h-dvh flex-col bg-store-cream font-sans text-store-navy">
@@ -39,6 +44,8 @@ export default async function CheckoutRoutePage() {
           initialEndereco={initialEndereco}
           lojaRetirada={lojaRetirada}
           saldoCashback={saldoCashback}
+          cashbackObrigatorio={obrigatorioRaw === true}
+          cashbackConfig={cashbackConfig}
         />
       </main>
       <SiteFooter />

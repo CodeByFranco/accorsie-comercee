@@ -1,3 +1,5 @@
+import { getCashbackConfigAdmin } from "@/features/cashback/cashbackConfig";
+import { FinanceiroCashbackForm } from "@/features/financeiro/components/FinanceiroCashbackForm";
 import { getStorePickupAddress } from "@/config/storePickupAddress";
 import { FinanceiroTeleRapidaForm } from "@/features/financeiro/components/FinanceiroTeleRapidaForm";
 import { getTeleRapidaConfigAdmin } from "@/features/frete/teleRapida/teleRapidaConfig";
@@ -9,7 +11,11 @@ export const metadata = {
 };
 
 export default async function AdminFinanceiroPage() {
-  const [{ faixas, error }, tele] = await Promise.all([getParcelamentoFaixasAdmin(), getTeleRapidaConfigAdmin()]);
+  const [{ faixas, error }, tele, cashback] = await Promise.all([
+    getParcelamentoFaixasAdmin(),
+    getTeleRapidaConfigAdmin(),
+    getCashbackConfigAdmin(),
+  ]);
   const loja = getStorePickupAddress();
 
   return (
@@ -45,6 +51,17 @@ export default async function AdminFinanceiroPage() {
         ) : null}
       </div>
       <FinanceiroTeleRapidaForm initial={tele.config} cidadeLoja={loja ? `${loja.cidade}/${loja.uf}` : null} />
+
+      <div className="pt-4">
+        <h2 className="text-xl font-semibold tracking-tight text-gray-900">Cashback</h2>
+        {cashback.error ? (
+          <p className="mt-2 text-sm text-amber-800" role="alert">
+            Não foi possível ler a configuração: {cashback.error}. Aplique a migração{" "}
+            <code className="rounded bg-amber-50 px-1">supabase/migrations/20261124120000_cashback_config.sql</code>.
+          </p>
+        ) : null}
+      </div>
+      <FinanceiroCashbackForm initial={cashback.config} />
     </div>
   );
 }

@@ -42,6 +42,13 @@ function TrashIcon({ className }: { className?: string }) {
   );
 }
 
+const CART_CEP_KEY = "accorsi-cart-cep";
+
+function formatCep(raw: string): string {
+  const d = raw.replace(/\D/g, "").slice(0, 8);
+  return d.length > 5 ? `${d.slice(0, 5)}-${d.slice(5)}` : d;
+}
+
 type CartPageProps = {
   initialProfileCep?: string;
 };
@@ -70,7 +77,20 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
   const lojaRetirada = useMemo(() => getStorePickupAddress(), []);
   const retiradaDisponivel = lojaRetirada !== null;
   const [distanciaLoja, setDistanciaLoja] = useState<number | null>(null);
-  const cepDistancia = initialProfileCep.replace(/\D/g, "");
+  const [cepInput, setCepInput] = useState(() => formatCep(initialProfileCep));
+  useEffect(() => {
+    if (initialProfileCep.replace(/\D/g, "").length === 8) return;
+    const salvo = localStorage.getItem(CART_CEP_KEY);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage só existe após hidratar
+    if (salvo) setCepInput(formatCep(salvo));
+  }, [initialProfileCep]);
+  function onCepChange(raw: string) {
+    const f = formatCep(raw);
+    setCepInput(f);
+    const d = f.replace(/\D/g, "");
+    if (d.length === 8) localStorage.setItem(CART_CEP_KEY, d);
+  }
+  const cepDistancia = cepInput.replace(/\D/g, "");
   useEffect(() => {
     if (!retiradaDisponivel || cepDistancia.length !== 8) return;
     const ctrl = new AbortController();
@@ -92,7 +112,7 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
     salvarModoEntregaPreferido(m);
   }
   const retirada = exigeRetiradaLoja || (retiradaDisponivel && modoEntrega === "retirada");
-  const profileCep = initialProfileCep.trim();
+  const profileCep = cepInput.trim();
   const missingProfileCep =
     hasItems && !exigeRetiradaLoja && profileCep.replace(/\D/g, "").length !== 8;
   const frete = useFreteQuote(itensPayload, profileCep, hasItems && !exigeRetiradaLoja);
@@ -306,11 +326,20 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
                     </label>
                   </fieldset>
                 ) : null}
+                <label className="mb-3 block">
+                  <span className="mb-1 block text-sm font-semibold text-black">Calcular frete</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="postal-code"
+                    placeholder="00000-000"
+                    value={cepInput}
+                    onChange={(e) => onCepChange(e.target.value)}
+                    className="w-full rounded-sm border border-store-line bg-white px-3 py-2 text-sm text-black"
+                  />
+                </label>
                 {missingProfileCep ? (
-                  <p>
-                    Defina seu CEP no <Link href="/conta" className="font-semibold underline">perfil</Link> para
-                    calcular o frete.
-                  </p>
+                  <p>Informe seu CEP para ver as opções de frete.</p>
                 ) : frete.loading ? (
                   <p>Calculando opcoes de frete...</p>
                 ) : frete.error ? (

@@ -11,6 +11,12 @@ import { kitClaimDesconto, useCart } from "@/features/carrinho/CartContext";
 import { lookupCep } from "@/features/endereco/services/lookupCep";
 import { FreteGratisBarra } from "@/features/frete/components/FreteGratisBarra";
 import { atingeFreteGratis, opcaoFreteGratisId } from "@/features/frete/freteGratis";
+import {
+  CASHBACK_PADRAO,
+  descreverRegraCashback,
+  formatPercentual,
+  type CashbackConfig,
+} from "@/features/cashback/cashbackRegras";
 import { useFreteQuote } from "@/features/frete/hooks/useFreteQuote";
 import type { CheckoutPayload } from "@/features/checkout/types";
 import { criarPedidoECheckout } from "@/features/checkout/services/criarPedidoECheckout";
@@ -41,6 +47,9 @@ type CheckoutPageProps = {
   lojaRetirada?: StorePickupAddress | null;
   /** Saldo de cashback disponível do cliente (reais). */
   saldoCashback?: number;
+  /** Regra do admin obriga a usar o saldo nesta compra. */
+  cashbackObrigatorio?: boolean;
+  cashbackConfig?: CashbackConfig;
 };
 
 
@@ -49,6 +58,8 @@ export function CheckoutPage({
   initialEndereco = emptyProfileEndereco(),
   lojaRetirada = null,
   saldoCashback = 0,
+  cashbackObrigatorio = false,
+  cashbackConfig = CASHBACK_PADRAO,
 }: CheckoutPageProps) {
   const baseId = useId();
   const { lines, itemCount, isReady, kitClaims } = useCart();
@@ -130,7 +141,9 @@ export function CheckoutPage({
     !hasItems ? 0 : modoEntrega === "retirada" || freteGratisAplicado ? 0 : frete.freteValue;
   const [cupomMensagem, setCupomMensagem] = useState<string | null>(null);
   const [cupomBusy, setCupomBusy] = useState(false);
-  const [usarCashback, setUsarCashback] = useState(false);
+  const [usarCashbackEscolha, setUsarCashback] = useState(false);
+  const usarCashback = cashbackObrigatorio || usarCashbackEscolha;
+  const regraCashback = descreverRegraCashback(cashbackConfig);
   const totalAntesCashback = Math.max(0, baseAposKit + shipping - (cupomDesconto ?? 0));
   /** Mesma regra da RPC: mantém ao menos R$ 1,00 a pagar. */
   const cashbackAplicado = usarCashback
@@ -671,12 +684,19 @@ export function CheckoutPage({
                       type="checkbox"
                       className="mt-0.5 h-4 w-4 accent-store-accent"
                       checked={usarCashback}
+                      disabled={cashbackObrigatorio}
                       onChange={(e) => setUsarCashback(e.target.checked)}
                     />
                     <span>
                       Usar meu saldo de <strong>{money.format(saldoCashback)}</strong> nesta compra.
                     </span>
                   </label>
+                  {regraCashback ? (
+                    <p className="mt-2 text-xs text-store-navy-muted">
+                      {cashbackObrigatorio ? <strong>Desconto aplicado automaticamente. </strong> : null}
+                      {regraCashback}
+                    </p>
+                  ) : null}
                 </section>
               ) : null}
 
@@ -849,9 +869,10 @@ export function CheckoutPage({
               <p className="mt-3 text-center text-xs text-store-navy-muted">
                 Você será encaminhado ao Mercado Pago para concluir o pagamento com segurança.
               </p>
-              {total > 0 ? (
+              {total > 0 && cashbackConfig.percentual > 0 ? (
                 <p className="mt-2 text-center text-xs font-medium text-emerald-800">
-                  Você ganha {money.format(Math.round(total * 2.5) / 100)} de cashback (2,5%) após o pagamento.
+                  Você ganha {money.format(Math.round(total * cashbackConfig.percentual) / 100)} de cashback (
+                  {formatPercentual(cashbackConfig.percentual)}%) após o pagamento.
                 </p>
               ) : null}
             </aside>

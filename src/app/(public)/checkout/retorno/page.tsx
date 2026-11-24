@@ -22,7 +22,7 @@ const copy: Record<
 > = {
   success: {
     title: "Pagamento em análise ou aprovado",
-    body: "Obrigado pela compra. O status final do pedido é confirmado pelo Mercado Pago e pode levar alguns instantes. Assim que o pagamento for confirmado, você acumula 2,5% do valor em cashback para usar nas próximas compras (veja em Minha conta).",
+    body: "Obrigado pela compra. O status final do pedido é confirmado pelo Mercado Pago e pode levar alguns instantes. Assim que o pagamento for confirmado, você acumula cashback para usar nas próximas compras (veja em Minha conta).",
     tone: "ok",
   },
   pending: {
