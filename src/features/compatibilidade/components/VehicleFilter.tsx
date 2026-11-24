@@ -414,7 +414,14 @@ export function VehicleFilter({
     setMobileFilterOpen(false);
   };
 
-  const onPlateResolvedVehicle = (resolvedModel: VehicleFilterModelo, resolvedAno: number | null) => {
+  const onPlateResolvedVehicle = async (resolvedModel: VehicleFilterModelo, resolvedAno: number | null) => {
+    /* Carrega os anos ANTES de navegar: uma server action pendente (getModeloAnos disparado pelo
+       efeito de `modeloId`) descarta o router.replace concorrente e o filtro não chega à URL. */
+    if (!anosRequestedRef.current.has(resolvedModel.id)) {
+      anosRequestedRef.current.add(resolvedModel.id);
+      const anos = await getModeloAnos(resolvedModel.id).catch(() => [] as number[]);
+      setAnosCache((prev) => ({ ...prev, [resolvedModel.id]: anos }));
+    }
     setCategory(tipoToTab(resolvedModel.tipo_veiculo));
     setMarcaId(resolvedModel.marca_id);
     setModeloId(resolvedModel.id);
