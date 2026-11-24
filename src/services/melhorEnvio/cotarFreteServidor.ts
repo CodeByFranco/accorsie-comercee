@@ -11,6 +11,7 @@ import {
 } from "@/services/melhorEnvio/freteQuoteLinesFromRows";
 import { PRODUCT_STATUS_PUBLISHED } from "@/features/produtos/utils/productStatus";
 import type { createClient } from "@/services/supabase/server";
+import { cotarTeleRapida } from "@/features/frete/teleRapida/cotarTeleRapida";
 
 type SupabaseServer = Awaited<ReturnType<typeof createClient>>;
 
@@ -132,10 +133,14 @@ export async function cotarFreteServidor(
     };
   }
 
-  const result = await quoteShipment({ cepOrigem, cepDestino, linhas }, { token });
+  const [result, teleRapida] = await Promise.all([
+    quoteShipment({ cepOrigem, cepDestino, linhas }, { token }),
+    cotarTeleRapida(cepDestino),
+  ]);
   if (!result.ok) {
+    if (teleRapida) return { ok: true, opcoes: [teleRapida] };
     return { ok: false, status: result.code === "invalid_input" ? 400 : result.code === "integration_disabled" ? 503 : 502, error: result.message };
   }
 
-  return { ok: true, opcoes: result.opcoes };
+  return { ok: true, opcoes: teleRapida ? [teleRapida, ...result.opcoes] : result.opcoes };
 }

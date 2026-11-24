@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { PedidoCancelamento } from "@/features/pedidos-admin/components/PedidoCancelamento";
 import { PedidoAcoes } from "@/features/pedidos-admin/components/PedidoAcoes";
 import { PedidoDadosNF } from "@/features/pedidos-admin/components/PedidoDadosNF";
 import { PedidoLogisticaForm } from "@/features/pedidos-admin/components/PedidoLogisticaForm";
 import { PedidoMercadoPagoSyncButton } from "@/features/pedidos-admin/components/PedidoMercadoPagoSyncButton";
-import { PedidoReembolsarButton } from "@/features/pedidos-admin/components/PedidoReembolsarButton";
 import { getPedidoAdminByIdWithItens } from "@/features/pedidos-admin/services/getPedidoAdminByIdWithItens";
 import {
+  devolucaoPillClass,
   logisticaLabel,
   logisticaPillClass,
   pagamentoPillClass,
@@ -49,15 +50,21 @@ export default async function AdminPedidoDetailPage({ params }: PageProps) {
         <div>
           <h1 className="font-mono text-2xl font-bold text-gray-900">#{formatPedidoUiCode(pedido.codigo_ui)}</h1>
           <p className="mt-1 text-sm text-gray-500">
-            {formatPedidoDate(pedido.created_at)} · {retirada ? "Retirada na loja" : "Entrega"}
+            {formatPedidoDate(pedido.created_at)} · {retirada ? "Retirada na loja" : pedido.tele_rapida === true ? "Tele rápida" : "Entrega"}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {pedido.tele_rapida === true ? (
+            <span className={`${pillBase} bg-orange-100 text-orange-800`}>Tele rápida</span>
+          ) : null}
           <span className={`${pillBase} ${pagamentoPillClass(pedido.status)}`}>{formatPedidoStatus(pedido.status)}</span>
           {pedido.status === "pago" ? (
             <span className={`${pillBase} ${logisticaPillClass(pedido.logistica_status)}`}>
               {logisticaLabel(pedido.logistica_status, retirada)}
             </span>
+          ) : null}
+          {pedido.status === "pago" && pedido.devolucao_status === "aguardando_retorno" ? (
+            <span className={`${pillBase} ${devolucaoPillClass}`}>Em devolução</span>
           ) : null}
         </div>
       </div>
@@ -149,8 +156,9 @@ export default async function AdminPedidoDetailPage({ params }: PageProps) {
               </div>
             </dl>
             <PedidoMercadoPagoSyncButton pedidoId={pedido.id} />
-            {pedido.status === "pago" ? <PedidoReembolsarButton pedidoId={pedido.id} /> : null}
           </section>
+
+          <PedidoCancelamento pedido={pedido} />
 
           <PedidoLogisticaForm pedido={pedido} />
         </div>

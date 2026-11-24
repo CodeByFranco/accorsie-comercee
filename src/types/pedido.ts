@@ -30,6 +30,7 @@ export type PedidoDetailWithItens = PedidoListRow & {
   subtotal: unknown;
   frete: unknown;
   retirada_loja?: boolean;
+  tele_rapida?: boolean | null;
   destinatario_nome: string;
   telefone: string;
   cep: string;

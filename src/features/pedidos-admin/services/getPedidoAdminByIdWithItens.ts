@@ -22,6 +22,7 @@ export const getPedidoAdminByIdWithItens = cache(async function getPedidoAdminBy
       subtotal,
       frete,
       retirada_loja,
+      tele_rapida,
       total,
       created_at,
       destinatario_nome,

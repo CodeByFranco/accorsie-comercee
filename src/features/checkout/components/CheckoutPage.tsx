@@ -1,5 +1,6 @@
 "use client";
 
+import { isTeleRapida } from "@/features/frete/teleRapida/teleRapida";
 import Link from "next/link";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
@@ -228,6 +229,7 @@ export function CheckoutPage({
       : {
           itens: itensPayload,
           frete: shipping,
+          frete_opcao_id: frete.selectedId ?? undefined,
           forma_pagamento: formaPagamento,
           destinatario_nome: destinatarioNome.trim(),
           telefone: telefone.trim(),
@@ -729,7 +731,7 @@ export function CheckoutPage({
                       {frete.opcoes.map((opcao) => (
                         <label
                           key={opcao.id}
-                          className="flex cursor-pointer items-center justify-between gap-3 rounded-sm border border-store-line/70 bg-store-subtle/20 px-3 py-2 has-[:checked]:border-store-navy has-[:checked]:bg-white"
+                          className={isTeleRapida(opcao) ? "flex cursor-pointer items-center justify-between gap-3 rounded-sm border px-3 py-2 border-2 border-orange-500 bg-orange-50 text-orange-950" : "flex cursor-pointer items-center justify-between gap-3 rounded-sm border border-store-line/70 bg-store-subtle/20 px-3 py-2 has-[:checked]:border-store-navy has-[:checked]:bg-white"}
                         >
                           <span className="flex items-center gap-2">
                             <input
@@ -740,7 +742,11 @@ export function CheckoutPage({
                               className="h-4 w-4 border-store-line text-store-navy"
                             />
                             <span className="text-sm text-store-navy">
-                              {opcao.nome}
+                                                          {isTeleRapida(opcao) ? (
+                              <span className="mr-1 rounded bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">Bento</span>
+                            ) : null}
+                            {opcao.nome}
+                            {isTeleRapida(opcao) ? " — entrega rápida na cidade" : ""}
                               {typeof opcao.prazoDiasUteis === "number"
                                 ? ` (${opcao.prazoDiasUteis} dias uteis)`
                                 : ""}

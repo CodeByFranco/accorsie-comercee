@@ -1,4 +1,5 @@
 import type { MelhorEnvioQuoteOption } from "@/services/melhorEnvio/types";
+import { TELE_RAPIDA_ID } from "@/features/frete/teleRapida/teleRapida";
 
 /** Precisa bater com o mínimo validado em `criar_pedido_checkout` (migration frete_gratis_minimo). */
 export const FRETE_GRATIS_MINIMO = 199;
@@ -14,6 +15,8 @@ export function faltaParaFreteGratis(valorProdutos: number): number {
 
 /** Só a opção mais barata da cotação entra no frete grátis. */
 export function opcaoFreteGratisId(opcoes: MelhorEnvioQuoteOption[]): string | null {
-  if (opcoes.length === 0) return null;
-  return [...opcoes].sort((a, b) => a.precoCentavos - b.precoCentavos)[0]?.id ?? null;
+  // Frete grátis vale para o envio mais barato pelos Correios/transportadora, não para a tele rápida.
+  const envios = opcoes.filter((o) => o.id !== TELE_RAPIDA_ID);
+  if (envios.length === 0) return null;
+  return [...envios].sort((a, b) => a.precoCentavos - b.precoCentavos)[0]?.id ?? null;
 }

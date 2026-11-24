@@ -1,5 +1,6 @@
 "use client";
 
+import { isTeleRapida } from "@/features/frete/teleRapida/teleRapida";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -318,7 +319,7 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
                   <fieldset className="space-y-2">
                     <legend className="mb-2 text-sm font-semibold">Selecione o frete</legend>
                     {frete.opcoes.map((opcao) => (
-                      <label key={opcao.id} className="flex cursor-pointer items-center justify-between gap-2 rounded border border-store-line/70 bg-white px-2 py-1.5">
+                      <label key={opcao.id} className={isTeleRapida(opcao) ? "flex cursor-pointer items-center justify-between gap-2 rounded border px-2 py-1.5 border-2 border-orange-500 bg-orange-50 text-orange-950" : "flex cursor-pointer items-center justify-between gap-2 rounded border border-store-line/70 bg-white px-2 py-1.5"}>
                         <span className="flex items-center gap-2">
                           <input
                             type="radio"
@@ -330,7 +331,11 @@ export function CartPage({ initialProfileCep = "" }: CartPageProps) {
                             }}
                           />
                           <span>
+                                                        {isTeleRapida(opcao) ? (
+                              <span className="mr-1 rounded bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold uppercase text-white">Bento</span>
+                            ) : null}
                             {opcao.nome}
+                            {isTeleRapida(opcao) ? " — entrega rápida na cidade" : ""}
                             {typeof opcao.prazoDiasUteis === "number" ? ` (${opcao.prazoDiasUteis} dias uteis)` : ""}
                           </span>
                         </span>

@@ -31,6 +31,8 @@ export type MelhorEnvioQuoteOption = {
   nome: string;
   precoCentavos: number;
   prazoDiasUteis?: number;
+  /** Só na tele rápida: horário limite do dia ("HH:MM"). */
+  horarioLimite?: string;
 };
 
 export type MelhorEnvioCreateOrderInput = {
