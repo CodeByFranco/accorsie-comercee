@@ -2,6 +2,8 @@ import { Poppins } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
 
+import { sincronizarPagamentosDoCliente } from "@/features/pedidos/services/sincronizarPagamentosDoCliente";
+import { createClient } from "@/services/supabase/server";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { storeShellContent, storeShellInset } from "@/config/storeShell";
 
@@ -59,6 +61,12 @@ export default async function CheckoutRetornoPage({
   const statusParam = typeof statusRaw === "string" ? statusRaw : undefined;
   const status = normalizeStatus(statusParam);
   const { title, body, tone } = copy[status];
+
+  // Atualiza o status já na volta do Mercado Pago, sem esperar o webhook.
+  const {
+    data: { user },
+  } = await (await createClient()).auth.getUser();
+  if (user) await sincronizarPagamentosDoCliente(user.id);
 
   return (
     <div className="flex min-h-dvh flex-col bg-store-cream font-sans text-store-navy">

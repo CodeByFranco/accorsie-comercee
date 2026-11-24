@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { PedidosListSection } from "@/features/pedidos/components/PedidosListSection";
+import { sincronizarPagamentosDoCliente } from "@/features/pedidos/services/sincronizarPagamentosDoCliente";
 import { listMyPedidos } from "@/features/pedidos/services/listMyPedidos";
 import { createClient } from "@/services/supabase/server";
 import { storeShellContent, storeShellInset } from "@/config/storeShell";
@@ -22,6 +23,7 @@ export default async function PedidosPage() {
     redirect("/login?next=/pedidos");
   }
 
+  await sincronizarPagamentosDoCliente(user.id);
   const pedidos = await listMyPedidos();
 
   return (

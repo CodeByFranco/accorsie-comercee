@@ -4,6 +4,7 @@ import { AccountAreaContent } from "@/features/auth/components/AccountAreaConten
 import { AuthPageShell } from "@/features/auth/components/AuthPageShell";
 import { getCashbackConfig } from "@/features/cashback/cashbackConfig";
 import { CashbackResumo } from "@/features/cashback/components/CashbackResumo";
+import { sincronizarPagamentosDoCliente } from "@/features/pedidos/services/sincronizarPagamentosDoCliente";
 import { listMyPedidos } from "@/features/pedidos/services/listMyPedidos";
 import { profileRowToEndereco } from "@/types/profileDelivery";
 import { createClient } from "@/services/supabase/server";
@@ -47,6 +48,7 @@ export default async function ContaPage({ searchParams }: ContaPageProps) {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(10);
+  await sincronizarPagamentosDoCliente(user.id);
   const pedidos = await listMyPedidos();
   const initialSection =
     params?.aba === "garagem" ? "garagem" : params?.aba === "pedidos" ? "pedidos" : "conta";
