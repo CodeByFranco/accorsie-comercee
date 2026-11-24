@@ -103,6 +103,8 @@ export function CheckoutPage({
 
   const [formError, setFormError] = useState<string | null>(null);
   const [checkoutBusy, setCheckoutBusy] = useState(false);
+  /** Trava síncrona: impede dois pedidos com clique duplo antes do re-render. */
+  const enviandoRef = useRef(false);
   const [modoEntrega, setModoEntrega] = useState<ModoEntrega>("envio");
   const exigeRetiradaLoja = useMemo(() => cartRequiresSomenteRetirada(lines), [lines]);
 
@@ -268,24 +270,36 @@ export function CheckoutPage({
         : {}),
     };
 
+    if (enviandoRef.current) return;
+    enviandoRef.current = true;
     setCheckoutBusy(true);
+    const liberar = () => {
+      enviandoRef.current = false;
+      setCheckoutBusy(false);
+    };
     void (async () => {
       try {
         if (codigoCupom) {
           const prev = await previewCupomDesconto(codigoCupom, baseAposKit, shipping);
           if (!prev.ok) {
             setFormError(prev.message);
+            liberar();
             return;
           }
         }
         const result = await criarPedidoECheckout(payload);
         if (result?.ok === false) {
           setFormError(result.message);
+          liberar();
         }
-      } catch {
-        /* redirect() do servidor dispara rejeição controlada */
-      } finally {
-        setCheckoutBusy(false);
+        // Sucesso: o servidor redireciona ao Mercado Pago; o botão fica travado até sair da página.
+      } catch (e) {
+        // redirect() do servidor dispara rejeição controlada: mantém travado até sair da página.
+        const digest = typeof e === "object" && e && "digest" in e ? String((e as { digest?: unknown }).digest) : "";
+        if (!digest.startsWith("NEXT_REDIRECT")) {
+          setFormError("Não foi possível iniciar o pagamento. Verifique sua conexão e tente novamente.");
+          liberar();
+        }
       }
     })();
   }
